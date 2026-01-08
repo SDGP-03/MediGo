@@ -1,3 +1,4 @@
+import 'package:driver_application/authentication/signup_screen.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -10,6 +11,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
 
   TextEditingController emailTextEditingController = TextEditingController();
+  TextEditingController passwordTextEditingController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -21,22 +23,22 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 60),
 
-              Center(child: Image.asset("assets/images/logo.png", height: 150)),
+              Center(child: Image.asset("assets/logo/logo.png", height: 160)),
 
               const SizedBox(height: 60),
 
               Container(
 
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 5)
-                    )
-                  ]
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 10,
+                          offset: Offset(0, 5)
+                      )
+                    ]
                 ),
 
                 child: Column(
@@ -74,16 +76,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
 
                     Padding(
-                      padding: const EdgeInsetsGeometry.all(20),
+                      padding: const EdgeInsets.all(20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
+
                           Text(
                             "Email Address",
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          SizedBox(height: 8),
+
+                          const SizedBox(height: 8),
+
                           TextField(
+                            controller: emailTextEditingController,
+                            keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: "driver@medigo.com",
                               prefixIcon: Icon(Icons.email_outlined),
@@ -92,8 +99,71 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(height: 16),
+
+                          const SizedBox(height: 16),
+
+                          Text(
+                            "Password",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          TextField(
+                            controller: passwordTextEditingController,
+                            obscureText: true,
+                            keyboardType: TextInputType.visiblePassword,
+                            decoration: const InputDecoration(
+                              hintText: "Enter your password",
+                              prefixIcon: Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 33),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade700,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+
+                              onPressed: () {},
+
+                              child: const Text(
+                                "Sign Up",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+
                         ],
+                      ),
+                    ),
+
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (c)=> SignupScreen()));
+                        },
+                        child: const Text(
+                          "Don't have an Account? Register Here",
+                          style: TextStyle(
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
                     ),
 

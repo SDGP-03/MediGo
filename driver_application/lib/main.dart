@@ -1,4 +1,4 @@
-import 'package:driver_application/authentication/login_screen.dart';
+import 'package:driver_application/screens/start_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFFAF3F5),
       ),
-      home: LoginScreen(),
+      home: StartScreen(),
     );
   }
 }
