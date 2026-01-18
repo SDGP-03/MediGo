@@ -1,4 +1,5 @@
 import 'package:driver_application/authentication/login_screen.dart';
+import 'package:driver_application/methods/common_methods.dart';
 import 'package:flutter/material.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -14,6 +15,11 @@ class _SignupScreenState extends State<SignupScreen> {
   TextEditingController phoneTextEditingController = TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
+  CommonMethods cMethods = CommonMethods();
+
+  checkIfNetworkIsAvailable() {
+    cMethods.checkConnectivity(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +189,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                               ),
 
-                              onPressed: () {},
+                              onPressed: () {
+                                checkIfNetworkIsAvailable();
+                              },
 
                               child: const Text(
                                 "Sign Up",
