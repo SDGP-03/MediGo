@@ -12,13 +12,28 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
 
   TextEditingController userNameTextEditingController = TextEditingController();
-  TextEditingController phoneTextEditingController = TextEditingController();
+  TextEditingController userPhoneTextEditingController = TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
 
   checkIfNetworkIsAvailable() {
     cMethods.checkConnectivity(context);
+    signUpFormValidation();
+  }
+
+  signUpFormValidation() {
+    if(userNameTextEditingController.text.trim().length < 4) {
+      cMethods.displaySnackBar("Your name must be atleast 4 or more characters.", context);
+    } else if(userPhoneTextEditingController.text.trim().length < 10) {
+      cMethods.displaySnackBar("Your phone number must be atleast 10 or more characters.", context);
+    } else if(!emailTextEditingController.text.contains("@")) {
+      cMethods.displaySnackBar("Please write valid email.", context);
+    } else if(passwordTextEditingController.text.trim().length < 6) {
+      cMethods.displaySnackBar("Your password must be atleast 6 or more characters.", context);
+    } else {
+      //register user
+    }
   }
 
   @override
@@ -119,7 +134,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 8),
 
                           TextField(
-                            controller: phoneTextEditingController,
+                            controller: userPhoneTextEditingController,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
                               hintText: "Enter your phone number",
