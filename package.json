@@ -4,8 +4,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:driver": "vite --mode driver",
     "build": "tsc && vite build",
+    "build:driver": "tsc && vite build --mode driver",
     "preview": "vite preview",
+    "start": "npm run dev",
+    "serve": "npm run preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
