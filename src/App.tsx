@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Ambulance, Users, BarChart3, Smartphone, Monitor, LogOut } from 'lucide-react';
+import { Activity, Truck, Users, BarChart3, Smartphone, Monitor, LogOut } from 'lucide-react';
 import { TransferRequest } from './components/hospital/TransferRequest';
 import { AmbulanceFleet } from './components/hospital/AmbulanceFleet';
 import { PatientRecords } from './components/hospital/PatientRecords';
@@ -124,7 +124,7 @@ export default function App() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Ambulance size={18} />
+              <Truck size={18} />
               <span>Transfer Request</span>
             </button>
             <button
@@ -135,7 +135,7 @@ export default function App() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Ambulance size={18} />
+              <Truck size={18} />
               <span>Ambulance Fleet</span>
             </button>
             <button
