@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529396803085",
+    "project_id": "medigo-cs03",
+    "storage_bucket": "medigo-cs03.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529396803085:android:ca802bd7a29d86ff5bd744",
+        "android_client_info": {
+          "package_name": "com.example.driver_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxnqf_BBneyllk_WK2ByAsCsSdgH-qkOs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
