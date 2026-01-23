@@ -5,14 +5,15 @@ class CommonMethods {
   Future<bool> checkConnectivity(BuildContext context) async {
     var connectionResult = await Connectivity().checkConnectivity();
 
-    if (connectionResult != ConnectivityResult.mobile &&
-        connectionResult != ConnectivityResult.wifi) {
+    if (connectionResult == ConnectivityResult.none) {
       if (!context.mounted) return false;
-
       displaySnackBar(
-        "Your internet is not available. Check your connection and try again.", context);
+        "Your internet is not available. Check your connection and try again.",
+        context,
+      );
       return false;
     }
+
     return true;
   }
 
