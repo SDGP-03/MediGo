@@ -1,1 +1,1 @@
-# MediGo - A smart ambulance management system
+Readme FIle
