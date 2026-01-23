@@ -1,5 +1,8 @@
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:driver_application/methods/common_methods.dart';
+import 'package:driver_application/widgets/loading_dialog.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -10,9 +13,9 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-
   TextEditingController userNameTextEditingController = TextEditingController();
-  TextEditingController userPhoneTextEditingController = TextEditingController();
+  TextEditingController userPhoneTextEditingController =
+      TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
@@ -23,17 +26,62 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   signUpFormValidation() {
-    if(userNameTextEditingController.text.trim().length < 4) {
-      cMethods.displaySnackBar("Your name must be atleast 4 or more characters.", context);
-    } else if(userPhoneTextEditingController.text.trim().length < 10) {
-      cMethods.displaySnackBar("Your phone number must be atleast 10 or more characters.", context);
-    } else if(!emailTextEditingController.text.contains("@")) {
+    if (userNameTextEditingController.text.trim().length < 4) {
+      cMethods.displaySnackBar(
+        "Your name must be atleast 4 or more characters.",
+        context,
+      );
+    } else if (userPhoneTextEditingController.text.trim().length < 10) {
+      cMethods.displaySnackBar(
+        "Your phone number must be atleast 10 or more characters.",
+        context,
+      );
+    } else if (!emailTextEditingController.text.contains("@")) {
       cMethods.displaySnackBar("Please write valid email.", context);
-    } else if(passwordTextEditingController.text.trim().length < 6) {
-      cMethods.displaySnackBar("Your password must be atleast 6 or more characters.", context);
+    } else if (passwordTextEditingController.text.trim().length < 6) {
+      cMethods.displaySnackBar(
+        "Your password must be atleast 6 or more characters.",
+        context,
+      );
     } else {
-      //register user
+      registerNewUser();
     }
+  }
+
+  registerNewUser() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) =>
+          LoadingDialog(messageText: "Registering, Please wait..."),
+    );
+
+    final User? userFirebase =
+        (await FirebaseAuth.instance
+                .createUserWithEmailAndPassword(
+                  email: emailTextEditingController.text.trim(),
+                  password: passwordTextEditingController.text.trim(),
+                )
+                .catchError((errorMessage) {
+                  cMethods.displaySnackBar(errorMessage, context);
+                }))
+            .user;
+
+    if (!context.mounted) return;
+    Navigator.pop(context);
+
+    DatabaseReference driversRef = FirebaseDatabase.instance
+        .ref()
+        .child("drivers")
+        .child(userFirebase!.uid);
+    Map driverMap = {
+      "id": userFirebase.uid,
+      "name": userNameTextEditingController.text.trim(),
+      "phone": userPhoneTextEditingController.text.trim(),
+      "email": emailTextEditingController.text.trim(),
+      "blockStatus": "no",
+    };
+    driversRef.set(driverMap);
   }
 
   @override
@@ -51,23 +99,21 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 50),
 
               Container(
-
                 decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          offset: Offset(0, 5)
-                      )
-                    ]
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 5),
+                    ),
+                  ],
                 ),
 
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -107,9 +153,9 @@ class _SignupScreenState extends State<SignupScreen> {
                             "Username",
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           TextField(
                             controller: userNameTextEditingController,
                             keyboardType: TextInputType.text,
@@ -123,7 +169,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 16),
 
                           Text(
@@ -140,21 +186,22 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: "Enter your phone number",
                               prefixIcon: Icon(Icons.phone_outlined),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(12)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
                               ),
                             ),
                           ),
 
                           const SizedBox(height: 16),
 
-
                           Text(
                             "Email Address",
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           TextField(
                             controller: emailTextEditingController,
                             keyboardType: TextInputType.emailAddress,
@@ -162,20 +209,22 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: "driver@medigo.com",
                               prefixIcon: Icon(Icons.email_outlined),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(12)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 16),
-                        
+
                           Text(
                             "Password",
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          
+
                           const SizedBox(height: 8),
-                          
+
                           TextField(
                             controller: passwordTextEditingController,
                             obscureText: true,
@@ -190,7 +239,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 33),
 
                           SizedBox(
@@ -217,7 +266,6 @@ class _SignupScreenState extends State<SignupScreen> {
                               ),
                             ),
                           ),
-
                         ],
                       ),
                     ),
@@ -225,20 +273,20 @@ class _SignupScreenState extends State<SignupScreen> {
                     Center(
                       child: TextButton(
                         onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (c)=> LoginScreen()));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (c) => LoginScreen()),
+                          );
                         },
                         child: const Text(
                           "Already have an Account? Login Here",
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(color: Colors.grey),
                         ),
                       ),
                     ),
-
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),

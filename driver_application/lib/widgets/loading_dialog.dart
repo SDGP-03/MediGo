@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class LoadingDialog extends StatelessWidget {
-  final String message;
+  final String messageText;
 
-  const LoadingDialog({super.key, required this.message});
+  const LoadingDialog({super.key, required this.messageText});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class LoadingDialog extends StatelessWidget {
             const SizedBox(width: 12.0),
             Flexible(
               child: Text(
-                message,
+                messageText,
                 style: const TextStyle(color: Colors.white, fontSize: 16.0),
               ),
             ),
