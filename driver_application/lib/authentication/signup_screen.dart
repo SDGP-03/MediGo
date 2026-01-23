@@ -21,9 +21,11 @@ class _SignupScreenState extends State<SignupScreen> {
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
 
-  checkIfNetworkIsAvailable() {
-    cMethods.checkConnectivity(context);
-    signUpFormValidation();
+  checkIfNetworkIsAvailable() async {
+    bool ok = await cMethods.checkConnectivity(context);
+    if (ok) {
+      signUpFormValidation();
+    }
   }
 
   signUpFormValidation() {
@@ -88,10 +90,39 @@ class _SignupScreenState extends State<SignupScreen> {
         context,
         MaterialPageRoute(builder: (_) => HomePage()),
       );
-    } catch (error) {
+    } on FirebaseAuthException catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      String errorMessage = "Something went wrong. Please try again.";
+
+      switch (e.code) {
+        case 'invalid-email':
+          errorMessage = "Please enter a valid email address.";
+          break;
+
+        case 'email-already-in-use':
+          errorMessage = "This email is already registered.";
+          break;
+
+        case 'weak-password':
+          errorMessage = "Password is too weak. Use at least 6 characters.";
+          break;
+
+        case 'network-request-failed':
+          errorMessage =
+              "Network error. Please check your internet connection.";
+          break;
+      }
+
+      cMethods.displaySnackBar(errorMessage, context);
+    } catch (e) {
       if (context.mounted) {
-        Navigator.pop(context); // close loading dialog
-        cMethods.displaySnackBar(error.toString(), context);
+        Navigator.pop(context);
+        cMethods.displaySnackBar(
+          "Something went wrong. Please try again.",
+          context,
+        );
       }
     }
   }
