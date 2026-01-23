@@ -1,5 +1,6 @@
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:driver_application/methods/common_methods.dart';
+import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/widgets/loading_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -52,36 +53,47 @@ class _SignupScreenState extends State<SignupScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) =>
-          LoadingDialog(messageText: "Registering, Please wait..."),
+      builder: (_) =>
+          const LoadingDialog(messageText: "Registering, Please wait..."),
     );
 
-    final User? userFirebase =
-        (await FirebaseAuth.instance
-                .createUserWithEmailAndPassword(
-                  email: emailTextEditingController.text.trim(),
-                  password: passwordTextEditingController.text.trim(),
-                )
-                .catchError((errorMessage) {
-                  cMethods.displaySnackBar(errorMessage, context);
-                }))
-            .user;
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: emailTextEditingController.text.trim(),
+            password: passwordTextEditingController.text.trim(),
+          );
 
-    if (!context.mounted) return;
-    Navigator.pop(context);
+      User userFirebase = userCredential.user!;
 
-    DatabaseReference driversRef = FirebaseDatabase.instance
-        .ref()
-        .child("drivers")
-        .child(userFirebase!.uid);
-    Map driverMap = {
-      "id": userFirebase.uid,
-      "name": userNameTextEditingController.text.trim(),
-      "phone": userPhoneTextEditingController.text.trim(),
-      "email": emailTextEditingController.text.trim(),
-      "blockStatus": "no",
-    };
-    driversRef.set(driverMap);
+      DatabaseReference driversRef = FirebaseDatabase.instance
+          .ref()
+          .child("drivers")
+          .child(userFirebase.uid);
+
+      Map<String, dynamic> driverMap = {
+        "id": userFirebase.uid,
+        "name": userNameTextEditingController.text.trim(),
+        "phone": userPhoneTextEditingController.text.trim(),
+        "email": emailTextEditingController.text.trim(),
+        "blockStatus": "unblocked",
+      };
+
+      await driversRef.set(driverMap);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // close loading dialog
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomePage()),
+      );
+    } catch (error) {
+      if (context.mounted) {
+        Navigator.pop(context); // close loading dialog
+        cMethods.displaySnackBar(error.toString(), context);
+      }
+    }
   }
 
   @override
