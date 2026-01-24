@@ -25,6 +25,7 @@ import {
   YAxis,
   ResponsiveContainer,
 } from "recharts";
+import { AmbulanceMap } from "./AmbulanceMap";
 
 export function HospitalDashboard() {
   const [mapView, setMapView] = useState<"map" | "list">("map");
@@ -98,6 +99,8 @@ export function HospitalDashboard() {
       status: "available",
       driver: "John Smith",
       location: "City General Hospital",
+      lat: 6.9271,
+      lng: 79.8612,
       position: { left: "25%", top: "33%" },
     },
     {
@@ -105,6 +108,8 @@ export function HospitalDashboard() {
       status: "available",
       driver: "Mike Chen",
       location: "Divisional Hospital North",
+      lat: 6.9350,
+      lng: 79.8700,
       position: { left: "33%", bottom: "33%" },
     },
     {
@@ -112,6 +117,8 @@ export function HospitalDashboard() {
       status: "available",
       driver: "Emily Davis",
       location: "City General Hospital",
+      lat: 6.9200,
+      lng: 79.8500,
       position: { left: "66%", top: "25%" },
     },
     {
@@ -120,6 +127,8 @@ export function HospitalDashboard() {
       driver: "Sarah Lee",
       location: "En route to Central Medical",
       eta: "12 mins",
+      lat: 6.9150,
+      lng: 79.8550,
       position: { right: "33%", top: "25%" },
     },
     {
@@ -128,6 +137,8 @@ export function HospitalDashboard() {
       driver: "Robert Taylor",
       location: "En route to Regional Base",
       eta: "18 mins",
+      lat: 6.9400,
+      lng: 79.8750,
       position: { right: "25%", bottom: "25%" },
     },
     {
@@ -135,6 +146,8 @@ export function HospitalDashboard() {
       status: "busy",
       driver: "Jennifer White",
       location: "At Central Medical Center",
+      lat: 6.9100,
+      lng: 79.8600,
       position: { left: "50%", top: "25%" },
     },
     {
@@ -142,6 +155,8 @@ export function HospitalDashboard() {
       status: "busy",
       driver: "Chris Johnson",
       location: "At Specialist Hospital",
+      lat: 6.9300,
+      lng: 79.8650,
       position: { right: "33%", bottom: "33%" },
     },
     {
@@ -149,6 +164,8 @@ export function HospitalDashboard() {
       status: "standby",
       driver: "David Brown",
       location: "Base Station A",
+      lat: 6.9250,
+      lng: 79.8620,
       position: { left: "40%", top: "50%" },
     },
     {
@@ -156,6 +173,8 @@ export function HospitalDashboard() {
       status: "standby",
       driver: "Lisa Anderson",
       location: "Base Station B",
+      lat: 6.9280,
+      lng: 79.8630,
       position: { right: "40%", bottom: "40%" },
     },
     {
@@ -163,6 +182,8 @@ export function HospitalDashboard() {
       status: "offline",
       driver: "David Kumar",
       location: "Service Center",
+      lat: 6.9000,
+      lng: 79.9000,
       position: { right: "20%", top: "40%" },
     },
     {
@@ -170,6 +191,8 @@ export function HospitalDashboard() {
       status: "offline",
       driver: "James Wilson",
       location: "Maintenance Bay",
+      lat: 6.9500,
+      lng: 79.8800,
       position: { left: "60%", bottom: "20%" },
     },
   ];
@@ -352,107 +375,18 @@ export function HospitalDashboard() {
 
             {/* Map View */}
             {mapView === "map" && (
-              <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 h-96">
-                {/* Map Background with grid */}
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: `
-                    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)
-                  `,
-                    backgroundSize: "40px 40px",
-                  }}
-                ></div>
-
-                {/* Road Lines */}
-                <div className="absolute inset-0">
-                  <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                  <div className="absolute left-0 right-0 top-1/2 h-1 bg-yellow-400"></div>
-                </div>
-
-                {/* Ambulance Markers */}
-                {ambulances.map((amb) => (
-                  <div
-                    key={amb.id}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                    style={amb.position}
-                  >
-                    <div className="relative">
-                      <div
-                        className={`w-12 h-12 ${getStatusColor(amb.status)} rounded-full flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110`}
-                      >
-                        <Ambulance size={20} />
-                      </div>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        <div className="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap">
-                          <p className="font-medium">
-                            {amb.id}
-                          </p>
-                          <p className="text-gray-300">
-                            {amb.driver}
-                          </p>
-                          {amb.eta && (
-                            <p className="text-blue-400">
-                              ETA: {amb.eta}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Map Controls */}
-                <div className="absolute right-4 top-4 bg-white rounded-lg shadow-md overflow-hidden">
-                  <button className="p-2 hover:bg-gray-50 border-b border-gray-200 block">
-                    <Plus size={20} className="text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-50 border-b border-gray-200 block">
-                    <Minus
-                      size={20}
-                      className="text-gray-600"
-                    />
-                  </button>
-                  <button className="p-2 hover:bg-gray-50 border-b border-gray-200 block">
-                    <Navigation
-                      size={20}
-                      className="text-gray-600"
-                    />
-                  </button>
-                  <button className="p-2 hover:bg-gray-50 block">
-                    <Maximize2
-                      size={20}
-                      className="text-gray-600"
-                    />
-                  </button>
-                </div>
-
-                {/* Legend */}
-                <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md px-4 py-3">
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
-                      <span className="text-gray-700">
-                        Available
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="text-gray-700">
-                        En Route
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="text-gray-700">
-                        Busy
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <AmbulanceMap
+                ambulances={ambulances.map(amb => ({
+                  id: amb.id,
+                  status: amb.status,
+                  driver: amb.driver,
+                  location: amb.location,
+                  eta: amb.eta,
+                  lat: amb.lat,
+                  lng: amb.lng,
+                }))}
+                height="384px"
+              />
             )}
 
             {/* List View */}

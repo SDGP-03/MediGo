@@ -1,0 +1,477 @@
+import { useMemo, useCallback, useState, useEffect } from 'react';
+import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import { Ambulance, MapPin, Navigation } from 'lucide-react';
+
+interface AmbulanceLocation {
+  id: string;
+  status: 'available' | 'on_way' | 'busy' | 'standby' | 'offline';
+  driver: string;
+  location: string;
+  eta?: string;
+  lat: number;
+  lng: number;
+}
+
+interface AmbulanceMapProps {
+  ambulances: AmbulanceLocation[];
+  height?: string;
+}
+
+// Default center (Colombo, Sri Lanka)
+const defaultCenter = {
+  lat: 6.9271,
+  lng: 79.8612,
+};
+
+const defaultZoom = 12;
+
+// Marker colors based on status
+const getMarkerColor = (status: string): string => {
+  switch (status) {
+    case 'available':
+      return '#14b8a6'; // teal-500
+    case 'on_way':
+      return '#3b82f6'; // blue-500
+    case 'busy':
+      return '#f97316'; // orange-500
+    case 'standby':
+      return '#eab308'; // yellow-500
+    case 'offline':
+      return '#ec4899'; // pink-500
+    default:
+      return '#6b7280'; // gray-500
+  }
+};
+
+export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps) {
+  const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
+  const [showUserLocationInfo, setShowUserLocationInfo] = useState(false);
+
+  // Load Google Maps API
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+  });
+
+  // Create marker icon function that works after Google Maps loads
+  const getMarkerIcon = useCallback((color: string) => {
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
+    
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      scale: 8,
+    } as google.maps.Symbol;
+  }, [isLoaded]);
+
+  // Calculate map bounds to fit all markers including user location
+  const bounds = useMemo(() => {
+    if ((ambulances.length === 0 && !userLocation) || typeof google === 'undefined') return null;
+    
+    const bounds = new google.maps.LatLngBounds();
+    ambulances.forEach((amb) => {
+      bounds.extend({ lat: amb.lat, lng: amb.lng });
+    });
+    if (userLocation) {
+      bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
+    }
+    return bounds;
+  }, [ambulances, userLocation]);
+
+  // Fit bounds when map loads
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+    if (bounds && typeof google !== 'undefined') {
+      // Add padding to bounds
+      const padding = 50;
+      map.fitBounds(bounds, padding);
+    }
+  }, [bounds]);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
+
+  // Handle marker click
+  const handleMarkerClick = (ambulance: AmbulanceLocation) => {
+    setSelectedAmbulance(ambulance);
+    setShowUserLocationInfo(false);
+  };
+
+  // Handle zoom controls
+  const handleZoomIn = () => {
+    if (map) {
+      const currentZoom = map.getZoom() || defaultZoom;
+      map.setZoom(currentZoom + 1);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (map) {
+      const currentZoom = map.getZoom() || defaultZoom;
+      map.setZoom(currentZoom - 1);
+    }
+  };
+
+  const handleCenterMap = () => {
+    if (map && bounds) {
+      map.fitBounds(bounds, 50);
+    } else if (map) {
+      map.setCenter(defaultCenter);
+      map.setZoom(defaultZoom);
+    }
+  };
+
+  // Center map on user location
+  const handleCenterOnUser = () => {
+    if (map && userLocation) {
+      map.setCenter(userLocation);
+      map.setZoom(15);
+    }
+  };
+
+  // Get user's current location
+  const getCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        setUserLocation(location);
+        
+        // Center map on user location if tracking is enabled
+        if (map && isTracking) {
+          map.setCenter(location);
+        }
+      },
+      (error) => {
+        let errorMessage = 'Unable to retrieve your location';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied by user';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out';
+            break;
+        }
+        setLocationError(errorMessage);
+        setIsTracking(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  }, [map, isTracking]);
+
+  // Start/stop location tracking
+  const toggleTracking = useCallback(() => {
+    if (isTracking) {
+      // Stop tracking
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        setWatchId(null);
+      }
+      setIsTracking(false);
+    } else {
+      // Start tracking
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by your browser');
+        return;
+      }
+
+      setLocationError(null);
+      const id = navigator.geolocation.watchPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setUserLocation(location);
+          
+          // Update map center if tracking
+          if (map) {
+            map.setCenter(location);
+          }
+        },
+        (error) => {
+          let errorMessage = 'Unable to retrieve your location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied by user';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out';
+              break;
+          }
+          setLocationError(errorMessage);
+          setIsTracking(false);
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            setWatchId(null);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 5000,
+        }
+      );
+      setWatchId(id);
+      setIsTracking(true);
+    }
+  }, [isTracking, watchId, map]);
+
+  // Cleanup watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [watchId]);
+
+  // Create user location marker icon
+  const getUserLocationIcon = useCallback(() => {
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
+    
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: '#ef4444', // red-500
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 3,
+      scale: 10,
+    } as google.maps.Symbol;
+  }, [isLoaded]);
+
+  if (!isLoaded) {
+    return (
+      <div 
+        className="flex items-center justify-center bg-gray-100"
+        style={{ height }}
+      >
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-2"></div>
+          <p className="text-gray-600 text-sm">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative" style={{ height }}>
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100%' }}
+        center={defaultCenter}
+        zoom={defaultZoom}
+        onLoad={onLoad}
+        onUnmount={onUnmount}
+        options={{
+          disableDefaultUI: false,
+          zoomControl: false,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+        }}
+      >
+        {ambulances.map((ambulance) => {
+          const color = getMarkerColor(ambulance.status);
+          const icon = getMarkerIcon(color);
+
+          return (
+            <Marker
+              key={ambulance.id}
+              position={{ lat: ambulance.lat, lng: ambulance.lng }}
+              icon={icon}
+              onClick={() => handleMarkerClick(ambulance)}
+            />
+          );
+        })}
+
+        {/* User Location Marker */}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={getUserLocationIcon()}
+            title="Your Location"
+            zIndex={1000}
+            onClick={() => {
+              setShowUserLocationInfo(true);
+              setSelectedAmbulance(null);
+            }}
+          />
+        )}
+
+        {selectedAmbulance && (
+          <InfoWindow
+            position={{ lat: selectedAmbulance.lat, lng: selectedAmbulance.lng }}
+            onCloseClick={() => setSelectedAmbulance(null)}
+          >
+            <div className="p-2">
+              <h3 className="font-semibold text-gray-900 mb-1">{selectedAmbulance.id}</h3>
+              <p className="text-gray-600 text-sm mb-1">{selectedAmbulance.driver}</p>
+              <p className="text-gray-500 text-xs mb-1">{selectedAmbulance.location}</p>
+              {selectedAmbulance.eta && (
+                <p className="text-blue-600 text-xs">ETA: {selectedAmbulance.eta}</p>
+              )}
+            </div>
+          </InfoWindow>
+        )}
+
+        {/* User Location Info Window */}
+        {userLocation && showUserLocationInfo && (
+          <InfoWindow
+            position={userLocation}
+            onCloseClick={() => setShowUserLocationInfo(false)}
+          >
+            <div className="p-2">
+              <h3 className="font-semibold text-red-600 mb-1 flex items-center gap-1">
+                <MapPin size={14} />
+                Your Location
+              </h3>
+              <p className="text-gray-600 text-xs mb-1">
+                {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
+              </p>
+              {isTracking && (
+                <p className="text-green-600 text-xs">📍 Live Tracking Active</p>
+              )}
+            </div>
+          </InfoWindow>
+        )}
+      </GoogleMap>
+
+      {/* Map Controls */}
+      <div className="absolute right-4 top-4 bg-white rounded-lg shadow-md overflow-hidden z-10">
+        <button
+          onClick={handleZoomIn}
+          className="p-2 hover:bg-gray-50 border-b border-gray-200 block w-full"
+          title="Zoom in"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="p-2 hover:bg-gray-50 border-b border-gray-200 block w-full"
+          title="Zoom out"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+          </svg>
+        </button>
+        <button
+          onClick={handleCenterMap}
+          className="p-2 hover:bg-gray-50 border-b border-gray-200 block w-full"
+          title="Center map on all markers"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+        </button>
+        {userLocation && (
+          <button
+            onClick={handleCenterOnUser}
+            className="p-2 hover:bg-gray-50 border-b border-gray-200 block w-full"
+            title="Center on my location"
+          >
+            <Navigation className="h-5 w-5 text-red-600" />
+          </button>
+        )}
+        <button
+          onClick={toggleTracking}
+          className={`p-2 hover:bg-gray-50 block w-full ${
+            isTracking ? 'bg-red-50' : ''
+          }`}
+          title={isTracking ? 'Stop tracking' : 'Start tracking my location'}
+        >
+          <MapPin className={`h-5 w-5 ${isTracking ? 'text-red-600' : 'text-gray-600'}`} />
+        </button>
+      </div>
+
+      {/* Location Error Message */}
+      {locationError && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg shadow-md z-10 max-w-md">
+          <p className="text-sm">{locationError}</p>
+          <button
+            onClick={() => setLocationError(null)}
+            className="text-red-500 hover:text-red-700 text-xs mt-1 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md px-4 py-3 z-10">
+        <div className="flex items-center gap-4 text-xs flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+            <span className="text-gray-700">Your Location</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+            <span className="text-gray-700">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+            <span className="text-gray-700">En Route</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+            <span className="text-gray-700">Busy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            <span className="text-gray-700">Standby</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+            <span className="text-gray-700">Offline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
