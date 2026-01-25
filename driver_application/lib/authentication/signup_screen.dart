@@ -39,7 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
         "Your phone number must be atleast 10 or more characters.",
         context,
       );
-    } else if (!emailTextEditingController.text.contains("@")) {
+    } else if (!emailTextEditingController.text.contains("@medigo.lk")) {
       cMethods.displaySnackBar("Please write valid email.", context);
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(

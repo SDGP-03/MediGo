@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   signInFormValidation() {
-    if (!emailTextEditingController.text.contains("@")) {
+    if (!emailTextEditingController.text.contains("@medigo.lk")) {
       cMethods.displaySnackBar("Please write valid email.", context);
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(
