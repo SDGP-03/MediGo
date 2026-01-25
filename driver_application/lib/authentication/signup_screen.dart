@@ -249,7 +249,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: emailTextEditingController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              hintText: "driver@medigo.com",
+                              hintText: "driver@medigo.lk",
                               prefixIcon: Icon(Icons.email_outlined),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
