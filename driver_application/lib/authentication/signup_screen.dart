@@ -39,7 +39,7 @@ class _SignupScreenState extends State<SignupScreen> {
         "Your phone number must be atleast 10 or more characters.",
         context,
       );
-    } else if (!emailTextEditingController.text.contains("@")) {
+    } else if (!emailTextEditingController.text.contains("@medigo.lk")) {
       cMethods.displaySnackBar("Please write valid email.", context);
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(
@@ -249,7 +249,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: emailTextEditingController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              hintText: "driver@medigo.com",
+                              hintText: "driver@medigo.lk",
                               prefixIcon: Icon(Icons.email_outlined),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
@@ -318,7 +318,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (c) => LoginScreen()),
+                            MaterialPageRoute(builder: (_) => LoginScreen()),
                           );
                         },
                         child: const Text(

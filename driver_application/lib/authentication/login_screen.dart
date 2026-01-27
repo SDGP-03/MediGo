@@ -26,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   signInFormValidation() {
-    if (!emailTextEditingController.text.contains("@")) {
+    if (!emailTextEditingController.text.contains("@medigo.lk")) {
       cMethods.displaySnackBar("Please write valid email.", context);
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(
@@ -202,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: emailTextEditingController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
-                              hintText: "driver@medigo.com",
+                              hintText: "driver@medigo.lk",
                               prefixIcon: Icon(Icons.email_outlined),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
@@ -271,7 +271,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (c) => SignupScreen()),
+                            MaterialPageRoute(builder: (_) => SignupScreen()),
                           );
                         },
                         child: const Text(
