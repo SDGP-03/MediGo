@@ -6,38 +6,93 @@ class SideMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Color(0xFFD60000)),
-            child: Text(
-              'Menu',
-              style: TextStyle(color: Colors.white, fontSize: 24),
+      child: Container(
+        color: const Color.fromARGB(255, 255, 230, 230), // light red
+        child: Column(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Color.fromARGB(255, 255, 162, 162),
+              ),
+              child: Center(
+                child: Image(
+                  image: AssetImage('assets/logo/logo.png'),
+                  width: 120,
+                  height: 120,
+                ),
+              ),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Home'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
-        ],
+
+            // Home
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/home');
+              },
+            ),
+
+            // Edit Profile
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Edit Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/edit-profile');
+              },
+            ),
+
+            // History
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('History'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/history');
+              },
+            ),
+
+            // Navigation Page
+            ListTile(
+              leading: const Icon(Icons.navigation),
+              title: const Text('Navigation'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/navigation');
+              },
+            ),
+
+            const Spacer(),
+
+            // Settings
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/settings');
+              },
+            ),
+
+            const Divider(
+              thickness: 1.5,
+              color: Colors.redAccent,
+              indent: 16,
+              endIndent: 16,
+            ),
+
+            // Logout
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                // handle logout logic here
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
