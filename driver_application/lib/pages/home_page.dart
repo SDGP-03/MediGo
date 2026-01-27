@@ -14,7 +14,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       drawer: const SideMenu(),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFD60000),
+        backgroundColor: const Color.fromARGB(255, 255, 59, 59),
         title: const Text('MediGo', style: TextStyle(color: Colors.white)),
         actions: const [
           Padding(
