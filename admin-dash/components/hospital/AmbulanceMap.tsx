@@ -12,6 +12,17 @@ interface AmbulanceLocation {
   lng: number;
 }
 
+// Interface for tracked device from external tracker app
+interface TrackedDevice {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  accuracy: number;
+  timestamp: number;
+  isTracking: boolean;
+}
+
 interface AmbulanceMapProps {
   ambulances: AmbulanceLocation[];
   height?: string;
@@ -52,6 +63,44 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
   const [watchId, setWatchId] = useState<number | null>(null);
   const [showUserLocationInfo, setShowUserLocationInfo] = useState(false);
 
+  // State for external tracked device
+  const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
+  const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
+
+  // Listen for location updates from external tracker app via BroadcastChannel
+  useEffect(() => {
+    // Try to load initial data from localStorage
+    try {
+      const storedData = localStorage.getItem('medigo-tracked-device');
+      if (storedData) {
+        const data = JSON.parse(storedData) as TrackedDevice;
+        // Only use if data is recent (within last 5 minutes) and tracking is active
+        if (data.isTracking && Date.now() - data.timestamp < 5 * 60 * 1000) {
+          setTrackedDevice(data);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load tracked device from localStorage:', e);
+    }
+
+    // Set up BroadcastChannel listener for real-time updates
+    const channel = new BroadcastChannel('medigo-device-tracker');
+
+    channel.onmessage = (event) => {
+      const { type, data } = event.data;
+
+      if (type === 'LOCATION_UPDATE') {
+        setTrackedDevice(data as TrackedDevice);
+      } else if (type === 'TRACKING_STOPPED') {
+        setTrackedDevice(prev => prev ? { ...prev, isTracking: false } : null);
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, []);
+
   // Load Google Maps API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -61,7 +110,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
   // Create marker icon function that works after Google Maps loads
   const getMarkerIcon = useCallback((color: string) => {
     if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
-    
+
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: color,
@@ -72,10 +121,10 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     } as google.maps.Symbol;
   }, [isLoaded]);
 
-  // Calculate map bounds to fit all markers including user location
+  // Calculate map bounds to fit all markers including user location and tracked device
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation) || typeof google === 'undefined') return null;
-    
+    if ((ambulances.length === 0 && !userLocation && !trackedDevice) || typeof google === 'undefined') return null;
+
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
       bounds.extend({ lat: amb.lat, lng: amb.lng });
@@ -83,8 +132,11 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     if (userLocation) {
       bounds.extend({ lat: userLocation.lat, lng: userLocation.lng });
     }
+    if (trackedDevice && trackedDevice.isTracking) {
+      bounds.extend({ lat: trackedDevice.lat, lng: trackedDevice.lng });
+    }
     return bounds;
-  }, [ambulances, userLocation]);
+  }, [ambulances, userLocation, trackedDevice]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -153,7 +205,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
           lng: position.coords.longitude,
         };
         setUserLocation(location);
-        
+
         // Center map on user location if tracking is enabled
         if (map && isTracking) {
           map.setCenter(location);
@@ -207,7 +259,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             lng: position.coords.longitude,
           };
           setUserLocation(location);
-          
+
           // Update map center if tracking
           if (map) {
             map.setCenter(location);
@@ -256,7 +308,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
   // Create user location marker icon
   const getUserLocationIcon = useCallback(() => {
     if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
-    
+
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: '#ef4444', // red-500
@@ -267,9 +319,23 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     } as google.maps.Symbol;
   }, [isLoaded]);
 
+  // Create tracked device marker icon (purple/violet for external tracker)
+  const getTrackedDeviceIcon = useCallback(() => {
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
+
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: '#8b5cf6', // violet-500
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 3,
+      scale: 12,
+    } as google.maps.Symbol;
+  }, [isLoaded]);
+
   if (!isLoaded) {
     return (
-      <div 
+      <div
         className="flex items-center justify-center bg-gray-100"
         style={{ height }}
       >
@@ -361,6 +427,46 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             </div>
           </InfoWindow>
         )}
+
+        {/* Tracked Device Marker (from external tracker app) */}
+        {trackedDevice && trackedDevice.isTracking && (
+          <Marker
+            position={{ lat: trackedDevice.lat, lng: trackedDevice.lng }}
+            icon={getTrackedDeviceIcon()}
+            title={trackedDevice.name}
+            zIndex={1001}
+            onClick={() => {
+              setShowTrackedDeviceInfo(true);
+              setSelectedAmbulance(null);
+              setShowUserLocationInfo(false);
+            }}
+          />
+        )}
+
+        {/* Tracked Device Info Window */}
+        {trackedDevice && trackedDevice.isTracking && showTrackedDeviceInfo && (
+          <InfoWindow
+            position={{ lat: trackedDevice.lat, lng: trackedDevice.lng }}
+            onCloseClick={() => setShowTrackedDeviceInfo(false)}
+          >
+            <div className="p-2">
+              <h3 className="font-semibold text-violet-600 mb-1 flex items-center gap-1">
+                <Navigation size={14} />
+                {trackedDevice.name}
+              </h3>
+              <p className="text-gray-600 text-xs mb-1">
+                ID: {trackedDevice.id}
+              </p>
+              <p className="text-gray-600 text-xs mb-1">
+                {trackedDevice.lat.toFixed(6)}, {trackedDevice.lng.toFixed(6)}
+              </p>
+              <p className="text-gray-500 text-xs mb-1">
+                Accuracy: ±{Math.round(trackedDevice.accuracy)}m
+              </p>
+              <p className="text-violet-600 text-xs">📡 Live Tracking</p>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
 
       {/* Map Controls */}
@@ -421,9 +527,8 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
         )}
         <button
           onClick={toggleTracking}
-          className={`p-2 hover:bg-gray-50 block w-full ${
-            isTracking ? 'bg-red-50' : ''
-          }`}
+          className={`p-2 hover:bg-gray-50 block w-full ${isTracking ? 'bg-red-50' : ''
+            }`}
           title={isTracking ? 'Stop tracking' : 'Start tracking my location'}
         >
           <MapPin className={`h-5 w-5 ${isTracking ? 'text-red-600' : 'text-gray-600'}`} />
@@ -470,6 +575,12 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
             <span className="text-gray-700">Offline</span>
           </div>
+          {trackedDevice && trackedDevice.isTracking && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-violet-500 rounded-full border-2 border-white"></div>
+              <span className="text-gray-700">Tracked Device</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
