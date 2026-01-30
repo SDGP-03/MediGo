@@ -15,9 +15,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   final Completer<GoogleMapController> googleMapsCompleterController =
-  Completer<GoogleMapController>();
+      Completer<GoogleMapController>();
 
   GoogleMapController? controllerGoogleMap;
 
@@ -30,50 +29,46 @@ class _HomePageState extends State<HomePage> {
   // ================= LIVE LOCATION TRACKING =================
 
   void startLiveLocationUpdates() {
-
     LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 10, // update every 10 meters
     );
 
-    positionStream = Geolocator.getPositionStream(
-      locationSettings: locationSettings,
-    ).listen((Position position) {
+    positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (Position position) {
+            driverCurrentPosition = position;
 
-      driverCurrentPosition = position;
+            LatLng newPosition = LatLng(position.latitude, position.longitude);
 
-      LatLng newPosition =
-      LatLng(position.latitude, position.longitude);
+            // Update marker
+            Marker updatedMarker = Marker(
+              markerId: const MarkerId("driverMarker"),
+              position: newPosition,
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueRed,
+              ),
+              infoWindow: const InfoWindow(title: "You"),
+            );
 
-      // Update marker
-      Marker updatedMarker = Marker(
-        markerId: const MarkerId("driverMarker"),
-        position: newPosition,
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueRed,
-        ),
-        infoWindow: const InfoWindow(title: "You"),
-      );
+            setState(() {
+              driverMarker = updatedMarker;
+            });
 
-      setState(() {
-        driverMarker = updatedMarker;
-      });
-
-      // Move camera with driver
-      if (controllerGoogleMap != null) {
-        controllerGoogleMap!.animateCamera(
-          CameraUpdate.newLatLng(newPosition),
+            // Move camera with driver
+            if (controllerGoogleMap != null) {
+              controllerGoogleMap!.animateCamera(
+                CameraUpdate.newLatLng(newPosition),
+              );
+            }
+          },
         );
-      }
-    });
   }
 
   // ================= PERMISSION HANDLER =================
 
   Future<void> checkLocationPermission() async {
-
-    LocationPermission permission =
-    await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -98,32 +93,20 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       drawer: const SideMenu(),
 
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 59, 59),
-        title: const Text(
-          'MediGo',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('MediGo', style: TextStyle(color: Colors.white)),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 16),
             child: Row(
               children: [
-                Icon(
-                  Icons.circle,
-                  color: Colors.green,
-                  size: 10,
-                ),
+                Icon(Icons.circle, color: Colors.green, size: 10),
                 SizedBox(width: 6),
-                Text(
-                  'Online',
-                  style: TextStyle(color: Colors.white),
-                ),
+                Text('Online', style: TextStyle(color: Colors.white)),
               ],
             ),
           ),
@@ -135,9 +118,7 @@ class _HomePageState extends State<HomePage> {
         myLocationEnabled: true,
         initialCameraPosition: googlePlexInitialPosition,
 
-        markers: driverMarker != null
-            ? {driverMarker!}
-            : {},
+        markers: driverMarker != null ? {driverMarker!} : {},
 
         onMapCreated: (GoogleMapController mapController) {
           controllerGoogleMap = mapController;
