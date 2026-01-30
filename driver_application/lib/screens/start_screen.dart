@@ -17,7 +17,7 @@ class StartScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset("assets/logo/logo.png", height: 200),
+                    Image.asset("assets/logo/logo.png", height: 180),
                     const SizedBox(height: 40),
 
                     const Text(
