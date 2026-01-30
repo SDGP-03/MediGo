@@ -1,4 +1,6 @@
 import 'package:driver_application/authentication/login_screen.dart';
+import 'package:driver_application/screens/start_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatelessWidget {
@@ -99,14 +101,16 @@ class SideMenu extends StatelessWidget {
                         child: const Text('Cancel'),
                       ),
                       TextButton(
-                        onPressed: () {
+                        onPressed: () async {
                           Navigator.pop(context);
                           Navigator.pop(context);
+
+                          await FirebaseAuth.instance.signOut();
 
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
+                              builder: (_) => const LoginScreen(),
                             ),
                             (route) => false,
                           );
