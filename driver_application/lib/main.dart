@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       title: 'MediGo Driver Application',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light().copyWith(
-        scaffoldBackgroundColor: const Color(0xFFFAF3F5),
+        scaffoldBackgroundColor: const Color(0xFFF4E6EA),
       ),
       home: FirebaseAuth.instance.currentUser == null
           ? const StartScreen()

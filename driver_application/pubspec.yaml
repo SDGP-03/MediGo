@@ -42,7 +42,7 @@ dependencies:
   firebase_storage: ^13.0.6
   google_maps_flutter:
   permission_handler:
-  geolocator: 
+  geolocator:
 
 dev_dependencies:
   flutter_test:
@@ -68,11 +68,11 @@ flutter_icons:
   adaptive_icon_background: "#FFFAF3F5"
 
 flutter_native_splash:
-  color: "#FAF3F5"
+  color: "#F4E6EA"
   image: assets/splash/splash.png
 
   android_12:
-    color: "#FAF3F5"
+    color: "#F4E6EA"
     image: assets/splash/splash.png
 
 # For information on the generic Dart part of this file, see the
