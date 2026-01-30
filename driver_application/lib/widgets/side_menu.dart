@@ -1,5 +1,4 @@
 import 'package:driver_application/authentication/login_screen.dart';
-import 'package:driver_application/screens/start_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
