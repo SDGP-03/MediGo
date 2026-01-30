@@ -1,4 +1,6 @@
+import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/screens/start_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -6,8 +8,8 @@ import 'package:permission_handler/permission_handler.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await Permission.locationWhenInUse.isDenied.then((valueOfPermission){
-    if(valueOfPermission){
+  await Permission.locationWhenInUse.isDenied.then((valueOfPermission) {
+    if (valueOfPermission) {
       Permission.locationWhenInUse.request();
     }
   });
@@ -26,7 +28,9 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFFAF3F5),
       ),
-      home: StartScreen(),
+      home: FirebaseAuth.instance.currentUser == null
+          ? const StartScreen()
+          : const HomePage(),
     );
   }
 }
