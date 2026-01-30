@@ -14,7 +14,7 @@ class SideMenu extends StatelessWidget {
           children: [
             const DrawerHeader(
               decoration: BoxDecoration(
-                color: Color.fromARGB(255, 255, 138, 138),
+                color: Color.fromARGB(255, 255, 171, 171),
               ),
               child: Center(
                 child: Image(
