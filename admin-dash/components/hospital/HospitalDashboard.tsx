@@ -56,8 +56,8 @@ export function HospitalDashboard() {
       value: "3/11",
       change: "In service",
       icon: Ambulance,
-      color: "text-teal-600",
-      bgColor: "bg-teal-50",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-50",
     },
     {
       label: "On the Way",
@@ -80,16 +80,16 @@ export function HospitalDashboard() {
       value: "2",
       change: "Ready",
       icon: Users,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      color: "text-slate-600",
+      bgColor: "bg-slate-50",
     },
     {
       label: "Offline",
       value: "2",
       change: "Maintenance",
       icon: AlertCircle,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
+      color: "text-red-600",
+      bgColor: "bg-red-50",
     },
   ];
 
@@ -273,21 +273,21 @@ export function HospitalDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-teal-500";
+        return "bg-emerald-500";
       case "on_way":
         return "bg-blue-500";
       case "busy":
         return "bg-orange-500";
       case "standby":
-        return "bg-yellow-500";
+        return "bg-slate-500";
       case "offline":
-        return "bg-pink-600";
+        return "bg-red-600";
       case "in_transit":
         return "bg-blue-100 text-blue-700";
       case "patient_loaded":
         return "bg-green-100 text-green-700";
       case "dispatched":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-blue-100 text-blue-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -378,7 +378,7 @@ export function HospitalDashboard() {
               <AmbulanceMap
                 ambulances={ambulances.map(amb => ({
                   id: amb.id,
-                  status: amb.status,
+                  status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
                   driver: amb.driver,
                   location: amb.location,
                   eta: amb.eta,
