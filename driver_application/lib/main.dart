@@ -32,7 +32,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFF4E6EA),
       ),
-      initialRoute: '/start',
+
+      home: FirebaseAuth.instance.currentUser == null
+          ? const StartScreen()
+          : const HomePage(),
 
       routes: {
         '/start': (context) => const StartScreen(),
