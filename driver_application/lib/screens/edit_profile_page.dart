@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -8,25 +13,100 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
+  File? selectedImage;
+  String? networkProfileImage;
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController vehicleController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final DatabaseReference driversRef = FirebaseDatabase.instance.ref().child(
+    "drivers",
+  );
 
   bool isSaving = false;
 
-  void saveProfile() async {
-    if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus(); // close keyboard
+  void loadProfileData() async {
+    User? user = _auth.currentUser;
 
+    if (user == null) return;
+
+    DatabaseEvent event = await driversRef.child(user.uid).once();
+
+    if (event.snapshot.value == null) return;
+
+    Map data = event.snapshot.value as Map;
+
+    setState(() {
+      networkProfileImage = data["profileImage"];
+      nameController.text = data["name"] ?? "";
+      phoneController.text = data["phone"] ?? "";
+      vehicleController.text = data["vehicleNumber"] ?? "";
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfileData(); // AUTO LOAD PROFILE DATA
+  }
+
+  Future<void> pickProfileImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 512,
+    );
+
+    if (image != null) {
       setState(() {
-        isSaving = true;
+        selectedImage = File(image.path);
       });
+    }
+  }
 
-      // Simulate API/Firebase delay
-      await Future.delayed(const Duration(seconds: 2));
+  Future<String?> uploadProfileImage(String uid) async {
+    if (selectedImage == null) return null;
 
-      setState(() {
-        isSaving = false;
+    Reference storageRef = FirebaseStorage.instance
+        .ref()
+        .child("driver_profile_images")
+        .child("$uid.jpg");
+
+    UploadTask uploadTask = storageRef.putFile(selectedImage!);
+
+    TaskSnapshot snapshot = await uploadTask;
+
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+
+    return downloadUrl;
+  }
+
+  void saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      User? user = _auth.currentUser;
+
+      if (user == null) {
+        throw Exception("User not logged in");
+      }
+
+      String uid = user.uid;
+      String? imageUrl = await uploadProfileImage(uid);
+
+      await driversRef.child(uid).update({
+        "name": nameController.text.trim(),
+        "phone": phoneController.text.trim(),
+        "vehicleNumber": vehicleController.text.trim(),
+        if (imageUrl != null) "profileImage": imageUrl,
       });
 
       if (!mounted) return;
@@ -34,6 +114,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully")),
       );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to update profile")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
     }
   }
 
@@ -55,11 +147,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   CircleAvatar(
                     radius: 55,
                     backgroundColor: Colors.grey.shade300,
-                    child: const Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Colors.white,
-                    ),
+
+                    backgroundImage: selectedImage != null
+                        ? FileImage(selectedImage!)
+                        : (networkProfileImage != null
+                              ? NetworkImage(networkProfileImage!)
+                                    as ImageProvider
+                              : null),
+
+                    child: selectedImage == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.white,
+                          )
+                        : null,
                   ),
 
                   Positioned(
@@ -78,7 +180,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           color: Colors.white,
                         ),
                         onPressed: () {
-                          // Add image picker later
+                          pickProfileImage();
                         },
                       ),
                     ),
