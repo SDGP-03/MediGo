@@ -239,6 +239,28 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
+                            "Vehicle Number",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          TextField(
+                            keyboardType: TextInputType.text,
+                            decoration: const InputDecoration(
+                              hintText: "Enter your vehicle number",
+                              prefixIcon: Icon(Icons.directions_car_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          Text(
                             "Email Address",
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
