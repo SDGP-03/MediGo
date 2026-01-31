@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Ambulance, Users, BarChart3, LogOut } from 'lucide-react';
+import { Ambulance, Users, BarChart3, LogOut, Activity } from 'lucide-react';
 import { TransferRequest } from './components/hospital/TransferRequest';
 import { AmbulanceFleet } from './components/hospital/AmbulanceFleet';
 import { PatientRecords } from './components/hospital/PatientRecords';
@@ -42,34 +42,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50/50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100/50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-red-600 p-2 rounded-lg">
-                <Activity className="text-white" size={28} />
-              </div>
-              <div>
-                <h1 className="text-red-600">MediGo Hospital Transfer System</h1>
-                <p className="text-gray-600 text-sm">Inter-Hospital Patient Transfer Management</p>
-              </div>
+              <img src="/logo.png" alt="MediGo Logo" className="h-10 w-auto" />
             </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-gray-700 text-sm">{hospitalNames[hospitalAccount.hospitalId] || 'Hospital'}</span>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50/50 rounded-full border border-gray-100">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-600 text-sm font-medium">{hospitalNames[hospitalAccount.hospitalId] || 'Hospital'}</span>
               </div>
+
+              <div className="h-6 w-px bg-gray-200"></div>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-2 text-gray-500 hover:text-red-600 transition-colors"
                 title="Logout"
               >
                 <LogOut size={18} />
-                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -77,75 +72,70 @@ export default function App() {
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                currentView === 'dashboard'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <nav className="inline-flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${currentView === 'dashboard'
+              ? 'bg-black text-white shadow-md'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }`}
-            >
-              <Activity size={18} />
-              <span>Dashboard</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('transfer')}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                currentView === 'transfer'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+          >
+            <Activity size={16} />
+            <span>Dashboard</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('transfer')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${currentView === 'transfer'
+              ? 'bg-black text-white shadow-md'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }`}
-            >
-              <Ambulance size={18} />
-              <span>Transfer Request</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('fleet')}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                currentView === 'fleet'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+          >
+            <Ambulance size={16} />
+            <span>Transfer</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('fleet')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${currentView === 'fleet'
+              ? 'bg-black text-white shadow-md'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }`}
-            >
-              <Ambulance size={18} />
-              <span>Ambulance Fleet</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('records')}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                currentView === 'records'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+          >
+            <Ambulance size={16} />
+            <span>Fleet</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('records')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${currentView === 'records'
+              ? 'bg-black text-white shadow-md'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }`}
-            >
-              <Users size={18} />
-              <span>Patient Records</span>
-            </button>
-            <button
-              onClick={() => setCurrentView('analytics')}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                currentView === 'analytics'
-                  ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+          >
+            <Users size={16} />
+            <span>Records</span>
+          </button>
+          <button
+            onClick={() => setCurrentView('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${currentView === 'analytics'
+              ? 'bg-black text-white shadow-md'
+              : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
               }`}
-            >
-              <BarChart3 size={18} />
-              <span>Analytics</span>
-            </button>
-          </div>
-        </div>
-      </nav>
+          >
+            <BarChart3 size={16} />
+            <span>Analytics</span>
+          </button>
+        </nav>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {currentView === 'dashboard' && <HospitalDashboard />}
-        {currentView === 'transfer' && <TransferRequest />}
-        {currentView === 'fleet' && <AmbulanceFleet />}
-        {currentView === 'records' && <PatientRecords />}
-        {currentView === 'analytics' && <AnalyticsDashboard />}
+      <main className="max-w-7xl mx-auto px-6 pb-12">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {currentView === 'dashboard' && <HospitalDashboard />}
+          {currentView === 'transfer' && <TransferRequest />}
+          {currentView === 'fleet' && <AmbulanceFleet />}
+          {currentView === 'records' && <PatientRecords />}
+          {currentView === 'analytics' && <AnalyticsDashboard />}
+        </div>
       </main>
     </div>
   );

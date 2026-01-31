@@ -40,15 +40,15 @@ const defaultZoom = 12;
 const getMarkerColor = (status: string): string => {
   switch (status) {
     case 'available':
-      return '#14b8a6'; // teal-500
+      return '#10b981'; // emerald-500
     case 'on_way':
       return '#3b82f6'; // blue-500
     case 'busy':
       return '#f97316'; // orange-500
     case 'standby':
-      return '#eab308'; // yellow-500
+      return '#64748b'; // slate-500
     case 'offline':
-      return '#ec4899'; // pink-500
+      return '#dc2626'; // red-600
     default:
       return '#6b7280'; // gray-500
   }
@@ -57,7 +57,7 @@ const getMarkerColor = (status: string): string => {
 export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps) {
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [isTracking, setIsTracking] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [watchId, setWatchId] = useState<number | null>(null);
@@ -203,6 +203,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
         const location = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
         };
         setUserLocation(location);
 
@@ -229,8 +230,8 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        timeout: 20000, // Increased timeout for better accuracy
+        maximumAge: 0, // Force fresh location
       }
     );
   }, [map, isTracking]);
@@ -257,6 +258,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
           };
           setUserLocation(location);
 
@@ -287,8 +289,8 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 5000,
+          timeout: 20000, // Increased timeout for better accuracy
+          maximumAge: 0, // Force fresh location
         }
       );
       setWatchId(id);
@@ -421,6 +423,11 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
               <p className="text-gray-600 text-xs mb-1">
                 {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
               </p>
+              {userLocation.accuracy && (
+                <p className="text-gray-500 text-xs mb-1">
+                  Accuracy: ±{Math.round(userLocation.accuracy)}m
+                </p>
+              )}
               {isTracking && (
                 <p className="text-green-600 text-xs">📍 Live Tracking Active</p>
               )}
@@ -556,7 +563,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <span className="text-gray-700">Your Location</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
             <span className="text-gray-700">Available</span>
           </div>
           <div className="flex items-center gap-2">
@@ -568,11 +575,11 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <span className="text-gray-700">Busy</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
             <span className="text-gray-700">Standby</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-red-600 rounded-full"></div>
             <span className="text-gray-700">Offline</span>
           </div>
           {trackedDevice && trackedDevice.isTracking && (

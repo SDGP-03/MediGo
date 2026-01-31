@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (hospitalId: string, email: string) => void;
@@ -64,15 +64,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <div className="hidden lg:block">
           <div className="bg-white rounded-2xl shadow-xl p-12">
             <div className="flex items-center gap-3 mb-8">
-              <div className="bg-red-600 p-3 rounded-xl">
-                <Activity className="text-white" size={32} />
-              </div>
-              <div>
-                <h1 className="text-gray-900">MediGo</h1>
-                <p className="text-gray-600">Emergency Medical Transport</p>
-              </div>
+              <img src="/logo.png" alt="MediGo Logo" className="h-16 w-auto" />
             </div>
-            
+
             <div className="space-y-6">
               <div>
                 <h2 className="text-gray-900 mb-4">Hospital Management Portal</h2>
@@ -120,14 +114,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <div className="w-full">
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
             {/* Mobile Header */}
-            <div className="lg:hidden flex items-center gap-3 mb-8">
-              <div className="bg-red-600 p-2.5 rounded-xl">
-                <Activity className="text-white" size={24} />
-              </div>
-              <div>
-                <h1 className="text-gray-900 text-xl">MediGo</h1>
-                <p className="text-gray-600 text-sm">Hospital Portal</p>
-              </div>
+            <div className="lg:hidden flex items-center justify-center mb-8">
+              <img src="/logo.png" alt="MediGo Logo" className="h-12 w-auto" />
             </div>
 
             <div className="mb-8">

@@ -1,4 +1,6 @@
+import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/screens/start_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -29,20 +31,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData.light().copyWith(
-        scaffoldBackgroundColor: const Color(0xFFFAF3F5),
+        scaffoldBackgroundColor: const Color(0xFFF4E6EA),
       ),
-
-      initialRoute: '/start',
-
-      routes: {
-        '/start': (context) => const StartScreen(),
-
-        '/home': (context) => const HomePage(),
-
-        '/edit-profile': (context) => const EditProfilePage(),
-
-        '/login': (context) => const LoginScreen(),
-      },
+      home: StartScreen(),
     );
   }
 }
