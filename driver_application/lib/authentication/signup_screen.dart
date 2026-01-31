@@ -17,6 +17,8 @@ class _SignupScreenState extends State<SignupScreen> {
   TextEditingController userNameTextEditingController = TextEditingController();
   TextEditingController userPhoneTextEditingController =
       TextEditingController();
+  TextEditingController userVehicleNumberEditingController =
+      TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
@@ -77,6 +79,7 @@ class _SignupScreenState extends State<SignupScreen> {
         "id": userFirebase.uid,
         "name": userNameTextEditingController.text.trim(),
         "phone": userPhoneTextEditingController.text.trim(),
+        "vehicleNumber": userVehicleNumberEditingController.text.trim(),
         "email": emailTextEditingController.text.trim(),
         "blockStatus": "unblocked",
       };
@@ -246,8 +249,9 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 8),
 
                           TextField(
+                            controller: userVehicleNumberEditingController,
                             keyboardType: TextInputType.text,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: "Enter your vehicle number",
                               prefixIcon: Icon(Icons.directions_car_outlined),
                               border: OutlineInputBorder(
