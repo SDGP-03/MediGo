@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'pages/home_page.dart';
+import 'screens/edit_profile_page.dart';
+import 'authentication/login_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await Permission.locationWhenInUse.isDenied.then((valueOfPermission){
-    if(valueOfPermission){
+  await Permission.locationWhenInUse.isDenied.then((valueOfPermission) {
+    if (valueOfPermission) {
       Permission.locationWhenInUse.request();
     }
   });
@@ -23,10 +27,22 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'MediGo Driver Application',
       debugShowCheckedModeBanner: false,
+
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFFAF3F5),
       ),
-      home: StartScreen(),
+
+      initialRoute: '/start',
+
+      routes: {
+        '/start': (context) => const StartScreen(),
+
+        '/home': (context) => const HomePage(),
+
+        '/edit-profile': (context) => const EditProfilePage(),
+
+        '/login': (context) => const LoginScreen(),
+      },
     );
   }
 }
