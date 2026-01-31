@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'pages/home_page.dart';
 import 'screens/edit_profile_page.dart';
 import 'authentication/login_screen.dart';
 
@@ -33,7 +32,17 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFF4E6EA),
       ),
-      home: StartScreen(),
+      initialRoute: '/start',
+
+      routes: {
+        '/start': (context) => const StartScreen(),
+
+        '/home': (context) => const HomePage(),
+
+        '/edit-profile': (context) => const EditProfilePage(),
+
+        '/login': (context) => const LoginScreen(),
+      },
     );
   }
 }
