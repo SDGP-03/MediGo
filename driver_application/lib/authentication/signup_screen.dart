@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:driver_application/methods/common_methods.dart';
 import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/widgets/loading_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -21,7 +25,38 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
+  File? selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
   CommonMethods cMethods = CommonMethods();
+
+  Future<void> pickProfileImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 512,
+    );
+
+    if (image != null) {
+      setState(() {
+        selectedImage = File(image.path);
+      });
+    }
+  }
+
+  Future<String?> uploadProfileImage(String uid) async {
+    if (selectedImage == null) return null;
+
+    Reference storageRef = FirebaseStorage.instance
+        .ref()
+        .child("driver_profile_images")
+        .child("$uid.jpg");
+
+    UploadTask uploadTask = storageRef.putFile(selectedImage!);
+    TaskSnapshot snapshot = await uploadTask;
+
+    return await snapshot.ref.getDownloadURL();
+  }
 
   checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
@@ -70,17 +105,22 @@ class _SignupScreenState extends State<SignupScreen> {
 
       User userFirebase = userCredential.user!;
 
+      String uid = userFirebase.uid;
+
+      String? imageUrl = await uploadProfileImage(uid);
+
       DatabaseReference driversRef = FirebaseDatabase.instance
           .ref()
           .child("drivers")
           .child(userFirebase.uid);
 
       Map<String, dynamic> driverMap = {
-        "id": userFirebase.uid,
+        "id": uid,
         "name": userNameTextEditingController.text.trim(),
         "phone": userPhoneTextEditingController.text.trim(),
         "vehicleNumber": userVehicleNumberEditingController.text.trim(),
         "email": emailTextEditingController.text.trim(),
+        "profileImage": imageUrl ?? "",
         "blockStatus": "unblocked",
       };
 
@@ -140,7 +180,49 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: 50),
 
-              Center(child: Image.asset("assets/logo/logo.png", height: 160)),
+              // PROFILE IMAGE (SIGNUP)
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 80,
+                    backgroundColor: const Color.fromARGB(255, 223, 181, 181),
+
+                    backgroundImage: selectedImage != null
+                        ? FileImage(selectedImage!)
+                        : null,
+
+                    child: selectedImage == null
+                        ? const Icon(
+                            Icons.person,
+                            size: 80,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade700,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {
+                          pickProfileImage();
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 50),
 
