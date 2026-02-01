@@ -55,16 +55,6 @@ class SideMenu extends StatelessWidget {
               },
             ),
 
-            // Navigation Page
-            ListTile(
-              leading: const Icon(Icons.navigation),
-              title: const Text('Navigation'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/navigation');
-              },
-            ),
-
             const Spacer(),
 
             // Settings
