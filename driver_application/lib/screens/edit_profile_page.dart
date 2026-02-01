@@ -19,6 +19,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController vehicleController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
 
   final TextEditingController currentPasswordController =
       TextEditingController();
@@ -59,6 +60,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       nameController.text = data["name"] ?? "";
       phoneController.text = data["phone"] ?? "";
       vehicleController.text = data["vehicleNumber"] ?? "";
+      emailController.text = data["email"] ?? "";
     });
   }
 
@@ -111,6 +113,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     await user.reauthenticateWithCredential(credential);
     await user.updatePassword(newPassword);
+  }
+
+  Future<void> changeEmail(String oldEmail) async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    AuthCredential credential = EmailAuthProvider.credential(
+      email: oldEmail,
+      password: currentPasswordController.text.trim(),
+    );
+
+    // Re-authenticate
+    await user.reauthenticateWithCredential(credential);
+
+    // Send verification email + update
+    await user.verifyBeforeUpdateEmail(emailController.text.trim());
   }
 
   // ================= SAVE PROFILE =================
@@ -309,6 +327,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               icon: Icons.person_outline,
                               validator: (value) =>
                                   value!.isEmpty ? "Name is required" : null,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            buildInput(
+                              controller: emailController,
+                              hint: "Email",
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                if (v == null || v.isEmpty)
+                                  return "Email required";
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                                ).hasMatch(v)) {
+                                  return "Invalid email";
+                                }
+                                return null;
+                              },
                             ),
 
                             const SizedBox(height: 16),
