@@ -318,8 +318,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               hint: "Phone Number",
                               icon: Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
-                              validator: (value) =>
-                                  value!.length != 10 ? "Invalid phone" : null,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return "Phone number is required";
+                                }
+
+                                if (value.length != 10) {
+                                  return "Invalid phone number";
+                                }
+
+                                return null;
+                              },
                             ),
 
                             const SizedBox(height: 16),
