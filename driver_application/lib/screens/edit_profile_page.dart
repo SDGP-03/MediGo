@@ -19,17 +19,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController vehicleController = TextEditingController();
+
+  final TextEditingController currentPasswordController =
+      TextEditingController();
+  final TextEditingController newPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
+
   final ImagePicker _picker = ImagePicker();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference driversRef = FirebaseDatabase.instance.ref().child(
     "drivers",
   );
 
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   bool isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfileData();
+  }
+
+  // ================= LOAD PROFILE =================
 
   void loadProfileData() async {
     User? user = _auth.currentUser;
-
     if (user == null) return;
 
     DatabaseEvent event = await driversRef.child(user.uid).once();
@@ -46,11 +62,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    loadProfileData(); // AUTO LOAD PROFILE DATA
-  }
+  // ================= IMAGE PICK =================
 
   Future<void> pickProfileImage() async {
     final XFile? image = await _picker.pickImage(
@@ -66,6 +78,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  // ================= IMAGE UPLOAD =================
+
   Future<String?> uploadProfileImage(String uid) async {
     if (selectedImage == null) return null;
 
@@ -78,10 +92,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     TaskSnapshot snapshot = await uploadTask;
 
-    String downloadUrl = await snapshot.ref.getDownloadURL();
-
-    return downloadUrl;
+    return await snapshot.ref.getDownloadURL();
   }
+
+  // ================= PASSWORD CHANGE =================
+
+  Future<void> changePassword() async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    String currentPassword = currentPasswordController.text.trim();
+    String newPassword = newPasswordController.text.trim();
+
+    AuthCredential credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
+
+  // ================= SAVE PROFILE =================
 
   void saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
@@ -94,14 +126,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       User? user = _auth.currentUser;
-
-      if (user == null) {
-        throw Exception("User not logged in");
-      }
+      if (user == null) throw Exception("User not logged in");
 
       String uid = user.uid;
+
+      // Upload image
       String? imageUrl = await uploadProfileImage(uid);
 
+      // Update database
       await driversRef.child(uid).update({
         "name": nameController.text.trim(),
         "phone": phoneController.text.trim(),
@@ -109,16 +141,46 @@ class _EditProfilePageState extends State<EditProfilePage> {
         if (imageUrl != null) "profileImage": imageUrl,
       });
 
+      // Update UI instantly
+      if (imageUrl != null) {
+        setState(() {
+          networkProfileImage = imageUrl;
+          selectedImage = null;
+        });
+      }
+
+      // Change password if provided
+      if (newPasswordController.text.isNotEmpty) {
+        await changePassword();
+      }
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profile updated successfully")),
       );
+
+      // Clear password fields
+      currentPasswordController.clear();
+      newPasswordController.clear();
+      confirmPasswordController.clear();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to update profile")),
-        );
+        String message = "Failed to update profile";
+
+        if (error is FirebaseAuthException) {
+          if (error.code == 'wrong-password') {
+            message = "Current password is incorrect";
+          } else if (error.code == 'weak-password') {
+            message = "New password is too weak";
+          } else if (error.code == 'requires-recent-login') {
+            message = "Please login again to change password";
+          }
+        }
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } finally {
       if (mounted) {
@@ -129,7 +191,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
@@ -152,10 +214,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ? FileImage(selectedImage!)
                         : (networkProfileImage != null
                               ? NetworkImage(networkProfileImage!)
-                                    as ImageProvider
                               : null),
 
-                    child: selectedImage == null
+                    child:
+                        (selectedImage == null && networkProfileImage == null)
                         ? const Icon(
                             Icons.person,
                             size: 60,
@@ -179,9 +241,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           size: 18,
                           color: Colors.white,
                         ),
-                        onPressed: () {
-                          pickProfileImage();
-                        },
+                        onPressed: pickProfileImage,
                       ),
                     ),
                   ),
@@ -190,7 +250,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
               const SizedBox(height: 30),
 
-              // MAIN CARD
+              // FORM CARD
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -203,11 +263,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                   ],
                 ),
-
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // HEADER STRIP
+                    // HEADER
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -218,7 +276,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           topRight: Radius.circular(24),
                         ),
                       ),
-
                       child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -239,42 +296,54 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
 
-                    // FORM AREA
+                    // FORM
                     Padding(
                       padding: const EdgeInsets.all(20),
                       child: Form(
                         key: _formKey,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            buildLabel("Full Name"),
-
                             buildInput(
                               controller: nameController,
-                              hint: "Enter your name",
+                              hint: "Full Name",
                               icon: Icons.person_outline,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Name is required";
-                                }
-                                return null;
-                              },
+                              validator: (value) =>
+                                  value!.isEmpty ? "Name is required" : null,
                             ),
 
                             const SizedBox(height: 16),
-
-                            buildLabel("Phone Number"),
 
                             buildInput(
                               controller: phoneController,
-                              hint: "07X XXX XXXX",
+                              hint: "Phone Number",
                               icon: Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
+                              validator: (value) =>
+                                  value!.length != 10 ? "Invalid phone" : null,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            buildInput(
+                              controller: vehicleController,
+                              hint: "Vehicle Number",
+                              icon: Icons.directions_car_outlined,
+                              validator: (value) => value!.isEmpty
+                                  ? "Vehicle number required"
+                                  : null,
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            buildInput(
+                              controller: currentPasswordController,
+                              hint: "Current Password",
+                              icon: Icons.lock_outline,
+                              keyboardType: TextInputType.visiblePassword,
                               validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Phone number is required";
-                                } else if (value.length < 10) {
-                                  return "Enter valid phone number";
+                                if (newPasswordController.text.isNotEmpty &&
+                                    value!.isEmpty) {
+                                  return "Enter current password";
                                 }
                                 return null;
                               },
@@ -282,15 +351,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                             const SizedBox(height: 16),
 
-                            buildLabel("Vehicle Number"),
+                            buildInput(
+                              controller: newPasswordController,
+                              hint: "New Password",
+                              icon: Icons.lock_reset,
+                              keyboardType: TextInputType.visiblePassword,
+                              validator: (value) {
+                                if (value!.isNotEmpty && value.length < 6) {
+                                  return "Min 6 characters";
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 16),
 
                             buildInput(
-                              controller: vehicleController,
-                              hint: "ABC-1234",
-                              icon: Icons.directions_car_outlined,
+                              controller: confirmPasswordController,
+                              hint: "Confirm New Password",
+                              icon: Icons.lock,
+                              keyboardType: TextInputType.visiblePassword,
                               validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Vehicle number is required";
+                                if (newPasswordController.text.isNotEmpty &&
+                                    value != newPasswordController.text) {
+                                  return "Passwords do not match";
                                 }
                                 return null;
                               },
@@ -298,7 +382,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                             const SizedBox(height: 30),
 
-                            // SAVE BUTTON
                             SizedBox(
                               width: double.infinity,
                               height: 50,
@@ -312,17 +395,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                 ),
-
                                 onPressed: isSaving ? null : saveProfile,
-
                                 child: isSaving
-                                    ? const SizedBox(
-                                        height: 22,
-                                        width: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Colors.white,
-                                        ),
+                                    ? const CircularProgressIndicator(
+                                        color: Colors.white,
                                       )
                                     : const Text(
                                         "Save Changes",
@@ -347,42 +423,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ===== UI COMPONENTS =====
-
-  Widget buildLabel(String text) {
-    return Text(text, style: const TextStyle(fontWeight: FontWeight.w500));
-  }
+  // ================= INPUT FIELD =================
 
   Widget buildInput({
     required TextEditingController controller,
     required String hint,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
-    required String? Function(String?)? validator,
+    required String? Function(String?) validator,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: validator,
-
-        decoration: InputDecoration(
-          hintText: hint,
-          prefixIcon: Icon(icon),
-
-          filled: true,
-          fillColor: Colors.grey.shade100,
-
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.red.shade700, width: 2),
-          ),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      obscureText: keyboardType == TextInputType.visiblePassword,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
         ),
       ),
     );
