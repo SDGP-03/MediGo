@@ -214,6 +214,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text("Edit Profile"),
+        backgroundColor: Colors.red.shade700,
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(22),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -13,6 +15,45 @@ class _SettingsPageState extends State<SettingsPage> {
   bool darkModeEnabled = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    requestNotificationPermission();
+    loadNotificationSetting();
+  }
+
+  Future<void> requestNotificationPermission() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Notification permission denied")),
+      );
+    }
+  }
+
+  Future<void> loadNotificationSetting() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    bool enabled = prefs.getBool('notifications') ?? true;
+
+    setState(() {
+      notificationsEnabled = enabled;
+    });
+
+    if (enabled) {
+      await FirebaseMessaging.instance.subscribeToTopic("drivers");
+    } else {
+      await FirebaseMessaging.instance.unsubscribeFromTopic("drivers");
+    }
+  }
 
   // ================= LOGOUT =================
 
@@ -62,11 +103,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
           SwitchListTile(
             value: notificationsEnabled,
-            onChanged: (value) {
+            onChanged: (value) async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+
               setState(() {
                 notificationsEnabled = value;
               });
+
+              await prefs.setBool('notifications', value);
+
+              if (value) {
+                await FirebaseMessaging.instance.subscribeToTopic("drivers");
+              } else {
+                await FirebaseMessaging.instance.unsubscribeFromTopic(
+                  "drivers",
+                );
+              }
             },
+
+            activeTrackColor: Colors.red.shade700,
+
             title: const Text("Enable Notifications"),
             secondary: const Icon(Icons.notifications_outlined),
           ),
@@ -78,6 +134,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 darkModeEnabled = value;
               });
             },
+
+            activeTrackColor: Colors.red.shade700,
+
             title: const Text("Dark Mode"),
             secondary: const Icon(Icons.dark_mode_outlined),
           ),
@@ -115,13 +174,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
             icon: const Icon(Icons.logout),
-            label: const Text("Logout"),
+            label: const Text(
+              "Logout",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             onPressed: logout,
           ),
         ],
