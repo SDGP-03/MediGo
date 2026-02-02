@@ -225,7 +225,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               Stack(
                 children: [
                   CircleAvatar(
-                    radius: 55,
+                    radius: 77,
                     backgroundColor: Colors.grey.shade300,
 
                     backgroundImage: selectedImage != null

@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'pages/edit_profile_page.dart';
+import 'pages/settings_page.dart';
 import 'authentication/login_screen.dart';
 
 Future<void> main() async {
@@ -45,6 +46,8 @@ class MyApp extends StatelessWidget {
         '/edit-profile': (context) => const EditProfilePage(),
 
         '/login': (context) => const LoginScreen(),
+
+        '/settings': (context) => const SettingsPage(),
       },
     );
   }
