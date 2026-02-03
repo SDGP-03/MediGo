@@ -1,60 +1,61 @@
 import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../src/firebase';
 
 interface LoginPageProps {
-  onLogin: (hospitalId: string, email: string) => void;
+  onLogin: () => void;
+  onRegister: () => void;
 }
 
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock hospital accounts for demonstration
-  const mockAccounts = [
-    {
-      hospitalId: 'CGH-001',
-      hospitalName: 'City General Hospital',
-      email: 'admin@citygeneral.com',
-      password: 'admin123',
-      address: '123 Medical Drive, Metro City',
-    },
-    {
-      hospitalId: 'CMC-002',
-      hospitalName: 'Central Medical Center',
-      email: 'admin@centralmedical.com',
-      password: 'admin123',
-      address: '456 Healthcare Ave, Downtown',
-    },
-    {
-      hospitalId: 'SCH-003',
-      hospitalName: 'Specialist Care Hospital',
-      email: 'admin@specialistcare.com',
-      password: 'admin123',
-      address: '789 Wellness Blvd, Uptown',
-    },
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate authentication delay
-    setTimeout(() => {
-      const account = mockAccounts.find(
-        acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
-      );
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      onLogin();
+    } catch (err: unknown) {
+      let errorMessage = 'An error occurred during sign in.';
 
-      if (account) {
-        onLogin(account.hospitalId, account.email);
-      } else {
-        setError('Invalid email or password. Please try again.');
+      if (err && typeof err === 'object' && 'code' in err) {
+        const firebaseError = err as { code: string };
+        switch (firebaseError.code) {
+          case 'auth/invalid-email':
+            errorMessage = 'Invalid email address.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'This account has been disabled.';
+            break;
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email.';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = 'Incorrect password.';
+            break;
+          case 'auth/invalid-credential':
+            errorMessage = 'Invalid email or password.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Please try again later.';
+            break;
+          default:
+            errorMessage = 'Failed to sign in. Please try again.';
+        }
       }
+
+      setError(errorMessage);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -189,21 +190,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <p className="text-gray-600 text-sm text-center mb-4">Demo Accounts:</p>
-              <div className="space-y-2 text-xs">
-                {mockAccounts.map((acc) => (
-                  <div key={acc.hospitalId} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-gray-900 mb-1">{acc.hospitalName}</p>
-                    <p className="text-gray-600">Email: {acc.email}</p>
-                    <p className="text-gray-600">Password: {acc.password}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <p className="text-gray-600 text-sm">
+            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+              <p className="text-gray-600 text-sm mb-4">
+                Don't have an account?{' '}
+                <button
+                  onClick={onRegister}
+                  className="text-red-600 hover:underline font-medium"
+                >
+                  Register as Admin
+                </button>
+              </p>
+              <p className="text-gray-500 text-xs">
                 Need help? <button className="text-red-600 hover:underline">Contact Support</button>
               </p>
             </div>
