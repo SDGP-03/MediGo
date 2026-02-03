@@ -1,3 +1,4 @@
+import '../authentication/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +12,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  String selectedMapStyle = "standard";
+
   bool notificationsEnabled = true;
   bool darkModeEnabled = false;
 
@@ -21,6 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     requestNotificationPermission();
     loadNotificationSetting();
+    loadMapStyle();
   }
 
   Future<void> requestNotificationPermission() async {
@@ -53,6 +57,18 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       await FirebaseMessaging.instance.unsubscribeFromTopic("drivers");
     }
+  }
+
+  Future<void> loadMapStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedMapStyle = prefs.getString("mapStyle") ?? "standard";
+    });
+  }
+
+  Future<void> saveMapStyle(String style) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("mapStyle", style);
   }
 
   // ================= LOGOUT =================
@@ -127,18 +143,33 @@ class _SettingsPageState extends State<SettingsPage> {
             secondary: const Icon(Icons.notifications_outlined),
           ),
 
-          SwitchListTile(
-            value: darkModeEnabled,
-            onChanged: (value) {
-              setState(() {
-                darkModeEnabled = value;
-              });
-            },
+          ListTile(
+            leading: const Icon(Icons.map),
+            title: const Text("Map Style"),
+            trailing: DropdownButton<String>(
+              value: selectedMapStyle,
 
-            activeTrackColor: Colors.red.shade700,
+              onChanged: (value) {
+                if (value == null) return;
 
-            title: const Text("Dark Mode"),
-            secondary: const Icon(Icons.dark_mode_outlined),
+                setState(() {
+                  selectedMapStyle = value;
+                });
+
+                saveMapStyle(value);
+
+                Navigator.pop(context, "styleChanged");
+              },
+
+              items: const [
+                DropdownMenuItem(value: "standard", child: Text("Standard")),
+                DropdownMenuItem(value: "silver", child: Text("Silver")),
+                DropdownMenuItem(value: "retro", child: Text("Retro")),
+                DropdownMenuItem(value: "dark", child: Text("Dark")),
+                DropdownMenuItem(value: "night", child: Text("Night")),
+                DropdownMenuItem(value: "aubergine", child: Text("Aubergine")),
+              ],
+            ),
           ),
 
           const SizedBox(height: 20),
@@ -168,7 +199,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 170),
 
           // ---------- LOGOUT ----------
           ElevatedButton.icon(
@@ -185,7 +216,41 @@ class _SettingsPageState extends State<SettingsPage> {
               "Logout",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            onPressed: logout,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Do you really want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+
+                        await FirebaseAuth.instance.signOut();
+
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

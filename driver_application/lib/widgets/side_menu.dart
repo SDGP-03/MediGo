@@ -58,12 +58,24 @@ class SideMenu extends StatelessWidget {
             const Spacer(),
 
             // Settings
+            // Settings
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/settings');
+              onTap: () async {
+                // ✅ Get root navigator BEFORE closing drawer
+                final navigator = Navigator.of(context, rootNavigator: true);
+
+                // Close drawer
+                Navigator.of(context).pop();
+
+                // Navigate safely
+                final result = await navigator.pushNamed('/settings');
+
+                // Reload Home if style changed
+                if (result == "styleChanged") {
+                  navigator.pushReplacementNamed('/home');
+                }
               },
             ),
 

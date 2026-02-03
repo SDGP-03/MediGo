@@ -223,7 +223,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           padding: const EdgeInsets.all(22),
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 20),
 
               // PROFILE IMAGE
               Stack(
