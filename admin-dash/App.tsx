@@ -1,45 +1,75 @@
-import { useState } from 'react';
-import { Ambulance, Users, BarChart3, LogOut, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Ambulance, Users, BarChart3, LogOut, Activity, Loader2 } from 'lucide-react';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { auth } from './src/firebase';
 import { TransferRequest } from './components/hospital/TransferRequest';
 import { AmbulanceFleet } from './components/hospital/AmbulanceFleet';
 import { PatientRecords } from './components/hospital/PatientRecords';
 import { HospitalDashboard } from './components/hospital/HospitalDashboard';
 import { AnalyticsDashboard } from './components/hospital/AnalyticsDashboard';
 import { LoginPage } from './components/auth/LoginPage';
+import { RegisterPage } from './components/auth/RegisterPage';
 
 type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
-
-interface HospitalAccount {
-  hospitalId: string;
-  email: string;
-}
+type AuthView = 'login' | 'register';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [hospitalAccount, setHospitalAccount] = useState<HospitalAccount | null>(null);
+  const [authView, setAuthView] = useState<AuthView>('login');
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogin = (hospitalId: string, email: string) => {
-    setHospitalAccount({ hospitalId, email });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = () => {
+    // User state will be updated by onAuthStateChanged listener
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm('Are you sure you want to log out?')) {
-      setHospitalAccount(null);
-      setCurrentView('dashboard');
+      try {
+        await signOut(auth);
+        setCurrentView('dashboard');
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
     }
   };
 
-  // Show login page if not authenticated
-  if (!hospitalAccount) {
-    return <LoginPage onLogin={handleLogin} />;
+  // Show loading spinner while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Hospital names mapping
-  const hospitalNames: Record<string, string> = {
-    'CGH-001': 'City General Hospital',
-    'CMC-002': 'Central Medical Center',
-    'SCH-003': 'Specialist Care Hospital',
-  };
+  // Show login or register page if not authenticated
+  if (!user) {
+    if (authView === 'register') {
+      return <RegisterPage onBackToLogin={() => setAuthView('login')} />;
+    }
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onRegister={() => setAuthView('register')}
+      />
+    );
+  }
+
+  // Get display name from email
+  const displayName = user.email?.split('@')[0] || 'User';
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -54,7 +84,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50/50 rounded-full border border-gray-100">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-gray-600 text-sm font-medium">{hospitalNames[hospitalAccount.hospitalId] || 'Hospital'}</span>
+                <span className="text-gray-600 text-sm font-medium capitalize">{displayName}</span>
               </div>
 
               <div className="h-6 w-px bg-gray-200"></div>
