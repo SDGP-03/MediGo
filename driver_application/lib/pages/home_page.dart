@@ -1,9 +1,9 @@
 import 'dart:async';
-
+import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver_application/global/global_var.dart';
 import '../widgets/side_menu.dart';
 
@@ -25,6 +25,8 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription<Position>? positionStream;
 
   Marker? driverMarker;
+
+  String selectedMapStyle = "standard";
 
   // ================= LIVE LOCATION TRACKING =================
 
@@ -81,12 +83,55 @@ class _HomePageState extends State<HomePage> {
     startLiveLocationUpdates();
   }
 
+  Future<void> loadMapStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    selectedMapStyle = prefs.getString("mapStyle") ?? "standard";
+  }
+
+  void applyMapStyle() {
+    if (controllerGoogleMap == null) return;
+
+    switch (selectedMapStyle) {
+      case "silver":
+        controllerGoogleMap!.setMapStyle(MapStyles.silver);
+        break;
+
+      case "retro":
+        controllerGoogleMap!.setMapStyle(MapStyles.retro);
+        break;
+
+      case "dark":
+        controllerGoogleMap!.setMapStyle(MapStyles.dark);
+        break;
+
+      case "night":
+        controllerGoogleMap!.setMapStyle(MapStyles.night);
+        break;
+
+      case "aubergine":
+        controllerGoogleMap!.setMapStyle(MapStyles.aubergine);
+        break;
+
+      default:
+        controllerGoogleMap!.setMapStyle(null); // Standard
+    }
+  }
+
   // ================= CLEANUP =================
 
   @override
   void dispose() {
     positionStream?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    loadMapStyle().then((_) {
+      applyMapStyle();
+    });
   }
 
   // ================= UI =================
@@ -120,9 +165,12 @@ class _HomePageState extends State<HomePage> {
 
         markers: driverMarker != null ? {driverMarker!} : {},
 
-        onMapCreated: (GoogleMapController mapController) {
+        onMapCreated: (GoogleMapController mapController) async {
           controllerGoogleMap = mapController;
           googleMapsCompleterController.complete(mapController);
+
+          await loadMapStyle(); // load saved style
+          applyMapStyle(); // apply style
 
           checkLocationPermission();
         },

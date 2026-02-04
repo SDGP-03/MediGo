@@ -1,7 +1,9 @@
+import '../authentication/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,6 +13,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  String selectedMapStyle = "standard";
+
   bool notificationsEnabled = true;
   bool darkModeEnabled = false;
 
@@ -21,6 +25,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     requestNotificationPermission();
     loadNotificationSetting();
+    loadMapStyle();
   }
 
   Future<void> requestNotificationPermission() async {
@@ -52,6 +57,42 @@ class _SettingsPageState extends State<SettingsPage> {
       await FirebaseMessaging.instance.subscribeToTopic("drivers");
     } else {
       await FirebaseMessaging.instance.unsubscribeFromTopic("drivers");
+    }
+  }
+
+  Future<void> loadMapStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedMapStyle = prefs.getString("mapStyle") ?? "standard";
+    });
+  }
+
+  Future<void> saveMapStyle(String style) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("mapStyle", style);
+  }
+
+  Future<void> clearAppCache() async {
+    try {
+      // Clear temporary directory
+      final tempDir = await getTemporaryDirectory();
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
+
+      // Clear Flutter image cache
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cache cleared successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to clear cache")));
     }
   }
 
@@ -127,18 +168,33 @@ class _SettingsPageState extends State<SettingsPage> {
             secondary: const Icon(Icons.notifications_outlined),
           ),
 
-          SwitchListTile(
-            value: darkModeEnabled,
-            onChanged: (value) {
-              setState(() {
-                darkModeEnabled = value;
-              });
-            },
+          ListTile(
+            leading: const Icon(Icons.map),
+            title: const Text("Map Style"),
+            trailing: DropdownButton<String>(
+              value: selectedMapStyle,
 
-            activeTrackColor: Colors.red.shade700,
+              onChanged: (value) {
+                if (value == null) return;
 
-            title: const Text("Dark Mode"),
-            secondary: const Icon(Icons.dark_mode_outlined),
+                setState(() {
+                  selectedMapStyle = value;
+                });
+
+                saveMapStyle(value);
+
+                Navigator.pop(context, "styleChanged");
+              },
+
+              items: const [
+                DropdownMenuItem(value: "standard", child: Text("Standard")),
+                DropdownMenuItem(value: "silver", child: Text("Silver")),
+                DropdownMenuItem(value: "retro", child: Text("Retro")),
+                DropdownMenuItem(value: "dark", child: Text("Dark")),
+                DropdownMenuItem(value: "night", child: Text("Night")),
+                DropdownMenuItem(value: "aubergine", child: Text("Aubergine")),
+              ],
+            ),
           ),
 
           const SizedBox(height: 20),
@@ -164,11 +220,45 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.privacy_tip_outlined,
             title: "Privacy Policy",
             onTap: () {
-              // Add navigation to privacy policy page
+              Navigator.pushNamed(context, '/privacy-policy');
             },
           ),
 
-          const SizedBox(height: 30),
+          settingsTile(
+            icon: Icons.delete_outline,
+            title: "Clear Cache",
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Clear Cache"),
+                  content: const Text(
+                    "This will remove temporary files and cached images. "
+                    "Your account data will not be affected.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        clearAppCache();
+                      },
+                      child: const Text(
+                        "Clear",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 120),
 
           // ---------- LOGOUT ----------
           ElevatedButton.icon(
@@ -185,7 +275,41 @@ class _SettingsPageState extends State<SettingsPage> {
               "Logout",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            onPressed: logout,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Logout'),
+                  content: const Text('Do you really want to logout?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+
+                        await FirebaseAuth.instance.signOut();
+
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        'Logout',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
