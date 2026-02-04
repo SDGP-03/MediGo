@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../../src/firebase';
+import { ref, set } from 'firebase/database';
+import { auth, database } from '../../src/firebase';
 
 interface RegisterPageProps {
     onBackToLogin: () => void;
@@ -43,6 +44,17 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
             // Update profile with display name
             await updateProfile(userCredential.user, {
                 displayName: `${name} - ${hospitalName}`,
+            });
+
+            // Save admin data to the "admin" table in Realtime Database
+            const adminRef = ref(database, `admin/${userCredential.user.uid}`);
+            await set(adminRef, {
+                uid: userCredential.user.uid,
+                name: name,
+                email: email,
+                hospitalName: hospitalName,
+                role: 'admin',
+                createdAt: new Date().toISOString(),
             });
 
             setSuccess(true);
