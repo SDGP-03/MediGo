@@ -225,6 +225,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
 
           settingsTile(
+            icon: Icons.help_outline,
+            title: "FAQ",
+            onTap: () {
+              Navigator.pushNamed(context, '/faq');
+            },
+          ),
+
+          settingsTile(
             icon: Icons.delete_outline,
             title: "Clear Cache",
             onTap: () {
@@ -258,7 +266,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
 
-          const SizedBox(height: 120),
+          const SizedBox(height: 50),
 
           // ---------- LOGOUT ----------
           ElevatedButton.icon(

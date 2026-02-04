@@ -8,6 +8,7 @@ import 'pages/privacy_policy_page.dart';
 import 'pages/edit_profile_page.dart';
 import 'pages/settings_page.dart';
 import 'authentication/login_screen.dart';
+import 'pages/faq_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,8 @@ class MyApp extends StatelessWidget {
         '/settings': (context) => const SettingsPage(),
 
         '/privacy-policy': (context) => const PrivacyPolicyPage(),
+
+        '/faq': (context) => const FaqPage(),
       },
     );
   }
