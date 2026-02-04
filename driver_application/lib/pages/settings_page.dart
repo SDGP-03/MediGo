@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -69,6 +70,30 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> saveMapStyle(String style) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString("mapStyle", style);
+  }
+
+  Future<void> clearAppCache() async {
+    try {
+      // Clear temporary directory
+      final tempDir = await getTemporaryDirectory();
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
+
+      // Clear Flutter image cache
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cache cleared successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to clear cache")));
+    }
   }
 
   // ================= LOGOUT =================
@@ -195,11 +220,45 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.privacy_tip_outlined,
             title: "Privacy Policy",
             onTap: () {
-              // Add navigation to privacy policy page
+              Navigator.pushNamed(context, '/privacy-policy');
             },
           ),
 
-          const SizedBox(height: 170),
+          settingsTile(
+            icon: Icons.delete_outline,
+            title: "Clear Cache",
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Clear Cache"),
+                  content: const Text(
+                    "This will remove temporary files and cached images. "
+                    "Your account data will not be affected.",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        clearAppCache();
+                      },
+                      child: const Text(
+                        "Clear",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 120),
 
           // ---------- LOGOUT ----------
           ElevatedButton.icon(

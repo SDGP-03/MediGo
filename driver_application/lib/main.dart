@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'pages/privacy_policy_page.dart';
 import 'pages/edit_profile_page.dart';
 import 'pages/settings_page.dart';
 import 'authentication/login_screen.dart';
@@ -48,6 +48,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
 
         '/settings': (context) => const SettingsPage(),
+
+        '/privacy-policy': (context) => const PrivacyPolicyPage(),
       },
     );
   }
