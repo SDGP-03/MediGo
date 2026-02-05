@@ -158,22 +158,104 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
 
-      body: GoogleMap(
-        mapType: MapType.normal,
-        myLocationEnabled: true,
-        initialCameraPosition: googlePlexInitialPosition,
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
 
-        markers: driverMarker != null ? {driverMarker!} : {},
+                child: GoogleMap(
+                  mapType: MapType.normal,
+                  myLocationEnabled: true,
+                  initialCameraPosition: googlePlexInitialPosition,
 
-        onMapCreated: (GoogleMapController mapController) async {
-          controllerGoogleMap = mapController;
-          googleMapsCompleterController.complete(mapController);
+                  markers: driverMarker != null ? {driverMarker!} : {},
 
-          await loadMapStyle(); // load saved style
-          applyMapStyle(); // apply style
+                  onMapCreated: (GoogleMapController mapController) async {
+                    controllerGoogleMap = mapController;
+                    googleMapsCompleterController.complete(mapController);
 
-          checkLocationPermission();
-        },
+                    await loadMapStyle(); // load saved style
+                    applyMapStyle(); // apply style
+
+                    checkLocationPermission();
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
+
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade500,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Current Assignment",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 5),
+                        Text(
+                          "Trip ID",
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Pick Up From",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          "Deliver To",
+                          style: TextStyle(color: Colors.black87),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
