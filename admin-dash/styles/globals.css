@@ -4,7 +4,7 @@
 
 :root {
   --font-size: 16px;
-  --background: #fcd9d9;
+  --background: #ffecec;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
