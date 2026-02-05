@@ -57,7 +57,15 @@ class SideMenu extends StatelessWidget {
 
             const Spacer(),
 
-            // Settings
+            ListTile(
+              leading: const Icon(Icons.feedback_outlined),
+              title: const Text('Feedback / Complaints'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/feedback');
+              },
+            ),
+
             // Settings
             ListTile(
               leading: const Icon(Icons.settings),

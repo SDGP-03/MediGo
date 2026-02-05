@@ -36,6 +36,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   bool isSaving = false;
+  bool isLoadingProfile = true;
 
   @override
   void initState() {
@@ -46,21 +47,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // ================= LOAD PROFILE =================
 
   void loadProfileData() async {
+    setState(() {
+      isLoadingProfile = true;
+    });
+
     User? user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(() => isLoadingProfile = false);
+      return;
+    }
 
     DatabaseEvent event = await driversRef.child(user.uid).once();
 
-    if (event.snapshot.value == null) return;
+    if (event.snapshot.value != null) {
+      Map data = event.snapshot.value as Map;
 
-    Map data = event.snapshot.value as Map;
-
-    setState(() {
       networkProfileImage = data["profileImage"];
       nameController.text = data["name"] ?? "";
       phoneController.text = data["phone"] ?? "";
       vehicleController.text = data["vehicleNumber"] ?? "";
       emailController.text = data["email"] ?? "";
+    }
+
+    setState(() {
+      isLoadingProfile = false;
     });
   }
 
@@ -218,258 +228,278 @@ class _EditProfilePageState extends State<EditProfilePage> {
         title: const Text("Edit Profile"),
         backgroundColor: Colors.red.shade700,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-
-              // PROFILE IMAGE
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 77,
-                    backgroundColor: Colors.grey.shade300,
-
-                    backgroundImage: selectedImage != null
-                        ? FileImage(selectedImage!)
-                        : (networkProfileImage != null
-                              ? NetworkImage(networkProfileImage!)
-                              : null),
-
-                    child:
-                        (selectedImage == null && networkProfileImage == null)
-                        ? const Icon(
-                            Icons.person,
-                            size: 60,
-                            color: Colors.white,
-                          )
-                        : null,
-                  ),
-
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.camera_alt,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        onPressed: pickProfileImage,
-                      ),
-                    ),
-                  ),
+      body: isLoadingProfile
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text("Loading profile..."),
                 ],
               ),
-
-              const SizedBox(height: 30),
-
-              // FORM CARD
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 5),
-                    ),
-                  ],
-                ),
+            )
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(22),
                 child: Column(
                   children: [
-                    // HEADER
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
+                    const SizedBox(height: 20),
+
+                    // PROFILE IMAGE
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 77,
+                          backgroundColor: Colors.grey.shade300,
+
+                          backgroundImage: selectedImage != null
+                              ? FileImage(selectedImage!)
+                              : (networkProfileImage != null
+                                    ? NetworkImage(networkProfileImage!)
+                                    : null),
+
+                          child:
+                              (selectedImage == null &&
+                                  networkProfileImage == null)
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 60,
+                                  color: Colors.white,
+                                )
+                              : null,
                         ),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Edit Profile",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade700,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              onPressed: pickProfileImage,
                             ),
                           ),
-                          SizedBox(height: 5),
-                          Text(
-                            "Update your driver information",
-                            style: TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // FORM CARD
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 10,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // HEADER
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade700,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                              ),
+                            ),
+                            child: const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Edit Profile",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  "Update your driver information",
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // FORM
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                children: [
+                                  buildInput(
+                                    controller: nameController,
+                                    hint: "Full Name",
+                                    icon: Icons.person_outline,
+                                    validator: (value) => value!.isEmpty
+                                        ? "Name is required"
+                                        : null,
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  buildInput(
+                                    controller: emailController,
+                                    hint: "Email",
+                                    icon: Icons.email_outlined,
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty)
+                                        return "Email required";
+                                      if (!RegExp(
+                                        r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
+                                      ).hasMatch(v)) {
+                                        return "Invalid email";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  buildInput(
+                                    controller: phoneController,
+                                    hint: "Phone Number",
+                                    icon: Icons.phone_outlined,
+                                    keyboardType: TextInputType.phone,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return "Phone number is required";
+                                      }
+
+                                      if (value.length != 10) {
+                                        return "Invalid phone number";
+                                      }
+
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  buildInput(
+                                    controller: vehicleController,
+                                    hint: "Vehicle Number",
+                                    icon: Icons.directions_car_outlined,
+                                    validator: (value) => value!.isEmpty
+                                        ? "Vehicle number required"
+                                        : null,
+                                  ),
+
+                                  const SizedBox(height: 30),
+
+                                  buildInput(
+                                    controller: currentPasswordController,
+                                    hint: "Current Password",
+                                    icon: Icons.lock_outline,
+                                    keyboardType: TextInputType.visiblePassword,
+                                    validator: (value) {
+                                      if (newPasswordController
+                                              .text
+                                              .isNotEmpty &&
+                                          value!.isEmpty) {
+                                        return "Enter current password";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  buildInput(
+                                    controller: newPasswordController,
+                                    hint: "New Password",
+                                    icon: Icons.lock_reset,
+                                    keyboardType: TextInputType.visiblePassword,
+                                    validator: (value) {
+                                      if (value!.isNotEmpty &&
+                                          value.length < 6) {
+                                        return "Min 6 characters";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  buildInput(
+                                    controller: confirmPasswordController,
+                                    hint: "Confirm New Password",
+                                    icon: Icons.lock,
+                                    keyboardType: TextInputType.visiblePassword,
+                                    validator: (value) {
+                                      if (newPasswordController
+                                              .text
+                                              .isNotEmpty &&
+                                          value != newPasswordController.text) {
+                                        return "Passwords do not match";
+                                      }
+                                      return null;
+                                    },
+                                  ),
+
+                                  const SizedBox(height: 30),
+
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 50,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: isSaving
+                                            ? Colors.grey
+                                            : Colors.red.shade700,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                        ),
+                                      ),
+                                      onPressed: isSaving ? null : saveProfile,
+                                      child: isSaving
+                                          ? const CircularProgressIndicator(
+                                              color: Colors.white,
+                                            )
+                                          : const Text(
+                                              "Save Changes",
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-
-                    // FORM
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            buildInput(
-                              controller: nameController,
-                              hint: "Full Name",
-                              icon: Icons.person_outline,
-                              validator: (value) =>
-                                  value!.isEmpty ? "Name is required" : null,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            buildInput(
-                              controller: emailController,
-                              hint: "Email",
-                              icon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (v) {
-                                if (v == null || v.isEmpty)
-                                  return "Email required";
-                                if (!RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w]{2,4}$',
-                                ).hasMatch(v)) {
-                                  return "Invalid email";
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            buildInput(
-                              controller: phoneController,
-                              hint: "Phone Number",
-                              icon: Icons.phone_outlined,
-                              keyboardType: TextInputType.phone,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return "Phone number is required";
-                                }
-
-                                if (value.length != 10) {
-                                  return "Invalid phone number";
-                                }
-
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            buildInput(
-                              controller: vehicleController,
-                              hint: "Vehicle Number",
-                              icon: Icons.directions_car_outlined,
-                              validator: (value) => value!.isEmpty
-                                  ? "Vehicle number required"
-                                  : null,
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            buildInput(
-                              controller: currentPasswordController,
-                              hint: "Current Password",
-                              icon: Icons.lock_outline,
-                              keyboardType: TextInputType.visiblePassword,
-                              validator: (value) {
-                                if (newPasswordController.text.isNotEmpty &&
-                                    value!.isEmpty) {
-                                  return "Enter current password";
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            buildInput(
-                              controller: newPasswordController,
-                              hint: "New Password",
-                              icon: Icons.lock_reset,
-                              keyboardType: TextInputType.visiblePassword,
-                              validator: (value) {
-                                if (value!.isNotEmpty && value.length < 6) {
-                                  return "Min 6 characters";
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            buildInput(
-                              controller: confirmPasswordController,
-                              hint: "Confirm New Password",
-                              icon: Icons.lock,
-                              keyboardType: TextInputType.visiblePassword,
-                              validator: (value) {
-                                if (newPasswordController.text.isNotEmpty &&
-                                    value != newPasswordController.text) {
-                                  return "Passwords do not match";
-                                }
-                                return null;
-                              },
-                            ),
-
-                            const SizedBox(height: 30),
-
-                            SizedBox(
-                              width: double.infinity,
-                              height: 50,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSaving
-                                      ? Colors.grey
-                                      : Colors.red.shade700,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                ),
-                                onPressed: isSaving ? null : saveProfile,
-                                child: isSaving
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white,
-                                      )
-                                    : const Text(
-                                        "Save Changes",
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 

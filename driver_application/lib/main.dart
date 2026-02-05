@@ -9,6 +9,8 @@ import 'pages/edit_profile_page.dart';
 import 'pages/settings_page.dart';
 import 'authentication/login_screen.dart';
 import 'pages/faq_page.dart';
+import 'pages/history_page.dart';
+import 'pages/feedback_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +55,10 @@ class MyApp extends StatelessWidget {
         '/privacy-policy': (context) => const PrivacyPolicyPage(),
 
         '/faq': (context) => const FaqPage(),
+
+        '/history': (context) => const HistoryPage(),
+
+        '/feedback': (context) => const FeedbackPage(),
       },
     );
   }
