@@ -232,8 +232,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  CircularProgressIndicator(),
+                children: [
+                  CircularProgressIndicator(color: Colors.red.shade700),
                   SizedBox(height: 12),
                   Text("Loading profile..."),
                 ],

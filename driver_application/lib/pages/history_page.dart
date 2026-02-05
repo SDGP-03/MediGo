@@ -30,7 +30,16 @@ class _HistoryPageState extends State<HistoryPage> {
         stream: historyRef.child(uid).onValue,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.red.shade700),
+                  SizedBox(height: 12),
+                  Text("Loading trip history..."),
+                ],
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
