@@ -343,7 +343,11 @@ class _HomePageState extends State<HomePage> {
                           icon: const Icon(Icons.navigation),
                           label: const Text(
                             "Start Navigation",
-                            style: TextStyle(fontSize: 16, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           onPressed: () {
                             Navigator.push(
