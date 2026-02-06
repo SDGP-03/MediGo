@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage> {
           driverCurrentPosition!.latitude,
           driverCurrentPosition!.longitude,
         ),
-        dropName: "Delivery Location",
+        dropName: "Destination",
         dropAddress: "Address",
         dropLatLng: const LatLng(6.9271, 79.8612),
       );
@@ -325,7 +325,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 18),
                           _locationTile(
-                            title: "Deliver To",
+                            title: "Destination",
                             name: currentAssignment!.dropName,
                             address: currentAssignment!.dropAddress,
                             icon: Icons.location_on,
