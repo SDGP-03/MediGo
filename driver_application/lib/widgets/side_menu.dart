@@ -31,7 +31,7 @@ class SideMenu extends StatelessWidget {
               title: const Text('Home'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/home');
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
             ),
 
