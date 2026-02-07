@@ -1,4 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:driver_application/models/assignment.dart';
+import 'package:driver_application/pages/navigation_page.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:http/http.dart' as http;
+
 import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -28,12 +34,16 @@ class _HomePageState extends State<HomePage> {
 
   String selectedMapStyle = "standard";
 
+  Assignment? currentAssignment;
+
+  Set<Polyline> polylines = {};
+
   // ================= LIVE LOCATION TRACKING =================
 
   void startLiveLocationUpdates() {
-    LocationSettings locationSettings = LocationSettings(
+    LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // update every 10 meters
+      distanceFilter: 10,
     );
 
     positionStream =
@@ -41,9 +51,13 @@ class _HomePageState extends State<HomePage> {
           (Position position) {
             driverCurrentPosition = position;
 
+            // FETCH ASSIGNMENT ON FIRST LOCATION
+            if (currentAssignment == null) {
+              fetchAssignedTask();
+            }
+
             LatLng newPosition = LatLng(position.latitude, position.longitude);
 
-            // Update marker
             Marker updatedMarker = Marker(
               markerId: const MarkerId("driverMarker"),
               position: newPosition,
@@ -57,12 +71,9 @@ class _HomePageState extends State<HomePage> {
               driverMarker = updatedMarker;
             });
 
-            // Move camera with driver
-            if (controllerGoogleMap != null) {
-              controllerGoogleMap!.animateCamera(
-                CameraUpdate.newLatLng(newPosition),
-              );
-            }
+            controllerGoogleMap?.animateCamera(
+              CameraUpdate.newLatLng(newPosition),
+            );
           },
         );
   }
@@ -76,12 +87,12 @@ class _HomePageState extends State<HomePage> {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      return;
-    }
+    if (permission == LocationPermission.deniedForever) return;
 
     startLiveLocationUpdates();
   }
+
+  // ================= MAP STYLE HANDLER =================
 
   Future<void> loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
@@ -115,6 +126,65 @@ class _HomePageState extends State<HomePage> {
       default:
         controllerGoogleMap!.setMapStyle(null); // Standard
     }
+  }
+
+  // ================= ASSIGNMENT HANDLER =================
+
+  Future<void> fetchAssignedTask() async {
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (driverCurrentPosition == null) return;
+
+    setState(() {
+      currentAssignment = Assignment(
+        pickupName: "Pickup Location",
+        pickupAddress: "Address",
+        pickupLatLng: LatLng(
+          driverCurrentPosition!.latitude,
+          driverCurrentPosition!.longitude,
+        ),
+        dropName: "Destination",
+        dropAddress: "Address",
+        dropLatLng: const LatLng(6.9271, 79.8612),
+      );
+    });
+
+    drawRouteToDestination();
+  }
+
+  // ================= ROUTE DRAWER =================
+
+  Future<void> drawRouteToDestination() async {
+    if (currentAssignment == null) return;
+
+    final origin =
+        "${currentAssignment!.pickupLatLng.latitude},${currentAssignment!.pickupLatLng.longitude}";
+    final destination =
+        "${currentAssignment!.dropLatLng.latitude},${currentAssignment!.dropLatLng.longitude}";
+
+    final url =
+        "https://maps.googleapis.com/maps/api/directions/json"
+        "?origin=$origin"
+        "&destination=$destination"
+        "&key=YOUR_GOOGLE_MAP_KEY";
+
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
+
+    final points = PolylinePoints.decodePolyline(
+      data["routes"][0]["overview_polyline"]["points"],
+    );
+
+    setState(() {
+      polylines = {
+        Polyline(
+          polylineId: const PolylineId("route"),
+          color: Colors.red,
+          width: 5,
+          points: points.map((e) => LatLng(e.latitude, e.longitude)).toList(),
+        ),
+      };
+    });
   }
 
   // ================= CLEANUP =================
@@ -170,16 +240,14 @@ class _HomePageState extends State<HomePage> {
                   mapType: MapType.normal,
                   myLocationEnabled: true,
                   initialCameraPosition: googlePlexInitialPosition,
-
                   markers: driverMarker != null ? {driverMarker!} : {},
-
+                  polylines: polylines,
                   onMapCreated: (GoogleMapController mapController) async {
                     controllerGoogleMap = mapController;
                     googleMapsCompleterController.complete(mapController);
 
-                    await loadMapStyle(); // load saved style
-                    applyMapStyle(); // apply style
-
+                    await loadMapStyle();
+                    applyMapStyle();
                     checkLocationPermission();
                   },
                 ),
@@ -188,75 +256,160 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 10),
 
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade500,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
+            // ================= ASSIGNMENT CARD =================
+            if (currentAssignment != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // HEADER
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade500,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Text(
+                                  "Current Assignment",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Trip ID",
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 223, 223, 223),
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Current Assignment",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          _locationTile(
+                            title: "Pick Up From",
+                            name: currentAssignment!.pickupName,
+                            address: currentAssignment!.pickupAddress,
+                            icon: Icons.circle,
+                          ),
+                          const SizedBox(height: 18),
+                          _locationTile(
+                            title: "Destination",
+                            name: currentAssignment!.dropName,
+                            address: currentAssignment!.dropAddress,
+                            icon: Icons.location_on,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.navigation),
+                          label: const Text(
+                            "Start Navigation",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => NavigationPage(
+                                  destination: currentAssignment!.dropLatLng,
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.shade500,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
                         ),
-                        SizedBox(height: 5),
-                        Text(
-                          "Trip ID",
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Pick Up From",
-                          style: TextStyle(color: Colors.black87),
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          "Deliver To",
-                          style: TextStyle(color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _locationTile({
+    required String title,
+    required String name,
+    required String address,
+    required IconData icon,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: icon == Icons.circle ? 12 : 24,
+          color: icon == Icons.circle ? Colors.grey : Colors.red,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.black54)),
+              const SizedBox(height: 4),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(address, style: const TextStyle(color: Colors.black54)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
