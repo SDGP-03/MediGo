@@ -27,7 +27,9 @@ export function useDriverLocations() {
         const handleData = (snapshot: any) => {
             try {
                 const data = snapshot.val();
+                console.log('[DriverLocations] Received data:', data);
                 if (!data) {
+                    console.log('[DriverLocations] No driver data in Firebase');
                     setDriverLocations([]);
                     setIsLoading(false);
                     return;
@@ -55,6 +57,7 @@ export function useDriverLocations() {
                             now - driver.timestamp < FIVE_MINUTES
                     );
 
+                console.log('[DriverLocations] Filtered drivers:', locations.length, 'of', Object.keys(data).length);
                 setDriverLocations(locations);
                 setError(null);
             } catch (err) {
@@ -66,12 +69,13 @@ export function useDriverLocations() {
         };
 
         const handleError = (err: Error) => {
-            console.error('Firebase listener error:', err);
+            console.error('[DriverLocations] Firebase listener error:', err);
             setError('Failed to connect to driver tracking');
             setIsLoading(false);
         };
 
         // Subscribe to real-time updates
+        console.log('[DriverLocations] Subscribing to driver_locations...');
         onValue(driversRef, handleData, handleError);
 
         // Cleanup on unmount
