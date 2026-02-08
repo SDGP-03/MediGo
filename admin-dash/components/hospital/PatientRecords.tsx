@@ -105,7 +105,12 @@ export function PatientRecords() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200">
-              <h3 className="text-gray-900">Patient List</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-gray-900">Patient List</h3>
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                  {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
+                </span>
+              </div>
             </div>
             <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
               {filteredPatients.length > 0 ? (
