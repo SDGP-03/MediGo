@@ -6,6 +6,7 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
@@ -578,15 +579,29 @@ class _HomePageState extends State<HomePage> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => NavigationPage(
-                                  destination: currentAssignment!.dropLatLng,
-                                ),
-                              ),
+                          onPressed: () async {
+                            // Update trip status to in_progress
+                            await _startTrip();
+
+                            // Open Google Maps for navigation
+                            final lat = currentAssignment!.dropLatLng.latitude;
+                            final lng = currentAssignment!.dropLatLng.longitude;
+                            final url = Uri.parse(
+                              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
                             );
+
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(
+                                url,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not open Google Maps'),
+                                ),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade500,
