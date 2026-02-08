@@ -86,7 +86,7 @@ export function PatientRecords() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-gray-900 mb-4">Centralized Patient Records</h2>
         <p className="text-gray-600 mb-4">
-          Secure digital patient records shared between hospitals for improved coordination and reduced errors.
+          Access comprehensive patient information in real-time. Search by name or ID to view complete medical histories, vital signs, and transfer records across all facilities.
         </p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -112,9 +112,8 @@ export function PatientRecords() {
                 <button
                   key={patient.id}
                   onClick={() => setSelectedPatient(patient)}
-                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                    selectedPatient?.id === patient.id ? 'bg-red-50' : ''
-                  }`}
+                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${selectedPatient?.id === patient.id ? 'bg-red-50' : ''
+                    }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -222,11 +221,10 @@ export function PatientRecords() {
                             <Calendar size={16} />
                             {transfer.date}
                           </span>
-                          <span className={`px-3 py-1 rounded-full text-xs ${
-                            transfer.status === 'Completed'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-blue-100 text-blue-700'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs ${transfer.status === 'Completed'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                            }`}>
                             {transfer.status}
                           </span>
                         </div>
