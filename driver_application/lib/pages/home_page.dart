@@ -107,7 +107,31 @@ class _HomePageState extends State<HomePage> {
           'timestamp': ServerValue.timestamp,
         });
         _onDisconnectSetup = true;
+
+        // Fetch driver name from database if not already cached
+        if (_cachedDriverName == null) {
+          _fetchDriverName(user.uid);
+        }
       }
+    }
+  }
+
+  // Cached driver name from the drivers database
+  String? _cachedDriverName;
+
+  /// Fetch driver name from the drivers database node
+  Future<void> _fetchDriverName(String uid) async {
+    try {
+      final driversRef = FirebaseDatabase.instance
+          .ref()
+          .child('drivers')
+          .child(uid);
+      final snapshot = await driversRef.child('name').get();
+      if (snapshot.exists && snapshot.value != null) {
+        _cachedDriverName = snapshot.value.toString();
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch driver name: $e');
     }
   }
 
@@ -125,7 +149,8 @@ class _HomePageState extends State<HomePage> {
         'accuracy': position.accuracy,
         'timestamp': ServerValue.timestamp,
         'isOnline': true,
-        'driverName': user?.displayName ?? user?.email ?? 'Driver',
+        'driverName':
+            _cachedDriverName ?? user?.displayName ?? user?.email ?? 'Driver',
       });
     } catch (e) {
       debugPrint('Failed to push location to Firebase: $e');
