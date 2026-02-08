@@ -14,10 +14,11 @@ export interface DriverLocation {
 
 /**
  * Hook to listen for driver locations from Firebase Realtime Database.
- * Automatically filters for online drivers with recent updates (< 5 min).
+ * Returns online drivers (recent updates < 5 min) and offline drivers (last known location < 24 hours).
  */
 export function useDriverLocations() {
-    const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([]);
+    const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
+    const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,16 +31,18 @@ export function useDriverLocations() {
                 console.log('[DriverLocations] Received data:', data);
                 if (!data) {
                     console.log('[DriverLocations] No driver data in Firebase');
-                    setDriverLocations([]);
+                    setOnlineDrivers([]);
+                    setOfflineDrivers([]);
                     setIsLoading(false);
                     return;
                 }
 
                 const now = Date.now();
                 const FIVE_MINUTES = 5 * 60 * 1000;
+                const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-                // Convert object to array and filter for online, recent drivers
-                const locations: DriverLocation[] = Object.entries(data)
+                // Convert object to array
+                const allDrivers: DriverLocation[] = Object.entries(data)
                     .map(([id, value]: [string, any]) => ({
                         id,
                         driverName: value.driverName || 'Unknown Driver',
@@ -49,16 +52,22 @@ export function useDriverLocations() {
                         timestamp: value.timestamp || 0,
                         isOnline: value.isOnline || false,
                     }))
-                    .filter(
-                        (driver) =>
-                            driver.isOnline &&
-                            driver.lat &&
-                            driver.lng &&
-                            now - driver.timestamp < FIVE_MINUTES
-                    );
+                    .filter((driver) => driver.lat && driver.lng);
 
-                console.log('[DriverLocations] Filtered drivers:', locations.length, 'of', Object.keys(data).length);
-                setDriverLocations(locations);
+                // Split into online (active within 5 min) and offline (last known within 24 hours)
+                const online = allDrivers.filter(
+                    (driver) => driver.isOnline && now - driver.timestamp < FIVE_MINUTES
+                );
+
+                const offline = allDrivers.filter(
+                    (driver) =>
+                        (!driver.isOnline || now - driver.timestamp >= FIVE_MINUTES) &&
+                        now - driver.timestamp < TWENTY_FOUR_HOURS
+                );
+
+                console.log('[DriverLocations] Online:', online.length, 'Offline:', offline.length);
+                setOnlineDrivers(online);
+                setOfflineDrivers(offline);
                 setError(null);
             } catch (err) {
                 console.error('Error parsing driver locations:', err);
@@ -84,5 +93,9 @@ export function useDriverLocations() {
         };
     }, []);
 
-    return { driverLocations, isLoading, error };
+    // Also export combined for backward compatibility
+    const driverLocations = onlineDrivers;
+
+    return { driverLocations, onlineDrivers, offlineDrivers, isLoading, error };
 }
+

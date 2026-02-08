@@ -56,9 +56,9 @@ class _HomePageState extends State<HomePage> {
           (Position position) {
             driverCurrentPosition = position;
 
-            // FETCH ASSIGNMENT ON FIRST LOCATION
-            if (currentAssignment == null) {
-              fetchAssignedTask();
+            // Start listening for assignments once we have location
+            if (currentAssignment == null && _assignmentSubscription == null) {
+              _startListeningForAssignments();
             }
 
             LatLng newPosition = LatLng(position.latitude, position.longitude);
@@ -88,6 +88,8 @@ class _HomePageState extends State<HomePage> {
 
   // ================= FIREBASE LOCATION PUSH =================
 
+  bool _onDisconnectSetup = false;
+
   void _initDriverLocationRef() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -95,6 +97,16 @@ class _HomePageState extends State<HomePage> {
           .ref()
           .child('driver_locations')
           .child(user.uid);
+
+      // Set up onDisconnect to automatically mark driver offline
+      // This runs on Firebase server when client disconnects (even if app crashes)
+      if (!_onDisconnectSetup) {
+        _driverLocationRef!.onDisconnect().update({
+          'isOnline': false,
+          'timestamp': ServerValue.timestamp,
+        });
+        _onDisconnectSetup = true;
+      }
     }
   }
 
@@ -110,7 +122,7 @@ class _HomePageState extends State<HomePage> {
         'lat': position.latitude,
         'lng': position.longitude,
         'accuracy': position.accuracy,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'timestamp': ServerValue.timestamp,
         'isOnline': true,
         'driverName': user?.displayName ?? user?.email ?? 'Driver',
       });
@@ -181,26 +193,190 @@ class _HomePageState extends State<HomePage> {
 
   // ================= ASSIGNMENT HANDLER =================
 
-  Future<void> fetchAssignedTask() async {
-    await Future.delayed(const Duration(seconds: 1));
+  StreamSubscription<DatabaseEvent>? _assignmentSubscription;
 
-    if (driverCurrentPosition == null) return;
+  /// Listen to Firebase for transfer requests assigned to this driver
+  void _startListeningForAssignments() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final requestsRef = FirebaseDatabase.instance.ref().child(
+      'transfer_requests',
+    );
+
+    // Listen for requests assigned to this driver with status 'pending'
+    _assignmentSubscription = requestsRef
+        .orderByChild('driverId')
+        .equalTo(user.uid)
+        .onValue
+        .listen((event) {
+          final data = event.snapshot.value;
+          if (data == null) return;
+
+          final requests = data as Map<dynamic, dynamic>;
+
+          // Find pending requests
+          for (var entry in requests.entries) {
+            final requestData = entry.value as Map<dynamic, dynamic>;
+            if (requestData['status'] == 'pending') {
+              final assignment = Assignment.fromJson(entry.key, requestData);
+              _showTripAlert(assignment);
+              break; // Show one at a time
+            }
+          }
+        });
+  }
+
+  /// Show trip alert dialog for incoming assignment
+  void _showTripAlert(Assignment assignment) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              assignment.priority == 'critical'
+                  ? Icons.warning
+                  : assignment.priority == 'urgent'
+                  ? Icons.priority_high
+                  : Icons.local_hospital,
+              color: assignment.priority == 'critical'
+                  ? Colors.red
+                  : assignment.priority == 'urgent'
+                  ? Colors.orange
+                  : Colors.green,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'New ${assignment.priority.toUpperCase()} Transfer',
+              style: const TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Patient: ${assignment.patientName}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (assignment.patientAge != null)
+                Text('Age: ${assignment.patientAge}'),
+              if (assignment.patientGender != null)
+                Text('Gender: ${assignment.patientGender}'),
+              const Divider(),
+              Text('From: ${assignment.pickupName}'),
+              Text('To: ${assignment.dropName}'),
+              const Divider(),
+              if (assignment.requiresDoctor)
+                const Text(
+                  '⚕️ Doctor Required',
+                  style: TextStyle(color: Colors.red),
+                ),
+              if (assignment.requiresVentilator)
+                const Text(
+                  '🫁 Ventilator Required',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              if (assignment.requiresOxygen)
+                const Text(
+                  '💨 Oxygen Required',
+                  style: TextStyle(color: Colors.blue),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _rejectAssignment(assignment.requestId);
+            },
+            child: const Text('REJECT', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _acceptAssignment(assignment);
+            },
+            child: const Text('ACCEPT'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Accept the assignment
+  Future<void> _acceptAssignment(Assignment assignment) async {
+    final requestRef = FirebaseDatabase.instance
+        .ref()
+        .child('transfer_requests')
+        .child(assignment.requestId);
+
+    await requestRef.update({
+      'status': 'accepted',
+      'acceptedAt': ServerValue.timestamp,
+    });
 
     setState(() {
-      currentAssignment = Assignment(
-        pickupName: "Pickup Location",
-        pickupAddress: "Address",
-        pickupLatLng: LatLng(
-          driverCurrentPosition!.latitude,
-          driverCurrentPosition!.longitude,
-        ),
-        dropName: "Destination",
-        dropAddress: "Address",
-        dropLatLng: const LatLng(6.9271, 79.8612),
-      );
+      currentAssignment = assignment;
     });
 
     drawRouteToDestination();
+  }
+
+  /// Reject the assignment
+  Future<void> _rejectAssignment(String requestId) async {
+    final requestRef = FirebaseDatabase.instance
+        .ref()
+        .child('transfer_requests')
+        .child(requestId);
+
+    await requestRef.update({
+      'status': 'cancelled',
+      'driverId': null, // Unassign so admin can reassign
+    });
+  }
+
+  /// Mark trip as started (in_progress)
+  Future<void> _startTrip() async {
+    if (currentAssignment == null) return;
+
+    final requestRef = FirebaseDatabase.instance
+        .ref()
+        .child('transfer_requests')
+        .child(currentAssignment!.requestId);
+
+    await requestRef.update({
+      'status': 'in_progress',
+      'startedAt': ServerValue.timestamp,
+    });
+  }
+
+  /// Mark trip as completed
+  Future<void> _completeTrip() async {
+    if (currentAssignment == null) return;
+
+    final requestRef = FirebaseDatabase.instance
+        .ref()
+        .child('transfer_requests')
+        .child(currentAssignment!.requestId);
+
+    await requestRef.update({
+      'status': 'completed',
+      'completedAt': ServerValue.timestamp,
+    });
+
+    setState(() {
+      currentAssignment = null;
+      polylines = {};
+    });
   }
 
   // ================= ROUTE DRAWER =================
@@ -243,6 +419,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     positionStream?.cancel();
+    _assignmentSubscription?.cancel();
     _setDriverOffline();
     super.dispose();
   }

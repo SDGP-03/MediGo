@@ -68,8 +68,9 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
 
   // Driver locations from Firebase
-  const { driverLocations, isLoading: driversLoading } = useDriverLocations();
+  const { driverLocations, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
+  const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
   // Listen for location updates from external tracker app via BroadcastChannel
@@ -128,7 +129,7 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
 
   // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation && !trackedDevice && driverLocations.length === 0) || typeof google === 'undefined') return null;
+    if ((ambulances.length === 0 && !userLocation && !trackedDevice && driverLocations.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -144,8 +145,12 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     driverLocations.forEach((driver) => {
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
+    // Include offline drivers in bounds
+    offlineDrivers.forEach((driver) => {
+      bounds.extend({ lat: driver.lat, lng: driver.lng });
+    });
     return bounds;
-  }, [ambulances, userLocation, trackedDevice, driverLocations]);
+  }, [ambulances, userLocation, trackedDevice, driverLocations, offlineDrivers]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -359,6 +364,30 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     } as google.maps.Symbol;
   }, [isLoaded]);
 
+  // Create offline driver marker icon (gray for offline drivers)
+  const getOfflineDriverIcon = useCallback(() => {
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
+
+    return {
+      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      fillColor: '#9ca3af', // gray-400
+      fillOpacity: 0.7,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      scale: 6,
+      rotation: 0,
+    } as google.maps.Symbol;
+  }, [isLoaded]);
+
+  // Format time ago for offline drivers
+  const formatTimeAgo = (timestamp: number) => {
+    const minutes = Math.floor((Date.now() - timestamp) / 60000);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hr ago`;
+    return 'Over 24 hr ago';
+  };
+
   if (!isLoaded) {
     return (
       <div
@@ -542,6 +571,49 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             </div>
           </InfoWindow>
         )}
+
+        {/* Offline Driver Location Markers (grayed out) */}
+        {offlineDrivers.map((driver) => (
+          <Marker
+            key={`offline-${driver.id}`}
+            position={{ lat: driver.lat, lng: driver.lng }}
+            icon={getOfflineDriverIcon()}
+            title={`${driver.driverName} (Offline)`}
+            zIndex={998}
+            onClick={() => {
+              setSelectedOfflineDriver(driver);
+              setSelectedDriver(null);
+              setSelectedAmbulance(null);
+              setShowUserLocationInfo(false);
+              setShowTrackedDeviceInfo(false);
+            }}
+          />
+        ))}
+
+        {/* Offline Driver Info Window */}
+        {selectedOfflineDriver && (
+          <InfoWindow
+            position={{ lat: selectedOfflineDriver.lat, lng: selectedOfflineDriver.lng }}
+            onCloseClick={() => setSelectedOfflineDriver(null)}
+          >
+            <div className="p-2">
+              <h3 className="font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                <Car size={14} />
+                {selectedOfflineDriver.driverName}
+              </h3>
+              <p className="text-gray-600 text-xs mb-1">
+                ID: {selectedOfflineDriver.id.substring(0, 8)}...
+              </p>
+              <p className="text-gray-600 text-xs mb-1">
+                {selectedOfflineDriver.lat.toFixed(6)}, {selectedOfflineDriver.lng.toFixed(6)}
+              </p>
+              <p className="text-gray-500 text-xs mb-1">
+                Last seen: {formatTimeAgo(selectedOfflineDriver.timestamp)}
+              </p>
+              <p className="text-gray-400 text-xs">📍 Last Known Location</p>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
 
       {/* Map Controls */}
@@ -646,10 +718,6 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
             <span className="text-gray-700">Standby</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-600 rounded-full"></div>
-            <span className="text-gray-700">Offline</span>
-          </div>
           {trackedDevice && trackedDevice.isTracking && (
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-violet-500 rounded-full border-2 border-white"></div>
@@ -660,6 +728,12 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <div className="flex items-center gap-2">
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-green-500"></div>
               <span className="text-gray-700">Active Drivers ({driverLocations.length})</span>
+            </div>
+          )}
+          {offlineDrivers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-gray-400 opacity-70"></div>
+              <span className="text-gray-700">Offline Drivers ({offlineDrivers.length})</span>
             </div>
           )}
         </div>
