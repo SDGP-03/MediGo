@@ -108,27 +108,37 @@ export function PatientRecords() {
               <h3 className="text-gray-900">Patient List</h3>
             </div>
             <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
-              {filteredPatients.map((patient) => (
-                <button
-                  key={patient.id}
-                  onClick={() => setSelectedPatient(patient)}
-                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${selectedPatient?.id === patient.id ? 'bg-red-50' : ''
-                    }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <User className="text-red-600" size={20} />
+              {filteredPatients.length > 0 ? (
+                filteredPatients.map((patient) => (
+                  <button
+                    key={patient.id}
+                    onClick={() => setSelectedPatient(patient)}
+                    className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${selectedPatient?.id === patient.id ? 'bg-red-50' : ''
+                      }`}
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                        <User className="text-red-600" size={20} />
+                      </div>
+                      <div>
+                        <p className="text-gray-900">{patient.name}</p>
+                        <p className="text-gray-600 text-sm">{patient.id}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-900">{patient.name}</p>
-                      <p className="text-gray-600 text-sm">{patient.id}</p>
-                    </div>
-                  </div>
+                    <p className="text-gray-600 text-sm">
+                      {patient.age} yrs • {patient.gender} • {patient.bloodGroup}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <div className="p-8 text-center">
+                  <AlertCircle className="mx-auto text-gray-400 mb-3" size={40} />
+                  <p className="text-gray-900 font-medium mb-1">No matches found</p>
                   <p className="text-gray-600 text-sm">
-                    {patient.age} yrs • {patient.gender} • {patient.bloodGroup}
+                    {searchTerm ? `No patients match "${searchTerm}"` : 'No patients available'}
                   </p>
-                </button>
-              ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
