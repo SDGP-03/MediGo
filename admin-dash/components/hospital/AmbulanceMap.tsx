@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
-import { Ambulance, MapPin, Navigation } from 'lucide-react';
+import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
+import { useDriverLocations, DriverLocation } from '../../src/useDriverLocations';
 
 interface AmbulanceLocation {
   id: string;
@@ -65,6 +66,10 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
 
   // State for external tracked device
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
+
+  // Driver locations from Firebase
+  const { driverLocations, isLoading: driversLoading } = useDriverLocations();
+  const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
   // Listen for location updates from external tracker app via BroadcastChannel
@@ -121,9 +126,9 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     } as google.maps.Symbol;
   }, [isLoaded]);
 
-  // Calculate map bounds to fit all markers including user location and tracked device
+  // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation && !trackedDevice) || typeof google === 'undefined') return null;
+    if ((ambulances.length === 0 && !userLocation && !trackedDevice && driverLocations.length === 0) || typeof google === 'undefined') return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -135,8 +140,12 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     if (trackedDevice && trackedDevice.isTracking) {
       bounds.extend({ lat: trackedDevice.lat, lng: trackedDevice.lng });
     }
+    // Include driver locations in bounds
+    driverLocations.forEach((driver) => {
+      bounds.extend({ lat: driver.lat, lng: driver.lng });
+    });
     return bounds;
-  }, [ambulances, userLocation, trackedDevice]);
+  }, [ambulances, userLocation, trackedDevice, driverLocations]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -335,6 +344,21 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
     } as google.maps.Symbol;
   }, [isLoaded]);
 
+  // Create driver marker icon (green for active drivers)
+  const getDriverIcon = useCallback(() => {
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
+
+    return {
+      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+      fillColor: '#22c55e', // green-500
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 2,
+      scale: 6,
+      rotation: 0,
+    } as google.maps.Symbol;
+  }, [isLoaded]);
+
   if (!isLoaded) {
     return (
       <div
@@ -474,6 +498,50 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             </div>
           </InfoWindow>
         )}
+
+        {/* Driver Location Markers (from Firebase) */}
+        {driverLocations.map((driver) => (
+          <Marker
+            key={driver.id}
+            position={{ lat: driver.lat, lng: driver.lng }}
+            icon={getDriverIcon()}
+            title={driver.driverName}
+            zIndex={999}
+            onClick={() => {
+              setSelectedDriver(driver);
+              setSelectedAmbulance(null);
+              setShowUserLocationInfo(false);
+              setShowTrackedDeviceInfo(false);
+            }}
+          />
+        ))}
+
+        {/* Driver Info Window */}
+        {selectedDriver && (
+          <InfoWindow
+            position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
+            onCloseClick={() => setSelectedDriver(null)}
+          >
+            <div className="p-2">
+              <h3 className="font-semibold text-green-600 mb-1 flex items-center gap-1">
+                <Car size={14} />
+                {selectedDriver.driverName}
+              </h3>
+              <p className="text-gray-600 text-xs mb-1">
+                ID: {selectedDriver.id.substring(0, 8)}...
+              </p>
+              <p className="text-gray-600 text-xs mb-1">
+                {selectedDriver.lat.toFixed(6)}, {selectedDriver.lng.toFixed(6)}
+              </p>
+              {selectedDriver.accuracy > 0 && (
+                <p className="text-gray-500 text-xs mb-1">
+                  Accuracy: ±{Math.round(selectedDriver.accuracy)}m
+                </p>
+              )}
+              <p className="text-green-600 text-xs">🚗 Active Driver</p>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
 
       {/* Map Controls */}
@@ -586,6 +654,12 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-violet-500 rounded-full border-2 border-white"></div>
               <span className="text-gray-700">Tracked Device</span>
+            </div>
+          )}
+          {driverLocations.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-green-500"></div>
+              <span className="text-gray-700">Active Drivers ({driverLocations.length})</span>
             </div>
           )}
         </div>

@@ -4,6 +4,8 @@ import 'package:driver_application/models/assignment.dart';
 import 'package:driver_application/pages/navigation_page.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +40,9 @@ class _HomePageState extends State<HomePage> {
 
   Set<Polyline> polylines = {};
 
+  // Firebase reference for driver location tracking
+  DatabaseReference? _driverLocationRef;
+
   // ================= LIVE LOCATION TRACKING =================
 
   void startLiveLocationUpdates() {
@@ -71,11 +76,57 @@ class _HomePageState extends State<HomePage> {
               driverMarker = updatedMarker;
             });
 
+            // Push location to Firebase for admin dashboard tracking
+            _pushLocationToFirebase(position);
+
             controllerGoogleMap?.animateCamera(
               CameraUpdate.newLatLng(newPosition),
             );
           },
         );
+  }
+
+  // ================= FIREBASE LOCATION PUSH =================
+
+  void _initDriverLocationRef() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _driverLocationRef = FirebaseDatabase.instance
+          .ref()
+          .child('driver_locations')
+          .child(user.uid);
+    }
+  }
+
+  Future<void> _pushLocationToFirebase(Position position) async {
+    if (_driverLocationRef == null) {
+      _initDriverLocationRef();
+    }
+    if (_driverLocationRef == null) return;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      await _driverLocationRef!.set({
+        'lat': position.latitude,
+        'lng': position.longitude,
+        'accuracy': position.accuracy,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'isOnline': true,
+        'driverName': user?.displayName ?? user?.email ?? 'Driver',
+      });
+    } catch (e) {
+      debugPrint('Failed to push location to Firebase: $e');
+    }
+  }
+
+  Future<void> _setDriverOffline() async {
+    if (_driverLocationRef != null) {
+      try {
+        await _driverLocationRef!.update({'isOnline': false});
+      } catch (e) {
+        debugPrint('Failed to set driver offline: $e');
+      }
+    }
   }
 
   // ================= PERMISSION HANDLER =================
@@ -192,6 +243,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     positionStream?.cancel();
+    _setDriverOffline();
     super.dispose();
   }
 
