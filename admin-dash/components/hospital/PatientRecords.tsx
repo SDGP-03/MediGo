@@ -86,7 +86,7 @@ export function PatientRecords() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-gray-900 mb-4">Centralized Patient Records</h2>
         <p className="text-gray-600 mb-4">
-          Access comprehensive patient information in real-time. Search by name or ID to view complete medical histories, vital signs, and transfer records across all facilities.
+          Search by name or ID to view complete medical histories, vital signs, and transfer records across all facilities.
         </p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
