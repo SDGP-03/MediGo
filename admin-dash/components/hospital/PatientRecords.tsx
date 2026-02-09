@@ -274,7 +274,68 @@ export function PatientRecords() {
                   <p className="text-gray-600 text-center py-4">No transfer history</p>
                 )}
               </div>
+              {/* Medical Documents */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-gray-900">Medical Documents</h3>
+                  <label className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm cursor-pointer flex items-center gap-2">
+                    <Upload size={16} />
+                    Upload Files
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                      onChange={(e) => handleFileUpload(e, selectedPatient.id)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {/* Display uploaded files */}
+                <div className="space-y-2">
+                  {uploadedFiles[selectedPatient.id]?.length > 0 ? (
+                    uploadedFiles[selectedPatient.id].map((file: File, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <File className="text-blue-600" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-gray-900 font-medium text-sm">{file.name}</p>
+                            <p className="text-gray-500 text-xs">
+                              {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const url = URL.createObjectURL(file);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = file.name;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Download file"
+                        >
+                          <Download size={20} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <File className="mx-auto text-gray-400 mb-3" size={40} />
+                      <p className="text-gray-600 text-sm">No documents uploaded yet</p>
+                      <p className="text-gray-500 text-xs mt-1">Upload patient reports, lab results, or transfer documents</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
             </div>
+
+
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
               <div className="max-w-xl mx-auto">
