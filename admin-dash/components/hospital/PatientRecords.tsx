@@ -80,6 +80,17 @@ export function PatientRecords() {
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  // File upload handler
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, patientId: string) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => ({
+        ...prev,
+        [patientId]: [...(prev[patientId] || []), ...newFiles]
+      }));
+    }
+  };
 
   return (
     <div className="space-y-6">
