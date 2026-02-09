@@ -1,9 +1,61 @@
+import 'dart:async';
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends StatefulWidget {
   const SideMenu({super.key});
+
+  @override
+  State<SideMenu> createState() => _SideMenuState();
+}
+
+class _SideMenuState extends State<SideMenu> {
+  String? profileImageUrl;
+  String userName = "";
+
+  StreamSubscription<DatabaseEvent>? _driverSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupDriverListener();
+  }
+
+  @override
+  void dispose() {
+    _driverSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupDriverListener() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DatabaseReference driversRef = FirebaseDatabase.instance
+          .ref()
+          .child("drivers")
+          .child(user.uid);
+
+      _driverSubscription = driversRef.onValue.listen((event) {
+        if (event.snapshot.value != null) {
+          final data = event.snapshot.value as Map;
+          if (mounted) {
+            setState(() {
+              // Safe access to map keys
+              if (data.containsKey("name") && data["name"] != null) {
+                userName = data["name"].toString();
+              }
+              if (data.containsKey("profileImage") &&
+                  data["profileImage"] != null) {
+                profileImageUrl = data["profileImage"].toString();
+              }
+            });
+          }
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,15 +64,47 @@ class SideMenu extends StatelessWidget {
         color: const Color.fromARGB(255, 255, 230, 230), // light red
         child: Column(
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Color.fromARGB(255, 255, 171, 171),
-              ),
-              child: Center(
-                child: Image(
-                  image: AssetImage('assets/logo/logo.png'),
-                  width: 120,
-                  height: 120,
+            Container(
+              height: 240,
+              width: double.infinity,
+              color: const Color.fromARGB(255, 255, 171, 171),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    profileImageUrl != null && profileImageUrl!.isNotEmpty
+                        ? CircleAvatar(
+                            radius: 70,
+                            backgroundColor: Colors.white,
+                            backgroundImage: NetworkImage(profileImageUrl!),
+                          )
+                        : CircleAvatar(
+                            radius: 70,
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              223,
+                              181,
+                              181,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 70,
+                              color: Colors.white,
+                            ),
+                          ),
+
+                    const SizedBox(height: 12),
+
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
