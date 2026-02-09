@@ -143,6 +143,12 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final user = FirebaseAuth.instance.currentUser;
+
+      // Ensure we have the driver name before pushing (fetch if not cached)
+      if (_cachedDriverName == null && user != null) {
+        await _fetchDriverName(user.uid);
+      }
+
       await _driverLocationRef!.set({
         'lat': position.latitude,
         'lng': position.longitude,
