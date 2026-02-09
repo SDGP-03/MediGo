@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { FileText, Search, User, Calendar, AlertCircle } from 'lucide-react';
+import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File } from 'lucide-react';
 
 export function PatientRecords() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File[] }>({});
 
   const patients = [
     {
@@ -101,8 +102,7 @@ export function PatientRecords() {
             <button
               onClick={() => setSearchTerm('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Clear search"
-            >
+              aria-label="Clear search">
               ✕
             </button>
           )}
