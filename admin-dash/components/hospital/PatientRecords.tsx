@@ -91,6 +91,13 @@ export function PatientRecords() {
       }));
     }
   };
+  // File removal handler
+  const handleFileRemove = (patientId: string, fileIndex: number) => {
+    setUploadedFiles(prev => ({
+      ...prev,
+      [patientId]: prev[patientId].filter((_, index) => index !== fileIndex)
+    }));
+  };
 
   return (
     <div className="space-y-6">
