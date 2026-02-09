@@ -115,28 +115,12 @@ export function HospitalDashboard() {
       bgColor: "bg-emerald-50",
     },
     {
-      label: "On the Way",
-      value: "2",
-      change: "En route",
-      icon: TrendingUp,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
       label: "Busy",
       value: "2",
       change: "At hospital",
       icon: Clock,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
-    },
-    {
-      label: "Standby",
-      value: "2",
-      change: "Ready",
-      icon: Users,
-      color: "text-slate-600",
-      bgColor: "bg-slate-50",
     },
     {
       label: "Offline",
