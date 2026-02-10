@@ -10,6 +10,7 @@ export function PatientRecords() {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editedPatient, setEditedPatient] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const patients = [
     {
       id: 'PT-20251',
@@ -85,22 +86,66 @@ export function PatientRecords() {
     patient.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
   // File upload handler
+  // File upload handler with localStorage persistence
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, patientId: string) => {
     const files = event.target.files;
     if (files && files.length > 0) {
+      setIsUploading(true); // Start loading state
       const newFiles = Array.from(files);
-      //file validation
-      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      // File size validation (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
       const oversizedFiles = newFiles.filter(file => file.size > maxSize);
 
       if (oversizedFiles.length > 0) {
         alert(`Some files are too large (max 5MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+        setIsUploading(false); // Stop loading
         return;
       }
-      setUploadedFiles(prev => ({
-        ...prev,
-        [patientId]: [...(prev[patientId] || []), ...newFiles]
-      }));
+
+      // Convert files to base64 for storage
+      const filePromises = newFiles.map(file => {
+        return new Promise<{ name: string, size: number, type: string, data: string }>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              data: e.target?.result as string
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(filePromises).then(fileData => {
+        // Get existing files from localStorage
+        const stored = localStorage.getItem('patientFiles');
+        const existingFiles = stored ? JSON.parse(stored) : {};
+
+        // Add new files to existing files for this patient
+        const updatedFiles = {
+          ...existingFiles,
+          [patientId]: [...(existingFiles[patientId] || []), ...fileData]
+        };
+
+        // Save to localStorage (persistent storage)
+        localStorage.setItem('patientFiles', JSON.stringify(updatedFiles));
+
+        // Update React state (for immediate UI update)
+        setUploadedFiles(prev => ({
+          ...prev,
+          [patientId]: [...(prev[patientId] || []), ...fileData.map(fd => ({
+            name: fd.name,
+            size: fd.size,
+            type: fd.type,
+            data: fd.data
+          } as any))]
+        }));
+
+        setIsUploading(false); // Stop loading state
+      });
     }
   };
   // File removal handler
@@ -383,18 +428,25 @@ export function PatientRecords() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-gray-900">Medical Documents</h3>
-                  <label className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm cursor-pointer flex items-center gap-2">
-                    <Upload size={16} />
-                    Upload Files
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                      onChange={(e) => handleFileUpload(e, selectedPatient.id)}
-                      className="hidden"
-                    />
-                  </label>
+                  {uploadedFiles[selectedPatient.id]?.length > 0 && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                      {uploadedFiles[selectedPatient.id].length}
+                    </span>
+                  )}
                 </div>
+                <label className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm cursor-pointer flex items-center gap-2">
+                  <Upload size={16} />
+                  {isUploading ? 'Uploading...' : 'Upload Files'}
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    onChange={(e) => handleFileUpload(e, selectedPatient.id)}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </label>
+
 
                 {/* Display uploaded files */}
                 <div className="space-y-2">
