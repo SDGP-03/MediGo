@@ -307,11 +307,17 @@ export function HospitalDashboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* Live Ambulance Map */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-gray-900">
-                Live Ambulance Locations
-              </h2>
-              <div className="flex items-center gap-2">
+            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center pl-3">
+                {/* Status indicator dot */}
+                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+
+                {/* Label */}
+                <h2 className="bg-white rounded-lg px-3 py-1 text-gray-900">
+                  Live Ambulance Locations
+                </h2>
+              </div>
+              <div className="flex items-center gap-2 pointer-events-auto">
                 <button
                   onClick={() => setMapView("map")}
                   className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
@@ -339,7 +345,7 @@ export function HospitalDashboard() {
                   lat: amb.lat,
                   lng: amb.lng,
                 }))}
-                height="384px"
+                height="525px"
               />
             )}
 
