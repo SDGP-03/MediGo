@@ -89,6 +89,14 @@ export function PatientRecords() {
     const files = event.target.files;
     if (files && files.length > 0) {
       const newFiles = Array.from(files);
+      //file validation
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const oversizedFiles = newFiles.filter(file => file.size > maxSize);
+
+      if (oversizedFiles.length > 0) {
+        alert(`Some files are too large (max 5MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+        return;
+      }
       setUploadedFiles(prev => ({
         ...prev,
         [patientId]: [...(prev[patientId] || []), ...newFiles]
