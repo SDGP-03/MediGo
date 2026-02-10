@@ -319,46 +319,6 @@ export function HospitalDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={stat.color} size={24} />
-              </div>
-            </div>
-            <p className="text-gray-600 text-sm mb-1">
-              {stat.label}
-            </p>
-            <p className={`${stat.color} mb-1`}>{stat.value}</p>
-            <p className="text-gray-500 text-xs">
-              {stat.change}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Pending Requests Alert */}
-      {pendingRequests.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="text-red-600" size={24} />
-            <div>
-              <h3 className="text-red-900">
-                Pending Transfer Requests
-              </h3>
-              <p className="text-red-700 text-sm">
-                {pendingRequests.length} requests waiting for
-                ambulance assignment
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -549,6 +509,48 @@ export function HospitalDashboard() {
           </div>
         </div>
       </div>
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        {stats.map((stat, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                <stat.icon className={stat.color} size={24} />
+              </div>
+            </div>
+            <p className="text-gray-600 text-sm mb-1">
+              {stat.label}
+            </p>
+            <p className={`${stat.color} mb-1`}>{stat.value}</p>
+            <p className="text-gray-500 text-xs">
+              {stat.change}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Pending Requests Alert */}
+      {pendingRequests.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="text-red-600" size={24} />
+            <div>
+              <h3 className="text-red-900">
+                Pending Transfer Requests
+              </h3>
+              <p className="text-red-700 text-sm">
+                {pendingRequests.length} requests waiting for
+                ambulance assignment
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {/* Active Transfers */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
