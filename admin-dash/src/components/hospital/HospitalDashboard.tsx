@@ -1,23 +1,5 @@
 import { useState } from "react";
-import {
-  Ambulance,
-  Clock,
-  Users,
-  AlertCircle,
-  TrendingUp,
-  MapPin,
-  Layers,
-  List,
-  Plus,
-  Minus,
-  Navigation,
-  Maximize2,
-  AlertTriangle,
-  Wrench,
-  Activity,
-  CheckCircle,
-  User,
-} from "lucide-react";
+import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, } from "lucide-react";
 
 import { AmbulanceMap } from "./AmbulanceMap";
 
@@ -408,130 +390,133 @@ export function HospitalDashboard() {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Fleet Summary */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900">Fleet Summary</h3>
-              <Activity className="text-red-600" size={20} />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 text-sm">
-                  Total Ambulances
-                </span>
-                <span className="text-gray-900">11</span>
+          {/* Statistics */}
+          <div className="space-y-4">
+            {stats.map((stat, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={stat.color} size={24} />
+                  </div>
+                </div>
+                <p className="text-gray-600 text-sm mb-1">
+                  {stat.label}
+                </p>
+                <p className={`${stat.color} mb-1`}>{stat.value}</p>
+                <p className="text-gray-500 text-xs">
+                  {stat.change}
+                </p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 text-sm">
-                  Active Now
-                </span>
-                <span className="text-teal-600">7</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 text-sm">
-                  In Service
-                </span>
-                <span className="text-blue-600">4</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 text-sm">
-                  Maintenance
-                </span>
-                <span className="text-orange-600">2</span>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Ambulance Condition */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-gray-900">
-                Ambulance Condition
-              </h3>
-              <span className="text-sm text-teal-600 flex items-center gap-1">
-                <TrendingUp size={14} />
-                5.2%
+        </div>
+      </div>
+      {/* Fleet and amblance condition wrapper */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Fleet Summary */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-gray-900">Fleet Summary</h3>
+            <Activity className="text-red-600" size={20} />
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 text-sm">
+                Total Ambulances
               </span>
+              <span className="text-gray-900">11</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 text-sm">
+                Active Now
+              </span>
+              <span className="text-teal-600">7</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 text-sm">
+                In Service
+              </span>
+              <span className="text-blue-600">4</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 text-sm">
+                Maintenance
+              </span>
+              <span className="text-orange-600">2</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Ambulance Condition */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-gray-900">
+              Ambulance Condition
+            </h3>
+            <span className="text-sm text-teal-600 flex items-center gap-1">
+              <TrendingUp size={14} />
+              5.2%
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <span className="text-gray-900 text-sm">
+                  Good
+                </span>
+              </div>
+              <span className="text-gray-900">7</span>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Good
-                  </span>
+            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                  <AlertTriangle
+                    className="text-white"
+                    size={14}
+                  />
                 </div>
-                <span className="text-gray-900">7</span>
+                <span className="text-gray-900 text-sm">
+                  Maintenance Needed
+                </span>
               </div>
+              <span className="text-gray-900">3</span>
+            </div>
 
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                    <AlertTriangle
-                      className="text-white"
-                      size={14}
-                    />
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Maintenance Needed
-                  </span>
+            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <Wrench className="text-white" size={14} />
                 </div>
-                <span className="text-gray-900">3</span>
+                <span className="text-gray-900 text-sm">
+                  Repairing
+                </span>
               </div>
+              <span className="text-gray-900">1</span>
+            </div>
 
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <Wrench className="text-white" size={14} />
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Repairing
-                  </span>
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
                 </div>
-                <span className="text-gray-900">1</span>
+                <span className="text-gray-900 text-sm">
+                  Breakdown
+                </span>
               </div>
-
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Breakdown
-                  </span>
-                </div>
-                <span className="text-gray-900">0</span>
-              </div>
+              <span className="text-gray-900">0</span>
             </div>
           </div>
         </div>
       </div>
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={stat.color} size={24} />
-              </div>
-            </div>
-            <p className="text-gray-600 text-sm mb-1">
-              {stat.label}
-            </p>
-            <p className={`${stat.color} mb-1`}>{stat.value}</p>
-            <p className="text-gray-500 text-xs">
-              {stat.change}
-            </p>
-          </div>
-        ))}
-      </div>
-
       {/* Pending Requests Alert */}
       {pendingRequests.length > 0 && (
         <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">

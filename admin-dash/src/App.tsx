@@ -82,7 +82,7 @@ export default function App() {
       />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 pb-12">
+      <main className="max-w-[95%] mx-auto px-6 py-8 pb-12">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {currentView === 'dashboard' && <HospitalDashboard />}
           {currentView === 'transfer' && <TransferRequest />}
