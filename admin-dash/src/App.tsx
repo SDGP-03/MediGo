@@ -6,7 +6,7 @@ import { TransferRequest } from './components/hospital/TransferRequest';
 import { AmbulanceFleet } from './components/hospital/AmbulanceFleet';
 import { PatientRecords } from './components/hospital/PatientRecords';
 import { HospitalDashboard } from './components/hospital/HospitalDashboard';
-import { AnalyticsDashboard } from './components/hospital/AnalyticsDashboard';
+import { Analytics } from './components/Analytics';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 
@@ -164,7 +164,7 @@ export default function App() {
           {currentView === 'transfer' && <TransferRequest />}
           {currentView === 'fleet' && <AmbulanceFleet />}
           {currentView === 'records' && <PatientRecords />}
-          {currentView === 'analytics' && <AnalyticsDashboard />}
+          {currentView === 'analytics' && <Analytics />}
         </div>
       </main>
     </div>
