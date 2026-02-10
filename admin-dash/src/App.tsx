@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Ambulance, Users, BarChart3, LogOut, Activity, Loader2 } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from './src/firebase';
+import { auth } from './firebase';
 import { TransferRequest } from './components/hospital/TransferRequest';
 import { AmbulanceFleet } from './components/hospital/AmbulanceFleet';
 import { PatientRecords } from './components/hospital/PatientRecords';

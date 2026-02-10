@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../src/firebase';
+import { auth } from '../../firebase';
 
 interface LoginPageProps {
   onLogin: () => void;

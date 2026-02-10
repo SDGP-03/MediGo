@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
 import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
-import { useDriverLocations, DriverLocation } from '../../src/useDriverLocations';
+import { useDriverLocations, DriverLocation } from '../../useDriverLocations';
 
 interface AmbulanceLocation {
   id: string;

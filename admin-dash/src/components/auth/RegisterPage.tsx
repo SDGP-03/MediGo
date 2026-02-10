@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
-import { auth, database } from '../../src/firebase';
+import { auth, database } from '../../firebase';
 
 interface RegisterPageProps {
     onBackToLogin: () => void;
