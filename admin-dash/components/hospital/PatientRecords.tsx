@@ -4,8 +4,12 @@ import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File }
 export function PatientRecords() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File[] }>({});
-
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: any[] }>(() => {
+    const stored = localStorage.getItem('patientFiles');
+    return stored ? JSON.parse(stored) : {};
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPatient, setEditedPatient] = useState<any>(null);
   const patients = [
     {
       id: 'PT-20251',
@@ -185,26 +189,104 @@ export function PatientRecords() {
                     <h2 className="text-gray-900 mb-1">{selectedPatient.name}</h2>
                     <p className="text-gray-600">{selectedPatient.id}</p>
                   </div>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                    Edit Record
-                  </button>
+                  {!isEditing ? (
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setEditedPatient({ ...selectedPatient });
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Edit Record
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          // Save changes
+                          setSelectedPatient(editedPatient);
+                          setIsEditing(false);
+                          alert('Changes saved! (In production, this would update the database)');
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedPatient(null);
+                        }}
+                        className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Age</p>
-                    <p className="text-gray-900">{selectedPatient.age} years</p>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedPatient.age}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, age: parseInt(e.target.value) })}
+                        className="text-gray-900 border border-gray-300 rounded px-2 py-1 w-20"
+                      />
+                    ) : (
+                      <p className="text-gray-900">{selectedPatient.age} years</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-gray-600">Gender</p>
-                    <p className="text-gray-900">{selectedPatient.gender}</p>
+                    {isEditing ? (
+                      <select
+                        value={editedPatient.gender}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
+                        className="text-gray-900 border border-gray-300 rounded px-2 py-1"
+                      >
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                      </select>
+                    ) : (
+                      <p className="text-gray-900">{selectedPatient.gender}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-gray-600">Blood Group</p>
-                    <p className="text-gray-900">{selectedPatient.bloodGroup}</p>
+                    {isEditing ? (
+                      <select
+                        value={editedPatient.bloodGroup}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, bloodGroup: e.target.value })}
+                        className="text-gray-900 border border-gray-300 rounded px-2 py-1"
+                      >
+                        <option>A+</option>
+                        <option>A-</option>
+                        <option>B+</option>
+                        <option>B-</option>
+                        <option>AB+</option>
+                        <option>AB-</option>
+                        <option>O+</option>
+                        <option>O-</option>
+                      </select>
+                    ) : (
+                      <p className="text-gray-900">{selectedPatient.bloodGroup}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-gray-600">Allergies</p>
-                    <p className="text-red-600">{selectedPatient.allergies}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedPatient.allergies}
+                        onChange={(e) => setEditedPatient({ ...editedPatient, allergies: e.target.value })}
+                        className="text-red-600 border border-gray-300 rounded px-2 py-1 w-full"
+                      />
+                    ) : (
+                      <p className="text-red-600">{selectedPatient.allergies}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -235,7 +317,15 @@ export function PatientRecords() {
               {/* Medical History */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-gray-900 mb-4">Medical History</h3>
-                <p className="text-gray-700">{selectedPatient.medicalHistory}</p>
+                {isEditing ? (
+                  <textarea
+                    value={editedPatient.medicalHistory}
+                    onChange={(e) => setEditedPatient({ ...editedPatient, medicalHistory: e.target.value })}
+                    className="w-full text-gray-700 border border-gray-300 rounded p-3 min-h-[80px]"
+                  />
+                ) : (
+                  <p className="text-gray-700">{selectedPatient.medicalHistory}</p>
+                )}
               </div>
 
               {/* Medications */}
