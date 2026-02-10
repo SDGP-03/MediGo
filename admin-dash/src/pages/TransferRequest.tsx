@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck } from 'lucide-react';
-import { database } from '../../firebase';
+import { database } from '../firebase';
 import { ref, push, set, onValue, off } from 'firebase/database';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)

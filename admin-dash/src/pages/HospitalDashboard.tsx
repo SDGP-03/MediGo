@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, } from "lucide-react";
-
-import { AmbulanceMap } from "./AmbulanceMap";
+import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User } from "lucide-react";
+import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 
 export function HospitalDashboard() {
   const [mapView, setMapView] = useState<"map" | "list">("map");
