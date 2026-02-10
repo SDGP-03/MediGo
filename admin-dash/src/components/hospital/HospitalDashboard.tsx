@@ -18,15 +18,7 @@ import {
   CheckCircle,
   User,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-} from "recharts";
+
 import { AmbulanceMap } from "./AmbulanceMap";
 
 export function HospitalDashboard() {
@@ -85,25 +77,7 @@ export function HospitalDashboard() {
     },
   ];
 
-  const fuelData = [
-    { month: "Jan", value: 26 },
-    { month: "Feb", value: 25 },
-    { month: "Mar", value: 27 },
-    { month: "Apr", value: 26 },
-    { month: "May", value: 28 },
-    { month: "Jun", value: 27 },
-    { month: "Jul", value: 28 },
-  ];
 
-  const distanceData = [
-    { day: "Mon", value: 380 },
-    { day: "Tue", value: 420 },
-    { day: "Wed", value: 450 },
-    { day: "Thu", value: 480 },
-    { day: "Fri", value: 520 },
-    { day: "Sat", value: 560 },
-    { day: "Sun", value: 408 },
-  ];
 
   const stats = [
     {
@@ -469,86 +443,7 @@ export function HospitalDashboard() {
             )}
           </div>
 
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Fuel Efficiency */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h4 className="text-gray-900 mb-1">
-                    Fuel Efficiency
-                  </h4>
-                  <p className="text-gray-500 text-sm">
-                    Liters per 100km
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-teal-600 text-sm">
-                  <TrendingUp size={14} />
-                  <span>+12%</span>
-                </div>
-              </div>
-              <div className="mb-4">
-                <span className="text-3xl text-gray-900">
-                  28L
-                </span>
-              </div>
-              <ResponsiveContainer width="100%" height={120}>
-                <LineChart data={fuelData}>
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#14b8a6"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 12, fill: "#9ca3af" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
 
-            {/* Distance Travelled */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h4 className="text-gray-900 mb-1">
-                    Distance Travelled
-                  </h4>
-                  <p className="text-gray-500 text-sm">
-                    Kilometers per day
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-teal-600 text-sm">
-                  <TrendingUp size={14} />
-                  <span>+8%</span>
-                </div>
-              </div>
-              <div className="mb-4">
-                <span className="text-3xl text-gray-900">
-                  408km
-                </span>
-              </div>
-              <ResponsiveContainer width="100%" height={120}>
-                <BarChart data={distanceData}>
-                  <Bar
-                    dataKey="value"
-                    fill="#3b82f6"
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 12, fill: "#9ca3af" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
 
         {/* Right Column */}
