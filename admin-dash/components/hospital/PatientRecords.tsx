@@ -302,32 +302,41 @@ export function PatientRecords() {
                 <div className="space-y-2">
                   {uploadedFiles[selectedPatient.id]?.length > 0 ? (
                     uploadedFiles[selectedPatient.id].map((file: File, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <File className="text-blue-600" size={20} />
                           </div>
-                          <div>
-                            <p className="text-gray-900 font-medium text-sm">{file.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-gray-900 font-medium text-sm truncate">{file.name}</p>
                             <p className="text-gray-500 text-xs">
                               {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
                             </p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            const url = URL.createObjectURL(file);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = file.name;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Download file"
-                        >
-                          <Download size={20} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const url = URL.createObjectURL(file);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = file.name;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Download file"
+                          >
+                            <Download size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleFileRemove(selectedPatient.id, index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remove file"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     ))
                   ) : (
