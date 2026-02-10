@@ -132,7 +132,7 @@ export function PatientRecords() {
       </div>
 
       {/* Patient List */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-4 border-b border-gray-200">
@@ -179,7 +179,7 @@ export function PatientRecords() {
           </div>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           {selectedPatient ? (
             <div className="space-y-6">
               {/* Patient Header */}
@@ -443,41 +443,14 @@ export function PatientRecords() {
 
 
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
-              <div className="max-w-xl mx-auto">
-                {/* Upload Icon */}
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Upload className="text-red-600" size={40} />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-gray-900 mb-2 text-xl font-semibold text-center">
-                  Upload Patient Reports
-                </h3>
-
-                {/* Description */}
-                <p className="text-gray-600 mb-6 text-center">
-                  Select a patient from the list, then upload medical reports, lab results, or transfer documents.
-                </p>
-
-                {/* Instructions */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <p className="text-blue-900 font-medium text-sm mb-2">📋 How to Upload:</p>
-                  <ol className="text-blue-700 text-sm space-y-1 list-decimal list-inside">
-                    <li>Click on a patient from the list on the left</li>
-                    <li>Scroll to the "Medical Documents" section</li>
-                    <li>Click "Upload Files" and select PDF, images, or documents</li>
-                    <li>Files will be available for all hospitals during transfers</li>
-                  </ol>
-                </div>
-
-                {/* Accepted formats */}
-                <div className="text-center">
-                  <p className="text-gray-500 text-sm">
-                    Accepted formats: PDF, PNG, JPG, JPEG, DOC, DOCX
-                  </p>
-                </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="text-red-600" size={32} />
               </div>
+              <h3 className="text-gray-900 mb-2 text-lg font-semibold">Select a Patient</h3>
+              <p className="text-gray-600 text-sm">
+                Choose a patient from the list to view complete medical records and upload documents.
+              </p>
             </div>
           )}
         </div>
