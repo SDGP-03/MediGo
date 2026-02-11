@@ -542,6 +542,7 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                           ),
+                          _priorityBadge(currentAssignment!.priority),
                         ],
                       ),
                     ),
@@ -662,6 +663,33 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 10),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _priorityBadge(String priority) {
+    Color bgColor = Colors.green;
+    String label = "Standard";
+
+    if (priority == "critical") {
+      label = "Critical";
+    } else if (priority == "urgent") {
+      label = "Urgent";
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
