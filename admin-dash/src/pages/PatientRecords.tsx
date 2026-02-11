@@ -85,7 +85,7 @@ export function PatientRecords() {
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  // File upload handler
+
   // File upload handler with localStorage persistence
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, patientId: string) => {
     const files = event.target.files;
@@ -150,10 +150,14 @@ export function PatientRecords() {
   };
   // File removal handler
   const handleFileRemove = (patientId: string, fileIndex: number) => {
-    setUploadedFiles(prev => ({
-      ...prev,
-      [patientId]: prev[patientId].filter((_, index) => index !== fileIndex)
-    }));
+    setUploadedFiles(prev => {
+      const updatedFiles = {
+        ...prev,
+        [patientId]: prev[patientId].filter((_, index) => index !== fileIndex)
+      };
+      localStorage.setItem('patientFiles', JSON.stringify(updatedFiles));
+      return updatedFiles;
+    });
   };
 
   return (
@@ -205,8 +209,8 @@ export function PatientRecords() {
                       key={patient.id}
                       onClick={() => setSelectedPatient(patient)}
                       className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border rounded-lg ${selectedPatient?.id === patient.id
-                          ? 'bg-red-50 border-red-200'
-                          : 'border-transparent hover:border-gray-200'
+                        ? 'bg-red-50 border-red-200'
+                        : 'border-transparent hover:border-gray-200'
                         } ${!selectedPatient ? 'border-gray-200' : ''}`}
                     >
                       <div className="flex items-center gap-3 mb-2">
