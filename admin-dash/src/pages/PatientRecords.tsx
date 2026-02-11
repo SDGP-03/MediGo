@@ -11,6 +11,14 @@ export function PatientRecords() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedPatient, setEditedPatient] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [newMedication, setNewMedication] = useState('');
+  const [newTransfer, setNewTransfer] = useState({
+    date: '',
+    from: '',
+    to: '',
+    reason: '',
+    status: 'In Progress'
+  });
   const patients = [
     {
       id: 'PT-20251',
@@ -412,24 +420,151 @@ export function PatientRecords() {
             {/* Medications */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-gray-900 mb-4 font-semibold">Current Medications</h3>
-              <div className="flex flex-wrap gap-2">
-                {selectedPatient.medications.map((med: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(isEditing ? editedPatient.medications : selectedPatient.medications).map((med: string, index: number) => (
+                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg group">
                     <div className="w-2 h-2 bg-red-600 rounded-full"></div>
                     <span className="text-gray-900 font-medium">{med}</span>
+                    {isEditing && (
+                      <button
+                        onClick={() => {
+                          const newMeds = editedPatient.medications.filter((_: any, i: number) => i !== index);
+                          setEditedPatient({ ...editedPatient, medications: newMeds });
+                        }}
+                        className="ml-2 text-gray-400 hover:text-red-600"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
+              {isEditing && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMedication}
+                    onChange={(e) => setNewMedication(e.target.value)}
+                    placeholder="Add new medication..."
+                    className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newMedication.trim()) {
+                        setEditedPatient({
+                          ...editedPatient,
+                          medications: [...editedPatient.medications, newMedication.trim()]
+                        });
+                        setNewMedication('');
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (newMedication.trim()) {
+                        setEditedPatient({
+                          ...editedPatient,
+                          medications: [...editedPatient.medications, newMedication.trim()]
+                        });
+                        setNewMedication('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Transfer History */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-gray-900 mb-4 font-semibold">Transfer History</h3>
-              {selectedPatient.recentTransfers.length > 0 ? (
+
+              {isEditing && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Add New Transfer Record</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <input
+                      type="date"
+                      value={newTransfer.date}
+                      onChange={(e) => setNewTransfer({ ...newTransfer, date: e.target.value })}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={newTransfer.status}
+                      onChange={(e) => setNewTransfer({ ...newTransfer, status: e.target.value })}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                    >
+                      <option>In Progress</option>
+                      <option>Completed</option>
+                      <option>Pending</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Reason"
+                      value={newTransfer.reason}
+                      onChange={(e) => setNewTransfer({ ...newTransfer, reason: e.target.value })}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm md:col-span-2"
+                    />
+                    <input
+                      type="text"
+                      placeholder="From Facility"
+                      value={newTransfer.from}
+                      onChange={(e) => setNewTransfer({ ...newTransfer, from: e.target.value })}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="To Facility"
+                      value={newTransfer.to}
+                      onChange={(e) => setNewTransfer({ ...newTransfer, to: e.target.value })}
+                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (newTransfer.date && newTransfer.reason) {
+                        setEditedPatient({
+                          ...editedPatient,
+                          recentTransfers: [newTransfer, ...editedPatient.recentTransfers]
+                        });
+                        setNewTransfer({
+                          date: '',
+                          from: '',
+                          to: '',
+                          reason: '',
+                          status: 'In Progress'
+                        });
+                      } else {
+                        alert('Please fill in Date and Reason');
+                      }
+                    }}
+                    className="w-full py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  >
+                    Add Record
+                  </button>
+                </div>
+              )}
+
+              {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).length > 0 ? (
                 <div className="space-y-4">
-                  {selectedPatient.recentTransfers.map((transfer: any, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between mb-2">
+                  {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).map((transfer: any, index: number) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors relative group">
+                      {isEditing && (
+                        <button
+                          onClick={() => {
+                            const newTransfers = editedPatient.recentTransfers.filter((_: any, i: number) => i !== index);
+                            setEditedPatient({ ...editedPatient, recentTransfers: newTransfers });
+                          }}
+                          className="absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1"
+                          title="Remove record"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+
+                      <div className="flex items-center justify-between mb-2 pr-8">
                         <span className="text-gray-600 text-sm flex items-center gap-2">
                           <Calendar size={16} className="text-gray-400" />
                           {transfer.date}
