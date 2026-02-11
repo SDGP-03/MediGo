@@ -18,14 +18,14 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
 
-  checkIfNetworkIsAvailable() async {
+  Future<void> checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
     if (ok) {
       signInFormValidation();
     }
   }
 
-  signInFormValidation() {
+  void signInFormValidation() {
     if (!emailTextEditingController.text.contains("@medigo.lk")) {
       cMethods.displaySnackBar("Please write valid email.", context);
     } else if (passwordTextEditingController.text.trim().length < 6) {
@@ -38,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  signInUser() async {
+  Future<void> signInUser() async {
     showDialog(
       context: context,
       barrierDismissible: false,

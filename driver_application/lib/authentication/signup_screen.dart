@@ -58,14 +58,14 @@ class _SignupScreenState extends State<SignupScreen> {
     return await snapshot.ref.getDownloadURL();
   }
 
-  checkIfNetworkIsAvailable() async {
+  Future<void> checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
     if (ok) {
       signUpFormValidation();
     }
   }
 
-  signUpFormValidation() {
+  void signUpFormValidation() {
     if (userNameTextEditingController.text.trim().length < 4) {
       cMethods.displaySnackBar(
         "Your name must be atleast 4 or more characters.",
@@ -88,7 +88,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  registerNewUser() async {
+  Future<void> registerNewUser() async {
     showDialog(
       context: context,
       barrierDismissible: false,
