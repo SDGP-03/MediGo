@@ -24,12 +24,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Completer<GoogleMapController> googleMapsCompleterController =
-      Completer<GoogleMapController>();
-
   GoogleMapController? controllerGoogleMap;
-
-  Position? driverCurrentPosition;
 
   StreamSubscription<Position>? positionStream;
 
@@ -55,8 +50,6 @@ class _HomePageState extends State<HomePage> {
     positionStream =
         Geolocator.getPositionStream(locationSettings: locationSettings).listen(
           (Position position) {
-            driverCurrentPosition = position;
-
             // Start listening for assignments once we have location
             if (currentAssignment == null && _assignmentSubscription == null) {
               _startListeningForAssignments();
@@ -391,26 +384,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Mark trip as completed
-  Future<void> _completeTrip() async {
-    if (currentAssignment == null) return;
-
-    final requestRef = FirebaseDatabase.instance
-        .ref()
-        .child('transfer_requests')
-        .child(currentAssignment!.requestId);
-
-    await requestRef.update({
-      'status': 'completed',
-      'completedAt': ServerValue.timestamp,
-    });
-
-    setState(() {
-      currentAssignment = null;
-      polylines = {};
-    });
-  }
-
   // ================= ROUTE DRAWER =================
 
   Future<void> drawRouteToDestination() async {
@@ -425,7 +398,7 @@ class _HomePageState extends State<HomePage> {
         "https://maps.googleapis.com/maps/api/directions/json"
         "?origin=$origin"
         "&destination=$destination"
-        "&key=YOUR_GOOGLE_MAP_KEY";
+        "&key=$googleMapKey";
 
     final response = await http.get(Uri.parse(url));
     final data = json.decode(response.body);
@@ -505,7 +478,6 @@ class _HomePageState extends State<HomePage> {
                   polylines: polylines,
                   onMapCreated: (GoogleMapController mapController) async {
                     controllerGoogleMap = mapController;
-                    googleMapsCompleterController.complete(mapController);
 
                     await loadMapStyle();
                     applyMapStyle();
@@ -613,26 +585,7 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () async {
                             // Update trip status to in_progress
                             await _startTrip();
-
-                            // Open Google Maps for navigation
-                            final lat = currentAssignment!.dropLatLng.latitude;
-                            final lng = currentAssignment!.dropLatLng.longitude;
-                            final url = Uri.parse(
-                              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
-                            );
-
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(
-                                url,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Could not open Google Maps'),
-                                ),
-                              );
-                            }
+                            _showNavigationOptionDialog();
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade500,
@@ -646,6 +599,68 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNavigationOptionDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Select Navigation Method",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.map, color: Colors.blue),
+              title: const Text("Google Maps"),
+              subtitle: const Text("Use external Google Maps app"),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final lat = currentAssignment!.dropLatLng.latitude;
+                final lng = currentAssignment!.dropLatLng.longitude;
+                final url = Uri.parse(
+                  'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+                );
+
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open Google Maps')),
+                  );
+                }
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.navigation, color: Colors.red),
+              title: const Text("MediGo Navigation"),
+              subtitle: const Text("Stay inside the MediGo app"),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NavigationPage(
+                      destination: currentAssignment!.dropLatLng,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
