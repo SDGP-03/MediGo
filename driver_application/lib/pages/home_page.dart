@@ -521,8 +521,8 @@ class _HomePageState extends State<HomePage> {
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const [
-                                Text(
+                              children: [
+                                const Text(
                                   "Current Assignment",
                                   style: TextStyle(
                                     color: Colors.white,
@@ -530,10 +530,10 @@ class _HomePageState extends State<HomePage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
                                 Text(
-                                  "Trip ID",
-                                  style: TextStyle(
+                                  "Trip ID: ${currentAssignment!.requestId}",
+                                  style: const TextStyle(
                                     color: Color.fromARGB(255, 223, 223, 223),
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
