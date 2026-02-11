@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -27,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   GoogleMapController? controllerGoogleMap;
 
   StreamSubscription<Position>? positionStream;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   Marker? driverMarker;
 
@@ -36,8 +38,35 @@ class _HomePageState extends State<HomePage> {
 
   Set<Polyline> polylines = {};
 
+  bool _isOnline = true;
+
   // Firebase reference for driver location tracking
   DatabaseReference? _driverLocationRef;
+
+  @override
+  void initState() {
+    super.initState();
+    _initConnectivityListener();
+  }
+
+  void _initConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      bool online = results.any((result) => result != ConnectivityResult.none);
+      setState(() {
+        _isOnline = online;
+      });
+    });
+
+    // Check initial state
+    Connectivity().checkConnectivity().then((results) {
+      bool online = results.any((result) => result != ConnectivityResult.none);
+      setState(() {
+        _isOnline = online;
+      });
+    });
+  }
 
   // ================= LIVE LOCATION TRACKING =================
 
@@ -425,6 +454,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     positionStream?.cancel();
     _assignmentSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _setDriverOffline();
     super.dispose();
   }
@@ -447,15 +477,40 @@ class _HomePageState extends State<HomePage> {
 
       appBar: AppBar(
         backgroundColor: Colors.red.shade500,
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+            child: GestureDetector(
+              onTap: () => Scaffold.of(context).openDrawer(),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(133, 237, 164, 164),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.menu, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
         title: const Text('MediGo', style: TextStyle(color: Colors.white)),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: Row(
               children: [
-                Icon(Icons.circle, color: Colors.green, size: 10),
-                SizedBox(width: 6),
-                Text('Online', style: TextStyle(color: Colors.white)),
+                Icon(
+                  Icons.circle,
+                  color: _isOnline ? Colors.green : Colors.grey,
+                  size: 12,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isOnline ? 'Online' : 'Offline',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
