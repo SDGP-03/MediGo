@@ -395,32 +395,12 @@ export function HospitalDashboard() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
-                    <Navigation className="text-blue-600" size={14} />
-                  </div>
-                  <span className="text-gray-600 text-sm">En Route</span>
-                </div>
-                <span className="text-blue-600 font-semibold text-sm">{statusCounts.on_way}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-orange-100 rounded-md flex items-center justify-center">
                     <Clock className="text-orange-600" size={14} />
                   </div>
                   <span className="text-gray-600 text-sm">Busy</span>
                 </div>
                 <span className="text-orange-600 font-semibold text-sm">{statusCounts.busy}</span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center">
-                    <MapPin className="text-slate-500" size={14} />
-                  </div>
-                  <span className="text-gray-600 text-sm">Standby</span>
-                </div>
-                <span className="text-slate-600 font-semibold text-sm">{statusCounts.standby}</span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -433,419 +413,407 @@ export function HospitalDashboard() {
                 <span className="text-red-600 font-semibold text-sm">{statusCounts.offline}</span>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Active summary */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 text-xs">Active Now</span>
-                <span className="text-teal-600 font-semibold text-sm">{statusCounts.available + statusCounts.on_way + statusCounts.busy + statusCounts.standby}</span>
-              </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-gray-500 text-xs">In Service</span>
-                <span className="text-blue-600 font-semibold text-sm">{statusCounts.on_way + statusCounts.busy}</span>
+
+        {/* Pending Requests Alert */}
+        {pendingRequests.length > 0 && (
+          <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="text-red-600" size={24} />
+              <div>
+                <h3 className="text-red-900">
+                  Pending Transfer Requests
+                </h3>
+                <p className="text-red-700 text-sm">
+                  {pendingRequests.length} requests waiting for
+                  ambulance assignment
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
 
-      {/* Pending Requests Alert */}
-      {pendingRequests.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="text-red-600" size={24} />
-            <div>
-              <h3 className="text-red-900">
-                Pending Transfer Requests
-              </h3>
-              <p className="text-red-700 text-sm">
-                {pendingRequests.length} requests waiting for
-                ambulance assignment
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
-      {/* Ambulance Condition */}
-      <div className="grid grid-cols-1 gap-6">
 
         {/* Ambulance Condition */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-gray-900">
-              Ambulance Condition
-            </h3>
-            <span className="text-sm text-teal-600 flex items-center gap-1">
-              <TrendingUp size={14} />
-              5.2%
-            </span>
-          </div>
+        <div className="grid grid-cols-1 gap-6">
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span className="text-gray-900 text-sm">
-                  Good
-                </span>
-              </div>
-              <span className="text-gray-900">7</span>
+          {/* Ambulance Condition */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-gray-900">
+                Ambulance Condition
+              </h3>
+              <span className="text-sm text-teal-600 flex items-center gap-1">
+                <TrendingUp size={14} />
+                5.2%
+              </span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                  <AlertTriangle
-                    className="text-white"
-                    size={14}
-                  />
-                </div>
-                <span className="text-gray-900 text-sm">
-                  Maintenance Needed
-                </span>
-              </div>
-              <span className="text-gray-900">3</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <Wrench className="text-white" size={14} />
-                </div>
-                <span className="text-gray-900 text-sm">
-                  Repairing
-                </span>
-              </div>
-              <span className="text-gray-900">1</span>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <span className="text-gray-900 text-sm">
-                  Breakdown
-                </span>
-              </div>
-              <span className="text-gray-900">0</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-
-
-      {/* Active Transfers */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-gray-900">Active Transfers</h2>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {activeTransfers.map((transfer) => (
-            <div
-              key={transfer.id}
-              className="p-6 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-gray-900">
-                      {transfer.patient}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(transfer.priority)}`}
-                    >
-                      {transfer.priority.toUpperCase()}
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${getStatusColor(transfer.status)}`}
-                    >
-                      {transfer.status
-                        .replace("_", " ")
-                        .toUpperCase()}
-                    </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
-                  <p className="text-gray-600 text-sm mb-3">
-                    {transfer.age} yrs • {transfer.gender} •
-                    Transfer ID: {transfer.id}
-                  </p>
+                  <span className="text-gray-900 text-sm">
+                    Good
+                  </span>
                 </div>
+                <span className="text-gray-900">7</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    FROM
-                  </p>
-                  <p className="text-gray-900 text-sm">
-                    {transfer.from}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    TO
-                  </p>
-                  <p className="text-gray-900 text-sm">
-                    {transfer.to}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    ETA
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Clock
-                      size={16}
-                      className="text-gray-400"
+              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                    <AlertTriangle
+                      className="text-white"
+                      size={14}
                     />
-                    <p className="text-gray-900 text-sm">
-                      {transfer.eta}
+                  </div>
+                  <span className="text-gray-900 text-sm">
+                    Maintenance Needed
+                  </span>
+                </div>
+                <span className="text-gray-900">3</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <Wrench className="text-white" size={14} />
+                  </div>
+                  <span className="text-gray-900 text-sm">
+                    Repairing
+                  </span>
+                </div>
+                <span className="text-gray-900">1</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                  </div>
+                  <span className="text-gray-900 text-sm">
+                    Breakdown
+                  </span>
+                </div>
+                <span className="text-gray-900">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+
+        {/* Active Transfers */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-gray-900">Active Transfers</h2>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {activeTransfers.map((transfer) => (
+              <div
+                key={transfer.id}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-gray-900">
+                        {transfer.patient}
+                      </h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(transfer.priority)}`}
+                      >
+                        {transfer.priority.toUpperCase()}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs ${getStatusColor(transfer.status)}`}
+                      >
+                        {transfer.status
+                          .replace("_", " ")
+                          .toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-3">
+                      {transfer.age} yrs • {transfer.gender} •
+                      Transfer ID: {transfer.id}
                     </p>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Ambulance
-                      size={16}
-                      className="text-gray-400"
-                    />
-                    <span className="text-gray-700">
-                      {transfer.ambulance}
-                    </span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">
+                      FROM
+                    </p>
+                    <p className="text-gray-900 text-sm">
+                      {transfer.from}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users
-                      size={16}
-                      className="text-gray-400"
-                    />
-                    <span className="text-gray-700">
-                      {transfer.driver}
-                    </span>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">
+                      TO
+                    </p>
+                    <p className="text-gray-900 text-sm">
+                      {transfer.to}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users
-                      size={16}
-                      className="text-gray-400"
-                    />
-                    <span className="text-gray-700">
-                      {transfer.attendant}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin
-                      size={16}
-                      className="text-gray-400"
-                    />
-                    <span className="text-gray-700">
-                      {transfer.distance} km
-                    </span>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">
+                      ETA
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Clock
+                        size={16}
+                        className="text-gray-400"
+                      />
+                      <p className="text-gray-900 text-sm">
+                        {transfer.eta}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                  Track Live
-                </button>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Ambulance
+                        size={16}
+                        className="text-gray-400"
+                      />
+                      <span className="text-gray-700">
+                        {transfer.ambulance}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users
+                        size={16}
+                        className="text-gray-400"
+                      />
+                      <span className="text-gray-700">
+                        {transfer.driver}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users
+                        size={16}
+                        className="text-gray-400"
+                      />
+                      <span className="text-gray-700">
+                        {transfer.attendant}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin
+                        size={16}
+                        className="text-gray-400"
+                      />
+                      <span className="text-gray-700">
+                        {transfer.distance} km
+                      </span>
+                    </div>
+                  </div>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                    Track Live
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Pending Requests */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-gray-900">
-            Pending Transfer Requests
-          </h2>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {pendingRequests.map((request) => (
-            <div
-              key={request.id}
-              className="p-6 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-gray-900">
-                      {request.patient}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(request.priority)}`}
-                    >
-                      {request.priority.toUpperCase()}
-                    </span>
+        {/* Pending Requests */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-gray-900">
+              Pending Transfer Requests
+            </h2>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {pendingRequests.map((request) => (
+              <div
+                key={request.id}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-gray-900">
+                        {request.patient}
+                      </h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(request.priority)}`}
+                      >
+                        {request.priority.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      {request.age} yrs • {request.gender} •{" "}
+                      {request.id}
+                    </p>
                   </div>
-                  <p className="text-gray-600 text-sm">
-                    {request.age} yrs • {request.gender} •{" "}
-                    {request.id}
-                  </p>
-                </div>
-                <span className="text-gray-500 text-sm">
-                  {request.time}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    FROM
-                  </p>
-                  <p className="text-gray-900 text-sm">
-                    {request.from}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">
-                    TO
-                  </p>
-                  <p className="text-gray-900 text-sm">
-                    {request.to}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <p className="text-gray-600 text-sm">
-                  Requested by:{" "}
-                  <span className="text-gray-900">
-                    {request.requestedBy}
+                  <span className="text-gray-500 text-sm">
+                    {request.time}
                   </span>
-                </p>
-                <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                  Assign Ambulance
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+                </div>
 
-      {/* Incoming Emergency Patients */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-gray-900 mb-4">Incoming Emergency Patients</h3>
-        <div className="space-y-4">
-          {incomingRequests.map((request) => (
-            <div
-              key={request.id}
-              className="border-2 border-gray-200 rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
-              onClick={() => setSelectedRequest(request)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-gray-900">{request.patientName}</h4>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
-                        request.priority
-                      )}`}
-                    >
-                      {request.priority.toUpperCase()}
-                    </span>
-                    <span className="text-gray-500 text-sm">{request.timestamp}</span>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">
+                      FROM
+                    </p>
+                    <p className="text-gray-900 text-sm">
+                      {request.from}
+                    </p>
                   </div>
-                  <p className="text-gray-600">
-                    {request.age} yrs • {request.gender} • {request.incidentType}
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">
+                      TO
+                    </p>
+                    <p className="text-gray-900 text-sm">
+                      {request.to}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <p className="text-gray-600 text-sm">
+                    Requested by:{" "}
+                    <span className="text-gray-900">
+                      {request.requestedBy}
+                    </span>
                   </p>
+                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    Assign Ambulance
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                <div className="flex items-center gap-2">
-                  <Ambulance size={16} className="text-gray-400" />
-                  <span className="text-gray-700 text-sm">{request.ambulanceNumber}</span>
+        {/* Incoming Emergency Patients */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-gray-900 mb-4">Incoming Emergency Patients</h3>
+          <div className="space-y-4">
+            {incomingRequests.map((request) => (
+              <div
+                key={request.id}
+                className="border-2 border-gray-200 rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
+                onClick={() => setSelectedRequest(request)}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="text-gray-900">{request.patientName}</h4>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
+                          request.priority
+                        )}`}
+                      >
+                        {request.priority.toUpperCase()}
+                      </span>
+                      <span className="text-gray-500 text-sm">{request.timestamp}</span>
+                    </div>
+                    <p className="text-gray-600">
+                      {request.age} yrs • {request.gender} • {request.incidentType}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-gray-400" />
-                  <span className="text-gray-700 text-sm">ETA {request.eta}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-gray-400" />
-                  <span className="text-gray-700 text-sm">{request.distance} km</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User size={16} className="text-gray-400" />
-                  <span className="text-gray-700 text-sm capitalize">{request.consciousness}</span>
-                </div>
-              </div>
 
-              <div className="bg-gray-50 rounded p-3">
-                <p className="text-gray-600 text-sm mb-1">Symptoms:</p>
-                <p className="text-gray-900 text-sm">{request.symptoms}</p>
-              </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Ambulance size={16} className="text-gray-400" />
+                    <span className="text-gray-700 text-sm">{request.ambulanceNumber}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-gray-400" />
+                    <span className="text-gray-700 text-sm">ETA {request.eta}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} className="text-gray-400" />
+                    <span className="text-gray-700 text-sm">{request.distance} km</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User size={16} className="text-gray-400" />
+                    <span className="text-gray-700 text-sm capitalize">{request.consciousness}</span>
+                  </div>
+                </div>
 
-              <div className="mt-3 flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                  Prepare Room
-                </button>
-                <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                  View Details
-                </button>
+                <div className="bg-gray-50 rounded p-3">
+                  <p className="text-gray-600 text-sm mb-1">Symptoms:</p>
+                  <p className="text-gray-900 text-sm">{request.symptoms}</p>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                    Prepare Room
+                  </button>
+                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                    View Details
+                  </button>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Resource Preparation Checklist */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-gray-900 mb-4">Resource Preparation Checklist</h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="text-green-600" size={20} />
+              <span className="text-gray-900">Emergency Room 1 - Ready</span>
             </div>
-          ))}
+            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="text-green-600" size={20} />
+              <span className="text-gray-900">Cardiac Team - On Standby</span>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
+              <AlertCircle className="text-yellow-600" size={20} />
+              <span className="text-gray-900">Trauma Team - Being Notified</span>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="text-green-600" size={20} />
+              <span className="text-gray-900">Blood Bank - Notified</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Resource Preparation Checklist */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-gray-900 mb-4">Resource Preparation Checklist</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <CheckCircle className="text-green-600" size={20} />
-            <span className="text-gray-900">Emergency Room 1 - Ready</span>
+        {/* System Status */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 className="text-green-900 mb-2">
+              Protocol Management
+            </h4>
+            <p className="text-green-700 text-sm">
+              ✓ All transfers comply with inter-hospital protocols
+            </p>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <CheckCircle className="text-green-600" size={20} />
-            <span className="text-gray-900">Cardiac Team - On Standby</span>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-blue-900 mb-2">
+              Pre-Arrival Notifications
+            </h4>
+            <p className="text-blue-700 text-sm">
+              ✓ Receiving hospitals notified 15 mins before
+              arrival
+            </p>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-            <AlertCircle className="text-yellow-600" size={20} />
-            <span className="text-gray-900">Trauma Team - Being Notified</span>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h4 className="text-purple-900 mb-2">
+              Gender Compliance
+            </h4>
+            <p className="text-purple-700 text-sm">
+              ✓ Attendants matched according to patient gender
+            </p>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-            <CheckCircle className="text-green-600" size={20} />
-            <span className="text-gray-900">Blood Bank - Notified</span>
-          </div>
-        </div>
-      </div>
-
-      {/* System Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="text-green-900 mb-2">
-            Protocol Management
-          </h4>
-          <p className="text-green-700 text-sm">
-            ✓ All transfers comply with inter-hospital protocols
-          </p>
-        </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-blue-900 mb-2">
-            Pre-Arrival Notifications
-          </h4>
-          <p className="text-blue-700 text-sm">
-            ✓ Receiving hospitals notified 15 mins before
-            arrival
-          </p>
-        </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <h4 className="text-purple-900 mb-2">
-            Gender Compliance
-          </h4>
-          <p className="text-purple-700 text-sm">
-            ✓ Attendants matched according to patient gender
-          </p>
         </div>
       </div>
     </div>
