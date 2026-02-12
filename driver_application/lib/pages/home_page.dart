@@ -544,6 +544,79 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 10),
 
+            // ================= ISSUE REPORT CARD =================
+            if (currentAssignment == null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.report_problem_rounded,
+                          color: Colors.red.shade500,
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            "Report Ambulance Issues",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Report service, maintenance, breakdown, or other problems before your next assignment.",
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 14),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: ElevatedButton.icon(
+                        onPressed: _showIssueReportOptions,
+                        icon: const Icon(
+                          Icons.edit_note_rounded,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          "Report Issue",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade500,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // ================= ASSIGNMENT CARD =================
             if (currentAssignment != null)
               Container(
@@ -629,7 +702,10 @@ class _HomePageState extends State<HomePage> {
                         width: double.infinity,
                         height: 54,
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.navigation),
+                          icon: const Icon(
+                            Icons.navigation,
+                            color: Colors.white,
+                          ),
                           label: const Text(
                             "Start Navigation",
                             style: TextStyle(
@@ -656,6 +732,115 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showIssueReportOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Report Issue Type",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Choose the issue you want to report.",
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(
+                Icons.miscellaneous_services,
+                color: Colors.blue,
+              ),
+              title: const Text("Service"),
+              onTap: () => _showIssueDetailsDialog(ctx, "Service"),
+            ),
+            ListTile(
+              leading: const Icon(Icons.build_circle, color: Colors.orange),
+              title: const Text("Maintenance"),
+              onTap: () => _showIssueDetailsDialog(ctx, "Maintenance"),
+            ),
+            ListTile(
+              leading: const Icon(Icons.car_repair, color: Colors.red),
+              title: const Text("Breakdown"),
+              onTap: () => _showIssueDetailsDialog(ctx, "Breakdown"),
+            ),
+            ListTile(
+              leading: const Icon(Icons.error_outline, color: Colors.grey),
+              title: const Text("Other Problems"),
+              onTap: () => _showIssueDetailsDialog(ctx, "Other Problems"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showIssueDetailsDialog(BuildContext sheetContext, String issueType) {
+    Navigator.pop(sheetContext);
+    final detailsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text("$issueType Issue"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Add extra details if needed (optional).",
+              style: TextStyle(color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: detailsController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: "Describe the problem...",
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final details = detailsController.text.trim();
+              Navigator.pop(dialogContext);
+              _submitIssue(issueType, details);
+            },
+            child: const Text("Submit"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submitIssue(String issueType, String details) {
+    final hasDetails = details.isNotEmpty;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          hasDetails
+              ? "$issueType report sent with extra details."
+              : "$issueType report sent successfully.",
         ),
       ),
     );
