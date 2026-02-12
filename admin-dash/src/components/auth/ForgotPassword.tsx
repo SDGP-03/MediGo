@@ -7,7 +7,7 @@ interface ForgotPasswordPageProps {
   onBackToLogin: () => void;
 }
 
-export function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
+export function ForgotPassword({ onBackToLogin }: ForgotPasswordPageProps) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);

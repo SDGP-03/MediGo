@@ -6,9 +6,10 @@ import { auth } from '../../firebase';
 interface LoginPageProps {
   onLogin: () => void;
   onRegister: () => void;
+  onForgotPassword: () => void;
 }
 
-export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -176,7 +177,7 @@ export function LoginPage({ onLogin, onRegister }: LoginPageProps) {
                   <input type="checkbox" className="w-4 h-4 text-red-600 rounded" />
                   <span className="text-gray-700 text-sm">Remember me</span>
                 </label>
-                <button type="button" className="text-red-600 text-sm hover:underline">
+                <button type="button" onClick={onForgotPassword}  className="text-red-600 text-sm hover:underline">
                   Forgot password?
                 </button>
               </div>
