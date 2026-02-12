@@ -10,9 +10,10 @@ import { Analytics } from './components/Analytics';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { Header } from './components/layout/Header';
+import { ForgotPassword } from './components/auth/ForgotPassword';
 
 type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
-type AuthView = 'login' | 'register';
+type AuthView = 'login' | 'register' | 'forgot-password';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -61,10 +62,14 @@ export default function App() {
     if (authView === 'register') {
       return <RegisterPage onBackToLogin={() => setAuthView('login')} />;
     }
+    if (authView === 'forgot-password') {
+      return <ForgotPassword onBackToLogin={() => setAuthView('login')} />;
+    }
     return (
       <LoginPage
         onLogin={handleLogin}
         onRegister={() => setAuthView('register')}
+        onForgotPassword={() => setAuthView('forgot-password')}
       />
     );
   }
