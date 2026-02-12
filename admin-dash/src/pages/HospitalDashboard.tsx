@@ -60,32 +60,6 @@ export function HospitalDashboard() {
 
 
 
-  const stats = [
-    {
-      label: "Available Ambulances",
-      value: "3/11",
-      change: "In service",
-      icon: Ambulance,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-    },
-    {
-      label: "Busy",
-      value: "2",
-      change: "At hospital",
-      icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-    {
-      label: "Offline",
-      value: "2",
-      change: "Maintenance",
-      icon: AlertCircle,
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-    },
-  ];
 
   const ambulances = [
     {
@@ -190,6 +164,16 @@ export function HospitalDashboard() {
       position: { left: "60%", bottom: "20%" },
     },
   ];
+
+  // Compute fleet status counts from ambulances data
+  const statusCounts = {
+    available: ambulances.filter(a => a.status === 'available').length,
+    on_way: ambulances.filter(a => a.status === 'on_way').length,
+    busy: ambulances.filter(a => a.status === 'busy').length,
+    standby: ambulances.filter(a => a.status === 'standby').length,
+    offline: ambulances.filter(a => a.status === 'offline').length,
+    total: ambulances.length,
+  };
 
   const activeTransfers = [
     {
@@ -301,39 +285,34 @@ export function HospitalDashboard() {
   return (
     <div className="space-y-6">
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Map and Charts */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Live Ambulance Map */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-2 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center pl-3">
-                {/* Status indicator dot */}
-                <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+      {/* Map + Fleet Overview */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center pl-3">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+            <h2 className="bg-white rounded-lg px-3 py-1 text-gray-900">
+              Live Ambulance Locations
+            </h2>
+          </div>
+          <div className="flex items-center gap-2 pointer-events-auto">
+            <button
+              onClick={() => setMapView("map")}
+              className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+            >
+              <Layers size={18} />
+            </button>
+            <button
+              onClick={() => setMapView("list")}
+              className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+            >
+              <List size={18} />
+            </button>
+          </div>
+        </div>
 
-                {/* Label */}
-                <h2 className="bg-white rounded-lg px-3 py-1 text-gray-900">
-                  Live Ambulance Locations
-                </h2>
-              </div>
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <button
-                  onClick={() => setMapView("map")}
-                  className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
-                >
-                  <Layers size={18} />
-                </button>
-                <button
-                  onClick={() => setMapView("list")}
-                  className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
-                >
-                  <List size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Map View */}
+        <div className="flex flex-col lg:flex-row">
+          {/* Map / List Area */}
+          <div className="flex-1 min-w-0">
             {mapView === "map" && (
               <AmbulanceMap
                 ambulances={ambulances.map(amb => ({
@@ -349,7 +328,6 @@ export function HospitalDashboard() {
               />
             )}
 
-            {/* List View */}
             {mapView === "list" && (
               <div className="h-96 overflow-y-auto">
                 <div className="divide-y divide-gray-100">
@@ -390,34 +368,84 @@ export function HospitalDashboard() {
             )}
           </div>
 
+          {/* Fleet Overview Sidebar — Map Key */}
+          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 bg-gray-50/50">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-900 text-sm font-semibold">Fleet Overview</h3>
+              <Activity className="text-red-600" size={16} />
+            </div>
 
-        </div>
+            {/* Total */}
+            <div className="mb-4 pb-3 border-b border-gray-200">
+              <p className="text-gray-500 text-xs">Total Ambulances</p>
+              <p className="text-gray-900 text-2xl font-bold">{statusCounts.total}</p>
+            </div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Statistics */}
-          <div className="space-y-4">
-            {stats.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-sm p-6 border border-gray-200"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                    <stat.icon className={stat.color} size={24} />
+            {/* Status breakdown */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-emerald-100 rounded-md flex items-center justify-center">
+                    <Ambulance className="text-emerald-600" size={14} />
                   </div>
+                  <span className="text-gray-600 text-sm">Available</span>
                 </div>
-                <p className="text-gray-600 text-sm mb-1">
-                  {stat.label}
-                </p>
-                <p className={`${stat.color} mb-1`}>{stat.value}</p>
-                <p className="text-gray-500 text-xs">
-                  {stat.change}
-                </p>
+                <span className="text-emerald-600 font-semibold text-sm">{statusCounts.available}</span>
               </div>
-            ))}
-          </div>
 
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                    <Navigation className="text-blue-600" size={14} />
+                  </div>
+                  <span className="text-gray-600 text-sm">En Route</span>
+                </div>
+                <span className="text-blue-600 font-semibold text-sm">{statusCounts.on_way}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-orange-100 rounded-md flex items-center justify-center">
+                    <Clock className="text-orange-600" size={14} />
+                  </div>
+                  <span className="text-gray-600 text-sm">Busy</span>
+                </div>
+                <span className="text-orange-600 font-semibold text-sm">{statusCounts.busy}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center">
+                    <MapPin className="text-slate-500" size={14} />
+                  </div>
+                  <span className="text-gray-600 text-sm">Standby</span>
+                </div>
+                <span className="text-slate-600 font-semibold text-sm">{statusCounts.standby}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-red-100 rounded-md flex items-center justify-center">
+                    <AlertCircle className="text-red-600" size={14} />
+                  </div>
+                  <span className="text-gray-600 text-sm">Offline</span>
+                </div>
+                <span className="text-red-600 font-semibold text-sm">{statusCounts.offline}</span>
+              </div>
+            </div>
+
+            {/* Active summary */}
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-xs">Active Now</span>
+                <span className="text-teal-600 font-semibold text-sm">{statusCounts.available + statusCounts.on_way + statusCounts.busy + statusCounts.standby}</span>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-gray-500 text-xs">In Service</span>
+                <span className="text-blue-600 font-semibold text-sm">{statusCounts.on_way + statusCounts.busy}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -442,41 +470,8 @@ export function HospitalDashboard() {
 
 
 
-      {/* Fleet and amblance condition wrapper */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Fleet Summary */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-900">Fleet Summary</h3>
-            <Activity className="text-red-600" size={20} />
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">
-                Total Ambulances
-              </span>
-              <span className="text-gray-900">11</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">
-                Active Now
-              </span>
-              <span className="text-teal-600">7</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">
-                In Service
-              </span>
-              <span className="text-blue-600">4</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 text-sm">
-                Maintenance
-              </span>
-              <span className="text-orange-600">2</span>
-            </div>
-          </div>
-        </div>
+      {/* Ambulance Condition */}
+      <div className="grid grid-cols-1 gap-6">
 
         {/* Ambulance Condition */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
