@@ -6,7 +6,7 @@ import { TransferRequest } from './pages/TransferRequest';
 import { AmbulanceFleet } from './pages/AmbulanceFleet';
 import { PatientRecords } from './pages/PatientRecords';
 import { HospitalDashboard } from './pages/HospitalDashboard';
-import { Analytics } from './components/Analytics';
+import { Analytics } from './pages/Analytics';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { Header } from './components/layout/Header';
