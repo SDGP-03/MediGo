@@ -286,7 +286,7 @@ export function HospitalDashboard() {
     <div className="space-y-6">
 
       {/* Map + Fleet Overview */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-2 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center pl-3">
             <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
@@ -415,97 +415,97 @@ export function HospitalDashboard() {
             </div>
           </div>
         </div>
+      </div>
 
-
-        {/* Pending Requests Alert */}
-        {pendingRequests.length > 0 && (
-          <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="text-red-600" size={24} />
-              <div>
-                <h3 className="text-red-900">
-                  Pending Transfer Requests
-                </h3>
-                <p className="text-red-700 text-sm">
-                  {pendingRequests.length} requests waiting for
-                  ambulance assignment
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-
-        {/* Ambulance Condition */}
-        <div className="grid grid-cols-1 gap-6">
-
-          {/* Ambulance Condition */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-gray-900">
-                Ambulance Condition
+      {/* Pending Requests Alert */}
+      {pendingRequests.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="text-red-600" size={24} />
+            <div>
+              <h3 className="text-red-900">
+                Pending Transfer Requests
               </h3>
-              <span className="text-sm text-teal-600 flex items-center gap-1">
-                <TrendingUp size={14} />
-                5.2%
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Good
-                  </span>
-                </div>
-                <span className="text-gray-900">7</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                    <AlertTriangle
-                      className="text-white"
-                      size={14}
-                    />
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Maintenance Needed
-                  </span>
-                </div>
-                <span className="text-gray-900">3</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <Wrench className="text-white" size={14} />
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Repairing
-                  </span>
-                </div>
-                <span className="text-gray-900">1</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                  <span className="text-gray-900 text-sm">
-                    Breakdown
-                  </span>
-                </div>
-                <span className="text-gray-900">0</span>
-              </div>
+              <p className="text-red-700 text-sm">
+                {pendingRequests.length} requests waiting for
+                ambulance assignment
+              </p>
             </div>
           </div>
         </div>
+      )}
+
+
+
+      {/* Ambulance Condition */}
+      <div className="grid grid-cols-1 gap-6">
+
+        {/* Ambulance Condition */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-gray-900">
+              Ambulance Condition
+            </h3>
+            <span className="text-sm text-teal-600 flex items-center gap-1">
+              <TrendingUp size={14} />
+              5.2%
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <span className="text-gray-900 text-sm">
+                  Good
+                </span>
+              </div>
+              <span className="text-gray-900">7</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                  <AlertTriangle
+                    className="text-white"
+                    size={14}
+                  />
+                </div>
+                <span className="text-gray-900 text-sm">
+                  Maintenance Needed
+                </span>
+              </div>
+              <span className="text-gray-900">3</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <Wrench className="text-white" size={14} />
+                </div>
+                <span className="text-gray-900 text-sm">
+                  Repairing
+                </span>
+              </div>
+              <span className="text-gray-900">1</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <span className="text-gray-900 text-sm">
+                  Breakdown
+                </span>
+              </div>
+              <span className="text-gray-900">0</span>
+            </div>
+          </div>
+        </div>
+
 
 
 
