@@ -164,21 +164,7 @@ export function Analytics() {
           </div>
         </div>
 
-        {/* Daily Bookings */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-900 mb-4">Daily Bookings (Public vs Private)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dailyBookingsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="public" fill="#3b82f6" name="Public" />
-              <Bar dataKey="private" fill="#8b5cf6" name="Private" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+
       </div>
 
       {/* High Demand Areas */}
