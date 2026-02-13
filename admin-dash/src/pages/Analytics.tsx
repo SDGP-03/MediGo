@@ -1,5 +1,5 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity, Ambulance } from 'lucide-react';
 
 export function Analytics() {
   // Response time data
@@ -58,13 +58,14 @@ export function Analytics() {
       bgColor: 'bg-orange-50',
     },
     {
-      label: 'Revenue (Private)',
-      value: '₹8.4L',
-      change: '+22.1%',
-      icon: DollarSign,
+      label: 'Total Transfers (Month)',
+      value: '1234',
+      change: '-15.3%',
+      icon: Ambulance,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
     },
+
   ];
 
   return (
@@ -284,27 +285,7 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Data Insights Summary */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-md p-6">
-        <h3 className="text-gray-900 mb-4">Key Data Insights</h3>
-        <div className="space-y-2">
-          <p className="text-gray-700">
-            • <strong>Optimized Dispatching:</strong> System automatically redirects urgent cases to the closest available service, reducing response time by 15.3%
-          </p>
-          <p className="text-gray-700">
-            • <strong>Real-time Resource Management:</strong> Hospitals and providers see fleet availability in real time
-          </p>
-          <p className="text-gray-700">
-            • <strong>Reduced Delays:</strong> Filtering by proximity, sector, and availability eliminates wasted time
-          </p>
-          <p className="text-gray-700">
-            • <strong>Efficient Categorization:</strong> Helps prioritize emergencies vs. non-critical transport
-          </p>
-          <p className="text-gray-700">
-            • <strong>Data-Driven Decisions:</strong> Collected data enables continuous operational improvements
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 }
