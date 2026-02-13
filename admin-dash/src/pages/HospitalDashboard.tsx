@@ -324,7 +324,7 @@ export function HospitalDashboard() {
                   lat: amb.lat,
                   lng: amb.lng,
                 }))}
-                height="525px"
+                height="650px"
               />
             )}
 
