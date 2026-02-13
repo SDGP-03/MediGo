@@ -422,14 +422,14 @@ export function HospitalDashboard() {
 
       {/* Pending Requests Alert */}
       {pendingRequests.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
+        <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-3">
             <AlertCircle className="text-red-600" size={24} />
             <div>
-              <h3 className="text-red-900">
+              <h3 className="text-red-600">
                 Pending Transfer Requests
               </h3>
-              <p className="text-red-700 text-sm">
+              <p className="text-red-400 text-sm">
                 {pendingRequests.length} requests waiting for
                 ambulance assignment
               </p>
