@@ -1,7 +1,11 @@
 import { useState } from 'react';
-import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File } from 'lucide-react';
+import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance } from 'lucide-react';
 
-export function PatientRecords() {
+interface PatientRecordsProps {
+  onNavigate?: (view: any) => void;
+}
+
+export function PatientRecords({ onNavigate }: PatientRecordsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: any[] }>(() => {
@@ -667,6 +671,14 @@ export function PatientRecords() {
           </div>
         )}
       </div>
+      <button
+        onClick={() => onNavigate?.('transfer')}
+        className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+        title="New Transfer Request"
+      >
+        <Ambulance size={24} />
+        <span className="hidden group-hover:block transition-all duration-300">New Request</span>
+      </button>
     </div>
   );
 }
