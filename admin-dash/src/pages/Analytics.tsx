@@ -21,16 +21,7 @@ export function Analytics() {
     { name: 'Other', value: 156, color: '#3b82f6' },
   ];
 
-  // Daily bookings
-  const dailyBookingsData = [
-    { day: 'Mon', public: 32, private: 28 },
-    { day: 'Tue', public: 28, private: 35 },
-    { day: 'Wed', public: 35, private: 30 },
-    { day: 'Thu', public: 30, private: 38 },
-    { day: 'Fri', public: 38, private: 42 },
-    { day: 'Sat', public: 45, private: 48 },
-    { day: 'Sun', public: 40, private: 45 },
-  ];
+
 
   // High demand areas
   const demandAreasData = [
@@ -163,8 +154,41 @@ export function Analytics() {
             ))}
           </div>
         </div>
-
-
+        {/* Peak Hours Analysis */}
+        {/* Peak Hours Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-gray-900 mb-4">Transfer Request Peak Hours</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-blue-600">6-9 AM</p>
+                <p className="text-sm text-gray-600">Morning Rush</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">23% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-green-600">9AM-12PM</p>
+                <p className="text-sm text-gray-600">Low Activity</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">15% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-orange-600">12-6 PM</p>
+                <p className="text-sm text-gray-600">Afternoon Peak</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">38% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-purple-600">6PM-12AM</p>
+                <p className="text-sm text-gray-600">Evening Rush</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">24% of transfers</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* High Demand Areas */}
