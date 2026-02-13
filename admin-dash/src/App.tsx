@@ -92,7 +92,7 @@ export default function App() {
           {currentView === 'dashboard' && <HospitalDashboard />}
           {currentView === 'transfer' && <TransferRequest />}
           {currentView === 'fleet' && <AmbulanceFleet />}
-          {currentView === 'records' && <PatientRecords />}
+          {currentView === 'records' && <PatientRecords onNavigate={setCurrentView} />}
           {currentView === 'analytics' && <Analytics />}
         </div>
       </main>
