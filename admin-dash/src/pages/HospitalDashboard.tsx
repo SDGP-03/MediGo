@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User } from "lucide-react";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
+import { useDriverLocations } from "../useDriverLocations";
 
 export function HospitalDashboard() {
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+
+  // Live driver data from Firebase
+  const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
   // Incoming emergency patients
   const incomingRequests = [
@@ -165,14 +169,13 @@ export function HospitalDashboard() {
     },
   ];
 
-  // Compute fleet status counts from ambulances data
+  // Compute fleet status counts from live Firebase driver data + hardcoded ambulances
+  const liveDriverCount = onlineDrivers.length + offlineDrivers.length;
   const statusCounts = {
-    available: ambulances.filter(a => a.status === 'available').length,
-    on_way: ambulances.filter(a => a.status === 'on_way').length,
+    available: onlineDrivers.length,
     busy: ambulances.filter(a => a.status === 'busy').length,
-    standby: ambulances.filter(a => a.status === 'standby').length,
-    offline: ambulances.filter(a => a.status === 'offline').length,
-    total: ambulances.length,
+    offline: offlineDrivers.length,
+    total: liveDriverCount > 0 ? liveDriverCount : ambulances.length,
   };
 
   const activeTransfers = [
