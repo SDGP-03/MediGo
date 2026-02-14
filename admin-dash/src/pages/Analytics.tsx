@@ -212,6 +212,39 @@ export function Analytics() {
           </p>
         </div>
       </div>
+      {/* Hospital Capacity Status */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-gray-900 mb-4">Current Hospital Capacity Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="border-l-4 border-green-500 pl-4">
+            <p className="text-gray-900 font-semibold">National Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">35% occupied</span>
+            </div>
+          </div>
+          <div className="border-l-4 border-yellow-500 pl-4">
+            <p className="text-gray-900 font-semibold">Teaching Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">68% occupied</span>
+            </div>
+          </div>
+          <div className="border-l-4 border-red-500 pl-4">
+            <p className="text-gray-900 font-semibold">General Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-red-500 h-2 rounded-full" style={{ width: '87%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">87% occupied</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Operational Outcomes */}
       <div className="bg-white rounded-lg shadow-md p-6">
