@@ -1,11 +1,15 @@
 import 'dart:async';
+
 import 'package:driver_application/authentication/login_screen.dart';
+import 'package:driver_application/pages/contact_support_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class SideMenu extends StatefulWidget {
-  const SideMenu({super.key});
+  const SideMenu({super.key, this.currentRoute});
+
+  final String? currentRoute;
 
   @override
   State<SideMenu> createState() => _SideMenuState();
@@ -13,7 +17,7 @@ class SideMenu extends StatefulWidget {
 
 class _SideMenuState extends State<SideMenu> {
   String? profileImageUrl;
-  String userName = "";
+  String userName = 'Driver';
 
   StreamSubscription<DatabaseEvent>? _driverSubscription;
 
@@ -30,196 +34,293 @@ class _SideMenuState extends State<SideMenu> {
   }
 
   void _setupDriverListener() {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      DatabaseReference driversRef = FirebaseDatabase.instance
-          .ref()
-          .child("drivers")
-          .child(user.uid);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-      _driverSubscription = driversRef.onValue.listen((event) {
-        if (event.snapshot.value != null) {
-          final data = event.snapshot.value as Map;
-          if (mounted) {
-            setState(() {
-              // Safe access to map keys
-              if (data.containsKey("name") && data["name"] != null) {
-                userName = data["name"].toString();
-              }
-              if (data.containsKey("profileImage") &&
-                  data["profileImage"] != null) {
-                profileImageUrl = data["profileImage"].toString();
-              }
-            });
-          }
-        }
+    final driversRef = FirebaseDatabase.instance
+        .ref()
+        .child('drivers')
+        .child(user.uid);
+
+    _driverSubscription = driversRef.onValue.listen((event) {
+      final snapshot = event.snapshot.value;
+      if (snapshot == null || !mounted) return;
+
+      final data = Map<String, dynamic>.from(snapshot as Map);
+
+      setState(() {
+        userName = data['name']?.toString() ?? 'Driver';
+        profileImageUrl = data['profileImage']?.toString();
       });
+    });
+  }
+
+  String? _resolvedCurrentRoute(BuildContext context) {
+    return widget.currentRoute ?? ModalRoute.of(context)?.settings.name;
+  }
+
+  Widget _buildAvatar() {
+    final imageUrl = profileImageUrl;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          imageUrl,
+          width: 80,
+          height: 80,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAvatar(),
+        ),
+      );
     }
+
+    return _defaultAvatar();
+  }
+
+  Widget _defaultAvatar() {
+    return Container(
+      width: 84,
+      height: 84,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.2),
+      ),
+      child: const Icon(Icons.person, color: Colors.white, size: 32),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final email = FirebaseAuth.instance.currentUser?.email ?? '';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.red.shade700, Colors.red.shade400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            _buildAvatar(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    userName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (email.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ListTile _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool selected = false,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      selected: selected,
+      selectedTileColor: Colors.red.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _openNamedRoute(String routeName) async {
+    Navigator.of(context).pop(); // close drawer
+
+    if (_resolvedCurrentRoute(context) == routeName) return;
+
+    await Navigator.of(context, rootNavigator: true).pushNamed(routeName);
+  }
+
+  Future<void> _openContactSupport() async {
+    Navigator.of(context).pop();
+
+    await Navigator.of(
+      context,
+      rootNavigator: true,
+    ).push(MaterialPageRoute(builder: (_) => const ContactSupportPage()));
+  }
+
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Do you really want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout != true || !mounted) return;
+
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentRoute = _resolvedCurrentRoute(context);
+
     return Drawer(
-      child: Container(
-        color: const Color.fromARGB(255, 255, 230, 230), // light red
-        child: Column(
-          children: [
-            Container(
-              height: 240,
-              width: double.infinity,
-              color: const Color.fromARGB(255, 255, 171, 171),
-              child: SafeArea(
-                bottom: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    profileImageUrl != null && profileImageUrl!.isNotEmpty
-                        ? CircleAvatar(
-                            radius: 70,
-                            backgroundColor: Colors.white,
-                            backgroundImage: NetworkImage(profileImageUrl!),
-                          )
-                        : CircleAvatar(
-                            radius: 70,
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              223,
-                              181,
-                              181,
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              size: 70,
-                              color: Colors.white,
-                            ),
-                          ),
+      backgroundColor: const Color(0xFFF8EEF1),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          _buildHeader(context),
+          const SizedBox(height: 8),
 
-                    const SizedBox(height: 12),
+          _buildMenuTile(
+            icon: Icons.home_outlined,
+            title: 'Home',
+            selected: currentRoute == '/home',
+            onTap: () {
+              Navigator.of(
+                context,
+                rootNavigator: true,
+              ).popUntil((route) => route.isFirst);
+            },
+          ),
 
-                    Text(
-                      userName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color.fromARGB(255, 255, 255, 255),
-                      ),
-                    ),
-                  ],
+          _buildMenuTile(
+            icon: Icons.person_outline,
+            title: 'Edit Profile',
+            selected: currentRoute == '/edit-profile',
+            onTap: () => _openNamedRoute('/edit-profile'),
+          ),
+
+          _buildMenuTile(
+            icon: Icons.history,
+            title: 'History',
+            selected: currentRoute == '/history',
+            onTap: () => _openNamedRoute('/history'),
+          ),
+
+          const Divider(height: 24, indent: 16, endIndent: 16),
+
+          _buildMenuTile(
+            icon: Icons.support_agent_outlined,
+            title: 'Contact Support',
+            onTap: _openContactSupport,
+          ),
+
+          _buildMenuTile(
+            icon: Icons.feedback_outlined,
+            title: 'Feedback / Complaints',
+            selected: currentRoute == '/feedback',
+            onTap: () => _openNamedRoute('/feedback'),
+          ),
+
+          _buildMenuTile(
+            icon: Icons.help_outline,
+            title: 'FAQ',
+            selected: currentRoute == '/faq',
+            onTap: () => _openNamedRoute('/faq'),
+          ),
+
+          _buildMenuTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            selected: currentRoute == '/privacy-policy',
+            onTap: () => _openNamedRoute('/privacy-policy'),
+          ),
+
+          const Divider(height: 24, indent: 16, endIndent: 16),
+
+          /// SETTINGS MENU
+          _buildMenuTile(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            selected: currentRoute == '/settings',
+            onTap: () async {
+              Navigator.of(context).pop(); // close drawer
+
+              final navigator = Navigator.of(context, rootNavigator: true);
+
+              final result = await navigator.pushNamed('/settings');
+
+              if (result == 'styleChanged') {
+                navigator.pushReplacementNamed('/home');
+              }
+            },
+          ),
+
+          const SizedBox(height: 8),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              tileColor: Colors.red.withOpacity(0.06),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onTap: _confirmLogout,
             ),
+          ),
 
-            // Home
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-
-            // Edit Profile
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Edit Profile'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/edit-profile');
-              },
-            ),
-
-            // History
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('History'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/history');
-              },
-            ),
-
-            const Spacer(),
-
-            ListTile(
-              leading: const Icon(Icons.feedback_outlined),
-              title: const Text('Feedback / Complaints'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/feedback');
-              },
-            ),
-
-            // Settings
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () async {
-                // ✅ Get root navigator BEFORE closing drawer
-                final navigator = Navigator.of(context, rootNavigator: true);
-
-                // Close drawer
-                Navigator.of(context).pop();
-
-                // Navigate safely
-                final result = await navigator.pushNamed('/settings');
-
-                // Reload Home if style changed
-                if (result == "styleChanged") {
-                  navigator.pushReplacementNamed('/home');
-                }
-              },
-            ),
-
-            const Divider(
-              thickness: 1.5,
-              color: Colors.redAccent,
-              indent: 16,
-              endIndent: 16,
-            ),
-
-            // Logout
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Logout'),
-                    content: const Text('Do you really want to logout?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          Navigator.pop(context);
-
-                          await FirebaseAuth.instance.signOut();
-
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        },
-                        child: const Text(
-                          'Logout',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }

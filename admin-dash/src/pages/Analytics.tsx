@@ -1,5 +1,5 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity, Ambulance } from 'lucide-react';
 
 export function Analytics() {
   // Response time data
@@ -21,16 +21,7 @@ export function Analytics() {
     { name: 'Other', value: 156, color: '#3b82f6' },
   ];
 
-  // Daily bookings
-  const dailyBookingsData = [
-    { day: 'Mon', public: 32, private: 28 },
-    { day: 'Tue', public: 28, private: 35 },
-    { day: 'Wed', public: 35, private: 30 },
-    { day: 'Thu', public: 30, private: 38 },
-    { day: 'Fri', public: 38, private: 42 },
-    { day: 'Sat', public: 45, private: 48 },
-    { day: 'Sun', public: 40, private: 45 },
-  ];
+
 
   // High demand areas
   const demandAreasData = [
@@ -67,13 +58,14 @@ export function Analytics() {
       bgColor: 'bg-orange-50',
     },
     {
-      label: 'Revenue (Private)',
-      value: '₹8.4L',
-      change: '+22.1%',
-      icon: DollarSign,
+      label: 'Total Transfers (Month)',
+      value: '1234',
+      change: '-15.3%',
+      icon: Ambulance,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
     },
+
   ];
 
   return (
@@ -163,21 +155,40 @@ export function Analytics() {
             ))}
           </div>
         </div>
-
-        {/* Daily Bookings */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-900 mb-4">Daily Bookings (Public vs Private)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dailyBookingsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="public" fill="#3b82f6" name="Public" />
-              <Bar dataKey="private" fill="#8b5cf6" name="Private" />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Peak Hours Analysis */}
+        {/* Peak Hours Analysis */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-gray-900 mb-4">Transfer Request Peak Hours</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-blue-600">6-9 AM</p>
+                <p className="text-sm text-gray-600">Morning Rush</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">23% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-green-600">9AM-12PM</p>
+                <p className="text-sm text-gray-600">Low Activity</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">15% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-orange-600">12-6 PM</p>
+                <p className="text-sm text-gray-600">Afternoon Peak</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">38% of transfers</p>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+              <div>
+                <p className="text-lg font-bold text-purple-600">6PM-12AM</p>
+                <p className="text-sm text-gray-600">Evening Rush</p>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">24% of transfers</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -199,6 +210,39 @@ export function Analytics() {
             <MapPin className="inline mr-2" size={16} />
             Central District shows highest demand - consider deploying more ambulances to this area
           </p>
+        </div>
+      </div>
+      {/* Hospital Capacity Status */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-gray-900 mb-4">Current Hospital Capacity Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="border-l-4 border-green-500 pl-4">
+            <p className="text-gray-900 font-semibold">National Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">35% occupied</span>
+            </div>
+          </div>
+          <div className="border-l-4 border-yellow-500 pl-4">
+            <p className="text-gray-900 font-semibold">Teaching Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">68% occupied</span>
+            </div>
+          </div>
+          <div className="border-l-4 border-red-500 pl-4">
+            <p className="text-gray-900 font-semibold">General Hospital</p>
+            <div className="mt-2 flex items-center">
+              <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                <div className="bg-red-500 h-2 rounded-full" style={{ width: '87%' }}></div>
+              </div>
+              <span className="text-sm text-gray-600">87% occupied</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -274,27 +318,7 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Data Insights Summary */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg shadow-md p-6">
-        <h3 className="text-gray-900 mb-4">Key Data Insights</h3>
-        <div className="space-y-2">
-          <p className="text-gray-700">
-            • <strong>Optimized Dispatching:</strong> System automatically redirects urgent cases to the closest available service, reducing response time by 15.3%
-          </p>
-          <p className="text-gray-700">
-            • <strong>Real-time Resource Management:</strong> Hospitals and providers see fleet availability in real time
-          </p>
-          <p className="text-gray-700">
-            • <strong>Reduced Delays:</strong> Filtering by proximity, sector, and availability eliminates wasted time
-          </p>
-          <p className="text-gray-700">
-            • <strong>Efficient Categorization:</strong> Helps prioritize emergencies vs. non-critical transport
-          </p>
-          <p className="text-gray-700">
-            • <strong>Data-Driven Decisions:</strong> Collected data enables continuous operational improvements
-          </p>
-        </div>
-      </div>
+
     </div>
   );
 }
