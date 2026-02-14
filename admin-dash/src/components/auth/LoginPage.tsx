@@ -60,7 +60,7 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPagePr
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-200 via-purple-100 to-blue-200 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
         <div className="hidden lg:block">
@@ -177,7 +177,7 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPagePr
                   <input type="checkbox" className="w-4 h-4 text-red-600 rounded" />
                   <span className="text-gray-700 text-sm">Remember me</span>
                 </label>
-                <button type="button" onClick={onForgotPassword}  className="text-red-600 text-sm hover:underline">
+                <button type="button" onClick={onForgotPassword} className="text-red-600 text-sm hover:underline">
                   Forgot password?
                 </button>
               </div>
@@ -185,7 +185,7 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPagePr
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-900 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </button>

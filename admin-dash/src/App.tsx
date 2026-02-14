@@ -16,8 +16,11 @@ type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 type AuthView = 'login' | 'register' | 'forgot-password';
 
 export default function App() {
+
+  //default page is dashboard
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [authView, setAuthView] = useState<AuthView>('login');
+  //specifies the initially user can be null (either user object or null value)
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,9 +29,11 @@ export default function App() {
       setUser(currentUser);
       setLoading(false);
     });
-
+    //when app closes, tell the system to stop watching
     return () => unsubscribe();
-  }, []);
+  },
+    []//run once app starts
+  );
 
   const handleLogin = () => {
     // User state will be updated by onAuthStateChanged listener
