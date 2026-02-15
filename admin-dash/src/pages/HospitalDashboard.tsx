@@ -289,24 +289,24 @@ export function HospitalDashboard() {
     <div className="space-y-6">
 
       {/* Map + Fleet Overview */}
-      <div className="overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-2 border-b border-gray-200 flex items-center justify-between">
+      <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
+        <div className="p-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center pl-3">
             <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-            <h2 className="bg-white rounded-lg px-3 py-1 text-gray-900">
+            <h2 className="bg-card rounded-lg px-3 py-1 text-foreground">
               Live Ambulance Locations
             </h2>
           </div>
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => setMapView("map")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+              className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
             >
               <Layers size={18} />
             </button>
             <button
               onClick={() => setMapView("list")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600"}`}
+              className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
             >
               <List size={18} />
             </button>
@@ -333,11 +333,11 @@ export function HospitalDashboard() {
 
             {mapView === "list" && (
               <div className="h-96 overflow-y-auto">
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-border">
                   {ambulances.map((amb) => (
                     <div
                       key={amb.id}
-                      className="p-4 hover:bg-gray-50 transition-colors"
+                      className="p-4 hover:bg-accent transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -345,16 +345,16 @@ export function HospitalDashboard() {
                             className={`w-3 h-3 ${getStatusColor(amb.status)} rounded-full`}
                           ></div>
                           <div>
-                            <p className="text-gray-900 text-sm">
+                            <p className="text-foreground text-sm">
                               {amb.id}
                             </p>
-                            <p className="text-gray-500 text-xs">
+                            <p className="text-muted-foreground text-xs">
                               {amb.driver}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-gray-700 text-sm">
+                          <p className="text-muted-foreground text-sm">
                             {amb.location}
                           </p>
                           {amb.eta && (
@@ -372,16 +372,16 @@ export function HospitalDashboard() {
           </div>
 
           {/* Fleet Overview Sidebar — Map Key */}
-          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 bg-gray-50/50">
+          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-gray-900 text-sm font-semibold">Fleet Overview</h3>
+              <h3 className="text-foreground text-sm font-semibold">Fleet Overview</h3>
               <Activity className="text-red-600" size={16} />
             </div>
 
             {/* Total */}
-            <div className="mb-4 pb-3 border-b border-gray-200">
-              <p className="text-gray-500 text-xs">Total Ambulances</p>
-              <p className="text-gray-900 text-2xl font-bold">{statusCounts.total}</p>
+            <div className="mb-4 pb-3 border-b border-border">
+              <p className="text-muted-foreground text-xs">Total Ambulances</p>
+              <p className="text-foreground text-2xl font-bold">{statusCounts.total}</p>
             </div>
 
             {/* Status breakdown */}
@@ -391,7 +391,7 @@ export function HospitalDashboard() {
                   <div className="w-6 h-6 bg-emerald-100 rounded-md flex items-center justify-center">
                     <Ambulance className="text-emerald-600" size={14} />
                   </div>
-                  <span className="text-gray-600 text-sm">Available</span>
+                  <span className="text-muted-foreground text-sm">Available</span>
                 </div>
                 <span className="text-emerald-600 font-semibold text-sm">{statusCounts.available}</span>
               </div>
@@ -401,7 +401,7 @@ export function HospitalDashboard() {
                   <div className="w-6 h-6 bg-orange-100 rounded-md flex items-center justify-center">
                     <Clock className="text-orange-600" size={14} />
                   </div>
-                  <span className="text-gray-600 text-sm">Busy</span>
+                  <span className="text-muted-foreground text-sm">Busy</span>
                 </div>
                 <span className="text-orange-600 font-semibold text-sm">{statusCounts.busy}</span>
               </div>
@@ -411,7 +411,7 @@ export function HospitalDashboard() {
                   <div className="w-6 h-6 bg-red-100 rounded-md flex items-center justify-center">
                     <AlertCircle className="text-red-600" size={14} />
                   </div>
-                  <span className="text-gray-600 text-sm">Offline</span>
+                  <span className="text-muted-foreground text-sm">Offline</span>
                 </div>
                 <span className="text-red-600 font-semibold text-sm">{statusCounts.offline}</span>
               </div>
@@ -422,7 +422,7 @@ export function HospitalDashboard() {
 
       {/* Pending Requests Alert */}
       {pendingRequests.length > 0 && (
-        <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
+        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-3">
             <AlertCircle className="text-red-600" size={24} />
             <div>
@@ -444,9 +444,9 @@ export function HospitalDashboard() {
       <div className="grid grid-cols-1 gap-6">
 
         {/* Ambulance Condition */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-gray-900">
+            <h3 className="text-foreground">
               Ambulance Condition
             </h3>
             <span className="text-sm text-teal-600 flex items-center gap-1">
@@ -461,11 +461,11 @@ export function HospitalDashboard() {
                 <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                   <div className="w-2 h-2 bg-white rounded-full"></div>
                 </div>
-                <span className="text-gray-900 text-sm">
+                <span className="text-foreground text-sm">
                   Good
                 </span>
               </div>
-              <span className="text-gray-900">7</span>
+              <span className="text-foreground">7</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
@@ -476,11 +476,11 @@ export function HospitalDashboard() {
                     size={14}
                   />
                 </div>
-                <span className="text-gray-900 text-sm">
+                <span className="text-foreground text-sm">
                   Maintenance Needed
                 </span>
               </div>
-              <span className="text-gray-900">3</span>
+              <span className="text-foreground">3</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -488,11 +488,11 @@ export function HospitalDashboard() {
                 <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
                   <Wrench className="text-white" size={14} />
                 </div>
-                <span className="text-gray-900 text-sm">
+                <span className="text-foreground text-sm">
                   Repairing
                 </span>
               </div>
-              <span className="text-gray-900">1</span>
+              <span className="text-foreground">1</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
@@ -500,11 +500,11 @@ export function HospitalDashboard() {
                 <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                   <div className="w-2 h-2 bg-white rounded-full"></div>
                 </div>
-                <span className="text-gray-900 text-sm">
+                <span className="text-foreground text-sm">
                   Breakdown
                 </span>
               </div>
-              <span className="text-gray-900">0</span>
+              <span className="text-foreground">0</span>
             </div>
           </div>
         </div>
@@ -514,20 +514,20 @@ export function HospitalDashboard() {
 
 
         {/* Active Transfers */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-gray-900">Active Transfers</h2>
+        <div className="bg-card rounded-lg shadow-sm border border-border">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-foreground">Active Transfers</h2>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-border">
             {activeTransfers.map((transfer) => (
               <div
                 key={transfer.id}
-                className="p-6 hover:bg-gray-50 transition-colors"
+                className="p-6 hover:bg-accent transition-colors"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-gray-900">
+                      <h3 className="text-foreground">
                         {transfer.patient}
                       </h3>
                       <span
@@ -543,7 +543,7 @@ export function HospitalDashboard() {
                           .toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-3">
+                    <p className="text-muted-foreground text-sm mb-3">
                       {transfer.age} yrs • {transfer.gender} •
                       Transfer ID: {transfer.id}
                     </p>
@@ -552,23 +552,23 @@ export function HospitalDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">
+                    <p className="text-muted-foreground text-xs mb-1">
                       FROM
                     </p>
-                    <p className="text-gray-900 text-sm">
+                    <p className="text-foreground text-sm">
                       {transfer.from}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">
+                    <p className="text-muted-foreground text-xs mb-1">
                       TO
                     </p>
-                    <p className="text-gray-900 text-sm">
+                    <p className="text-foreground text-sm">
                       {transfer.to}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">
+                    <p className="text-muted-foreground text-xs mb-1">
                       ETA
                     </p>
                     <div className="flex items-center gap-2">
@@ -576,21 +576,21 @@ export function HospitalDashboard() {
                         size={16}
                         className="text-gray-400"
                       />
-                      <p className="text-gray-900 text-sm">
+                      <p className="text-foreground text-sm">
                         {transfer.eta}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div className="flex items-center gap-6 text-sm">
                     <div className="flex items-center gap-2">
                       <Ambulance
                         size={16}
                         className="text-gray-400"
                       />
-                      <span className="text-gray-700">
+                      <span className="text-muted-foreground">
                         {transfer.ambulance}
                       </span>
                     </div>
@@ -599,7 +599,7 @@ export function HospitalDashboard() {
                         size={16}
                         className="text-gray-400"
                       />
-                      <span className="text-gray-700">
+                      <span className="text-muted-foreground">
                         {transfer.driver}
                       </span>
                     </div>
@@ -608,7 +608,7 @@ export function HospitalDashboard() {
                         size={16}
                         className="text-gray-400"
                       />
-                      <span className="text-gray-700">
+                      <span className="text-muted-foreground">
                         {transfer.attendant}
                       </span>
                     </div>
@@ -617,7 +617,7 @@ export function HospitalDashboard() {
                         size={16}
                         className="text-gray-400"
                       />
-                      <span className="text-gray-700">
+                      <span className="text-muted-foreground">
                         {transfer.distance} km
                       </span>
                     </div>
@@ -632,13 +632,13 @@ export function HospitalDashboard() {
         </div>
 
         {/* Pending Requests */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-gray-900">
+        <div className="bg-card rounded-lg shadow-sm border border-border">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-foreground">
               Pending Transfer Requests
             </h2>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-border">
             {pendingRequests.map((request) => (
               <div
                 key={request.id}
@@ -647,7 +647,7 @@ export function HospitalDashboard() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-gray-900">
+                      <h3 className="text-foreground">
                         {request.patient}
                       </h3>
                       <span
@@ -656,39 +656,39 @@ export function HospitalDashboard() {
                         {request.priority.toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       {request.age} yrs • {request.gender} •{" "}
                       {request.id}
                     </p>
                   </div>
-                  <span className="text-gray-500 text-sm">
+                  <span className="text-muted-foreground text-sm">
                     {request.time}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">
+                    <p className="text-muted-foreground text-xs mb-1">
                       FROM
                     </p>
-                    <p className="text-gray-900 text-sm">
+                    <p className="text-foreground text-sm">
                       {request.from}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">
+                    <p className="text-muted-foreground text-xs mb-1">
                       TO
                     </p>
-                    <p className="text-gray-900 text-sm">
+                    <p className="text-foreground text-sm">
                       {request.to}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <p className="text-gray-600 text-sm">
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <p className="text-muted-foreground text-sm">
                     Requested by:{" "}
-                    <span className="text-gray-900">
+                    <span className="text-foreground">
                       {request.requestedBy}
                     </span>
                   </p>
@@ -702,19 +702,19 @@ export function HospitalDashboard() {
         </div>
 
         {/* Incoming Emergency Patients */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-gray-900 mb-4">Incoming Emergency Patients</h3>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+          <h3 className="text-foreground mb-4">Incoming Emergency Patients</h3>
           <div className="space-y-4">
             {incomingRequests.map((request) => (
               <div
                 key={request.id}
-                className="border-2 border-gray-200 rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
+                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
                 onClick={() => setSelectedRequest(request)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h4 className="text-gray-900">{request.patientName}</h4>
+                      <h4 className="text-foreground">{request.patientName}</h4>
                       <span
                         className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
                           request.priority
@@ -722,9 +722,9 @@ export function HospitalDashboard() {
                       >
                         {request.priority.toUpperCase()}
                       </span>
-                      <span className="text-gray-500 text-sm">{request.timestamp}</span>
+                      <span className="text-muted-foreground text-sm">{request.timestamp}</span>
                     </div>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                       {request.age} yrs • {request.gender} • {request.incidentType}
                     </p>
                   </div>
@@ -733,25 +733,25 @@ export function HospitalDashboard() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                   <div className="flex items-center gap-2">
                     <Ambulance size={16} className="text-gray-400" />
-                    <span className="text-gray-700 text-sm">{request.ambulanceNumber}</span>
+                    <span className="text-muted-foreground text-sm">{request.ambulanceNumber}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-gray-400" />
-                    <span className="text-gray-700 text-sm">ETA {request.eta}</span>
+                    <span className="text-muted-foreground text-sm">ETA {request.eta}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin size={16} className="text-gray-400" />
-                    <span className="text-gray-700 text-sm">{request.distance} km</span>
+                    <span className="text-muted-foreground text-sm">{request.distance} km</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User size={16} className="text-gray-400" />
-                    <span className="text-gray-700 text-sm capitalize">{request.consciousness}</span>
+                    <span className="text-muted-foreground text-sm capitalize">{request.consciousness}</span>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded p-3">
-                  <p className="text-gray-600 text-sm mb-1">Symptoms:</p>
-                  <p className="text-gray-900 text-sm">{request.symptoms}</p>
+                <div className="bg-muted/30 rounded p-3">
+                  <p className="text-muted-foreground text-sm mb-1">Symptoms:</p>
+                  <p className="text-foreground text-sm">{request.symptoms}</p>
                 </div>
 
                 <div className="mt-3 flex gap-2">
@@ -768,24 +768,24 @@ export function HospitalDashboard() {
         </div>
 
         {/* Resource Preparation Checklist */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-gray-900 mb-4">Resource Preparation Checklist</h3>
+        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+          <h3 className="text-foreground mb-4">Resource Preparation Checklist</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
               <CheckCircle className="text-green-600" size={20} />
-              <span className="text-gray-900">Emergency Room 1 - Ready</span>
+              <span className="text-foreground">Emergency Room 1 - Ready</span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
               <CheckCircle className="text-green-600" size={20} />
-              <span className="text-gray-900">Cardiac Team - On Standby</span>
+              <span className="text-foreground">Cardiac Team - On Standby</span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
               <AlertCircle className="text-yellow-600" size={20} />
-              <span className="text-gray-900">Trauma Team - Being Notified</span>
+              <span className="text-foreground">Trauma Team - Being Notified</span>
             </div>
             <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
               <CheckCircle className="text-green-600" size={20} />
-              <span className="text-gray-900">Blood Bank - Notified</span>
+              <span className="text-foreground">Blood Bank - Notified</span>
             </div>
           </div>
         </div>

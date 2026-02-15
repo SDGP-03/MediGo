@@ -59,14 +59,27 @@ export function Header({ user, onLogout }: HeaderProps) {
     }, [updateIndicator]);
 
 
-    //simple dark mode toggle logic
+    // Theme toggle logic with persistence
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, []);
+
     const toggleTheme = () => {
         if (document.documentElement.classList.contains('dark')) {
             document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
         } else {
             document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
         }
-    }
+    };
 
     return (
         <header
@@ -104,7 +117,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                                 width: indicatorStyle.width,
                                 transition: 'left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
-                                border: '1.5px solid rgba(255,255,255,0.55)',
+                                border: '1.5px solid var(--border)',
                                 boxShadow: '0 1px 8px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(0,0,0,0.03)',
                                 backdropFilter: 'blur(12px) saturate(120%)',
                             }}

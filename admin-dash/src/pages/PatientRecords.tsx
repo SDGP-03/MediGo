@@ -175,9 +175,9 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-gray-900 mb-4">Centralized Patient Records</h2>
-        <p className="text-gray-600 mb-4">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+        <h2 className="text-foreground mb-4">Centralized Patient Records</h2>
+        <p className="text-muted-foreground mb-4">
           Search by name or ID to view complete medical histories, vital signs, and transfer records across all facilities.
         </p>
         <div className="relative">
@@ -187,7 +187,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
             placeholder="Search by patient name or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
           />
           {searchTerm && (
             <button
@@ -204,37 +204,37 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Patient List */}
         <div className={`lg:col-span-1 ${!selectedPatient ? 'lg:col-span-3' : ''} transition-all duration-300`}>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200">
+          <div className="bg-card rounded-lg shadow-sm border border-border">
+            <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between">
-                <h3 className="text-gray-900">Patient List</h3>
-                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                <h3 className="text-foreground">Patient List</h3>
+                <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
                   {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
                 </span>
               </div>
             </div>
-            <div className={`divide-y divide-gray-200 overflow-y-auto ${selectedPatient ? 'max-h-[600px]' : ''}`}>
+            <div className={`divide-y divide-border overflow-y-auto ${selectedPatient ? 'max-h-[600px]' : ''}`}>
               {filteredPatients.length > 0 ? (
                 <div className={`${!selectedPatient ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4' : ''}`}>
                   {filteredPatients.map((patient) => (
                     <button
                       key={patient.id}
                       onClick={() => setSelectedPatient(patient)}
-                      className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border rounded-lg ${selectedPatient?.id === patient.id
-                        ? 'bg-red-50 border-red-200'
-                        : 'border-transparent hover:border-gray-200'
-                        } ${!selectedPatient ? 'border-gray-200' : ''}`}
+                      className={`w-full p-4 text-left hover:bg-accent transition-colors border rounded-lg ${selectedPatient?.id === patient.id
+                        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
+                        : 'border-transparent hover:border-border'
+                        } ${!selectedPatient ? 'border-border' : ''}`}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
                           <User className="text-red-600" size={20} />
                         </div>
                         <div>
-                          <p className="text-gray-900 font-medium">{patient.name}</p>
-                          <p className="text-gray-600 text-sm">{patient.id}</p>
+                          <p className="text-foreground font-medium">{patient.name}</p>
+                          <p className="text-muted-foreground text-sm">{patient.id}</p>
                         </div>
                       </div>
-                      <p className="text-gray-600 text-sm mt-2">
+                      <p className="text-muted-foreground text-sm mt-2">
                         {patient.age} yrs • {patient.gender} • {patient.bloodGroup}
                       </p>
                     </button>
@@ -242,9 +242,9 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                 </div>
               ) : (
                 <div className="p-8 text-center">
-                  <AlertCircle className="mx-auto text-gray-400 mb-3" size={40} />
-                  <p className="text-gray-900 font-medium mb-1">No matches found</p>
-                  <p className="text-gray-600 text-sm">
+                  <AlertCircle className="mx-auto text-muted-foreground mb-3" size={40} />
+                  <p className="text-foreground font-medium mb-1">No matches found</p>
+                  <p className="text-muted-foreground text-sm">
                     {searchTerm ? `No patients match "${searchTerm}"` : 'No patients available'}
                   </p>
                 </div>
@@ -257,12 +257,12 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
         {selectedPatient && (
           <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Patient Header */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4">
                   <button
                     onClick={() => setSelectedPatient(null)}
-                    className="p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600 lg:hidden"
+                    className="p-2 -ml-2 hover:bg-accent rounded-lg text-muted-foreground lg:hidden"
                   >
                     <span className="sr-only">Back to list</span>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -271,7 +271,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                   </button>
                   <div>
                     <div className="flex items-center gap-3">
-                      <h2 className="text-gray-900 mb-1 font-bold text-xl">{selectedPatient.name}</h2>
+                      <h2 className="text-foreground mb-1 font-bold text-xl">{selectedPatient.name}</h2>
                       <button
                         onClick={() => setSelectedPatient(null)}
                         className="text-xs text-blue-600 hover:text-blue-800 underline hidden lg:block"
@@ -279,7 +279,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                         Back to List
                       </button>
                     </div>
-                    <p className="text-gray-600">{selectedPatient.id}</p>
+                    <p className="text-muted-foreground">{selectedPatient.id}</p>
                   </div>
                 </div>
                 {!isEditing ? (
@@ -317,43 +317,43 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6 pt-6 border-t border-gray-100">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6 pt-6 border-t border-border">
                 <div>
-                  <p className="text-gray-600 mb-1">Age</p>
+                  <p className="text-muted-foreground mb-1">Age</p>
                   {isEditing ? (
                     <input
                       type="number"
                       value={editedPatient.age}
                       onChange={(e) => setEditedPatient({ ...editedPatient, age: parseInt(e.target.value) })}
-                      className="text-gray-900 border border-gray-300 rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-background border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
                     />
                   ) : (
-                    <p className="text-gray-900 font-medium">{selectedPatient.age} years</p>
+                    <p className="text-foreground font-medium">{selectedPatient.age} years</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-gray-600 mb-1">Gender</p>
+                  <p className="text-muted-foreground mb-1">Gender</p>
                   {isEditing ? (
                     <select
                       value={editedPatient.gender}
                       onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
-                      className="text-gray-900 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-background border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
                     >
                       <option>Male</option>
                       <option>Female</option>
                       <option>Other</option>
                     </select>
                   ) : (
-                    <p className="text-gray-900 font-medium">{selectedPatient.gender}</p>
+                    <p className="text-foreground font-medium">{selectedPatient.gender}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-gray-600 mb-1">Blood Group</p>
+                  <p className="text-muted-foreground mb-1">Blood Group</p>
                   {isEditing ? (
                     <select
                       value={editedPatient.bloodGroup}
                       onChange={(e) => setEditedPatient({ ...editedPatient, bloodGroup: e.target.value })}
-                      className="text-gray-900 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-background border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
                     >
                       <option>A+</option>
                       <option>A-</option>
@@ -365,17 +365,17 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       <option>O-</option>
                     </select>
                   ) : (
-                    <p className="text-gray-900 font-medium">{selectedPatient.bloodGroup}</p>
+                    <p className="text-foreground font-medium">{selectedPatient.bloodGroup}</p>
                   )}
                 </div>
                 <div>
-                  <p className="text-gray-600 mb-1">Allergies</p>
+                  <p className="text-muted-foreground mb-1">Allergies</p>
                   {isEditing ? (
                     <input
                       type="text"
                       value={editedPatient.allergies}
                       onChange={(e) => setEditedPatient({ ...editedPatient, allergies: e.target.value })}
-                      className="text-red-600 border border-gray-300 rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-red-600 bg-background border border-input rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
                     />
                   ) : (
                     <p className="text-red-600 font-medium">{selectedPatient.allergies}</p>
@@ -385,57 +385,57 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
             </div>
 
             {/* Vital Signs */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-gray-900 mb-4 font-semibold">Current Vital Signs</h3>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+              <h3 className="text-foreground mb-4 font-semibold">Current Vital Signs</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                  <p className="text-blue-600 text-sm mb-1 font-medium">Blood Pressure</p>
-                  <p className="text-gray-900 text-lg font-bold">{selectedPatient.vitalSigns.bp}</p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                  <p className="text-blue-600 dark:text-blue-400 text-sm mb-1 font-medium">Blood Pressure</p>
+                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.bp}</p>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                  <p className="text-green-600 text-sm mb-1 font-medium">Heart Rate</p>
-                  <p className="text-gray-900 text-lg font-bold">{selectedPatient.vitalSigns.heartRate} <span className="text-sm font-normal text-gray-600">bpm</span></p>
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
+                  <p className="text-green-600 dark:text-green-400 text-sm mb-1 font-medium">Heart Rate</p>
+                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.heartRate} <span className="text-sm font-normal text-muted-foreground">bpm</span></p>
                 </div>
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                  <p className="text-orange-600 text-sm mb-1 font-medium">Temperature</p>
-                  <p className="text-gray-900 text-lg font-bold">{selectedPatient.vitalSigns.temperature}</p>
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
+                  <p className="text-orange-600 dark:text-orange-400 text-sm mb-1 font-medium">Temperature</p>
+                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.temperature}</p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                  <p className="text-purple-600 text-sm mb-1 font-medium">Oxygen Sat.</p>
-                  <p className="text-gray-900 text-lg font-bold">{selectedPatient.vitalSigns.oxygen}</p>
+                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800">
+                  <p className="text-purple-600 dark:text-purple-400 text-sm mb-1 font-medium">Oxygen Sat.</p>
+                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.oxygen}</p>
                 </div>
               </div>
             </div>
 
             {/* Medical History */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-gray-900 mb-4 font-semibold">Medical History</h3>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+              <h3 className="text-foreground mb-4 font-semibold">Medical History</h3>
               {isEditing ? (
                 <textarea
                   value={editedPatient.medicalHistory}
                   onChange={(e) => setEditedPatient({ ...editedPatient, medicalHistory: e.target.value })}
-                  className="w-full text-gray-700 border border-gray-300 rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
+                  className="w-full text-foreground bg-background border border-input rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
                 />
               ) : (
-                <p className="text-gray-700 leading-relaxed">{selectedPatient.medicalHistory}</p>
+                <p className="text-foreground leading-relaxed">{selectedPatient.medicalHistory}</p>
               )}
             </div>
 
             {/* Medications */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-gray-900 mb-4 font-semibold">Current Medications</h3>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+              <h3 className="text-foreground mb-4 font-semibold">Current Medications</h3>
               <div className="flex flex-wrap gap-2 mb-4">
                 {(isEditing ? editedPatient.medications : selectedPatient.medications).map((med: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg group">
+                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-secondary/50 border border-border rounded-lg group">
                     <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                    <span className="text-gray-900 font-medium">{med}</span>
+                    <span className="text-foreground font-medium">{med}</span>
                     {isEditing && (
                       <button
                         onClick={() => {
                           const newMeds = editedPatient.medications.filter((_: any, i: number) => i !== index);
                           setEditedPatient({ ...editedPatient, medications: newMeds });
                         }}
-                        className="ml-2 text-gray-400 hover:text-red-600"
+                        className="ml-2 text-muted-foreground hover:text-red-600"
                       >
                         ×
                       </button>
@@ -450,7 +450,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                     value={newMedication}
                     onChange={(e) => setNewMedication(e.target.value)}
                     placeholder="Add new medication..."
-                    className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                    className="flex-1 border border-input bg-background text-foreground rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newMedication.trim()) {
                         setEditedPatient({
@@ -480,23 +480,23 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
             </div>
 
             {/* Transfer History */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-gray-900 mb-4 font-semibold">Transfer History</h3>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+              <h3 className="text-foreground mb-4 font-semibold">Transfer History</h3>
 
               {isEditing && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Add New Transfer Record</h4>
+                <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border">
+                  <h4 className="text-sm font-medium text-foreground mb-3">Add New Transfer Record</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <input
                       type="date"
                       value={newTransfer.date}
                       onChange={(e) => setNewTransfer({ ...newTransfer, date: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
                     />
                     <select
                       value={newTransfer.status}
                       onChange={(e) => setNewTransfer({ ...newTransfer, status: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
                     >
                       <option>In Progress</option>
                       <option>Completed</option>
@@ -507,21 +507,21 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       placeholder="Reason"
                       value={newTransfer.reason}
                       onChange={(e) => setNewTransfer({ ...newTransfer, reason: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-2 text-sm md:col-span-2"
+                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm md:col-span-2"
                     />
                     <input
                       type="text"
                       placeholder="From Facility"
                       value={newTransfer.from}
                       onChange={(e) => setNewTransfer({ ...newTransfer, from: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="To Facility"
                       value={newTransfer.to}
                       onChange={(e) => setNewTransfer({ ...newTransfer, to: e.target.value })}
-                      className="border border-gray-300 rounded px-3 py-2 text-sm"
+                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
                     />
                   </div>
                   <button
@@ -552,14 +552,14 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
               {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).length > 0 ? (
                 <div className="space-y-4">
                   {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).map((transfer: any, index: number) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors relative group">
+                    <div key={index} className="border border-border rounded-lg p-4 hover:bg-accent transition-colors relative group">
                       {isEditing && (
                         <button
                           onClick={() => {
                             const newTransfers = editedPatient.recentTransfers.filter((_: any, i: number) => i !== index);
                             setEditedPatient({ ...editedPatient, recentTransfers: newTransfers });
                           }}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-red-600 p-1"
+                          className="absolute top-2 right-2 text-muted-foreground hover:text-red-600 p-1"
                           title="Remove record"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -569,36 +569,36 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       )}
 
                       <div className="flex items-center justify-between mb-2 pr-8">
-                        <span className="text-gray-600 text-sm flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-400" />
+                        <span className="text-muted-foreground text-sm flex items-center gap-2">
+                          <Calendar size={16} className="text-muted-foreground" />
                           {transfer.date}
                         </span>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${transfer.status === 'Completed'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                          : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                           }`}>
                           {transfer.status}
                         </span>
                       </div>
-                      <p className="text-gray-900 mb-1 font-medium">{transfer.reason}</p>
-                      <div className="flex items-center gap-2 text-gray-600 text-sm mt-2">
+                      <p className="text-foreground mb-1 font-medium">{transfer.reason}</p>
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">
                         <span>{transfer.from}</span>
-                        <span className="text-gray-400">→</span>
+                        <span className="text-muted-foreground">→</span>
                         <span>{transfer.to}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600 text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-200">No transfer history records found</p>
+                <p className="text-muted-foreground text-center py-4 bg-muted/30 rounded-lg border border-dashed border-border">No transfer history records found</p>
               )}
             </div>
             {/* Medical Documents */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-gray-900 font-semibold">Medical Documents</h3>
+                <h3 className="text-foreground font-semibold">Medical Documents</h3>
                 {uploadedFiles[selectedPatient.id]?.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
                     {uploadedFiles[selectedPatient.id].length}
                   </span>
                 )}
@@ -621,14 +621,14 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
               <div className="space-y-2">
                 {uploadedFiles[selectedPatient.id]?.length > 0 ? (
                   uploadedFiles[selectedPatient.id].map((file: File, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors group">
+                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border hover:border-input transition-colors group">
                       <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
                           <File className="text-blue-600" size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-900 font-medium text-sm truncate">{file.name}</p>
-                          <p className="text-gray-500 text-xs">
+                          <p className="text-foreground font-medium text-sm truncate">{file.name}</p>
+                          <p className="text-muted-foreground text-xs">
                             {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
                           </p>
                         </div>
@@ -643,14 +643,14 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                             a.click();
                             URL.revokeObjectURL(url);
                           }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                           title="Download file"
                         >
                           <Download size={18} />
                         </button>
                         <button
                           onClick={() => handleFileRemove(selectedPatient.id, index)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Remove file"
                         >
                           ✕
@@ -659,10 +659,10 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                    <File className="mx-auto text-gray-400 mb-3" size={32} />
-                    <p className="text-gray-600 text-sm font-medium">No documents uploaded yet</p>
-                    <p className="text-gray-400 text-xs mt-1">Upload patient reports, lab results, or transfer documents</p>
+                  <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
+                    <File className="mx-auto text-muted-foreground mb-3" size={32} />
+                    <p className="text-muted-foreground text-sm font-medium">No documents uploaded yet</p>
+                    <p className="text-muted-foreground text-xs mt-1">Upload patient reports, lab results, or transfer documents</p>
                   </div>
                 )}
               </div>

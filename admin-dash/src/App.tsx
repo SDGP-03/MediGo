@@ -92,7 +92,7 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
+    <div className="min-h-screen bg-background text-foreground">
       <Header
         user={user}
         // 3. removing 
