@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './firebase';
@@ -17,8 +18,10 @@ type AuthView = 'login' | 'register' | 'forgot-password';
 
 export default function App() {
 
-  //default page is dashboard
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  //default page is dashboard, 1. removing due to importing the router-dom
+  // const [currentView, setCurrentView] = useState<View>('dashboard');
+
+
   const [authView, setAuthView] = useState<AuthView>('login');
   //specifies the initially user can be null (either user object or null value)
   const [user, setUser] = useState<User | null>(null);
@@ -43,7 +46,8 @@ export default function App() {
     if (confirm('Are you sure you want to log out?')) {
       try {
         await signOut(auth);
-        setCurrentView('dashboard');
+        // 2. since removing the useState and redirect is handled automatically by auth check 
+        // setCurrentView('dashboard');
       } catch (error) {
         console.error('Error signing out:', error);
       }
@@ -86,19 +90,43 @@ export default function App() {
     <div className="min-h-screen bg-slate-50/50">
       <Header
         user={user}
-        currentView={currentView}
-        onViewChange={setCurrentView}
+        // 3. removing 
+        // currentView={currentView}
+        // onViewChange={setCurrentView}
         onLogout={handleLogout}
       />
+
+
+
+
 
       {/* Main Content */}
       <main className="max-w-[90%] mx-auto px-6 py-8 pb-12">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {currentView === 'dashboard' && <HospitalDashboard />}
+          {/* using routing */}
+          <Routes>
+            <Route path='/' element={<HospitalDashboard />} />
+            <Route path='/transfer' element={<TransferRequest />} />
+            <Route path='/fleet' element={<AmbulanceFleet />} />
+            <Route path='/records' element={<PatientRecords />} />
+            <Route path='/analytics' element={<Analytics />} />
+
+            {/* catch all redirect to dashboard */}
+            <Route path='*' element={<Navigate to='/' replace />} />
+          </Routes>
+
+
+
+
+
+
+
+          {/* old navigation */}
+          {/* {currentView === 'dashboard' && <HospitalDashboard />}
           {currentView === 'transfer' && <TransferRequest />}
           {currentView === 'fleet' && <AmbulanceFleet />}
           {currentView === 'records' && <PatientRecords onNavigate={setCurrentView} />}
-          {currentView === 'analytics' && <Analytics />}
+          {currentView === 'analytics' && <Analytics />} */}
         </div>
       </main>
     </div>

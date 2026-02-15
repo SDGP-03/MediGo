@@ -1,17 +1,25 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Ambulance, Users, BarChart3, LogOut, Activity, ArrowRightLeft } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 
 interface HeaderProps {
     user: User | null;
-    currentView: View;
-    onViewChange: (view: View) => void;
+
+    // 4. removing due to deletion of the useState
+    // currentView: View;
+    // onViewChange: (view: View) => void;
+
+
     onLogout: () => void;
 }
 
-export function Header({ user, currentView, onViewChange, onLogout }: HeaderProps) {
+export function Header({ user, onLogout }: HeaderProps) {
+
+    const navigate = useNavigate();
+    const location = useLocation();
     const displayName = user?.email?.split('@')[0] || 'User';
 
     const navItems = [
@@ -21,6 +29,9 @@ export function Header({ user, currentView, onViewChange, onLogout }: HeaderProp
         { id: 'records', label: 'Records', icon: Users },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ] as const;
+
+    //determine active view based on URL
+    const currentView = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);
 
     // Refs for measuring tab positions for the sliding indicator
     const navRef = useRef<HTMLDivElement>(null);
@@ -92,7 +103,7 @@ export function Header({ user, currentView, onViewChange, onLogout }: HeaderProp
                             <button
                                 key={item.id}
                                 ref={(el) => { tabRefs.current[item.id] = el; }}
-                                onClick={() => onViewChange(item.id)}
+                                onClick={() => navigate(item.id === 'dashboard' ? '/' : `/${item.id}`)} //using the navigate
                                 className="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors duration-300"
                                 style={{
                                     color: currentView === item.id ? '#111827' : '#9ca3af',
@@ -146,7 +157,7 @@ export function Header({ user, currentView, onViewChange, onLogout }: HeaderProp
                         {navItems.map((item) => (
                             <button
                                 key={item.id}
-                                onClick={() => onViewChange(item.id)}
+                                onClick={() => navigate(item.id === 'dashboard' ? '/' : `/${item.id}`)}
                                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-300"
                                 style={currentView === item.id ? {
                                     background: 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.5) 100%)',
