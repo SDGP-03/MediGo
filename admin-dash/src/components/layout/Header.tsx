@@ -66,7 +66,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
             }}
         >
-            <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="border border-red-500 max-w-full mx-auto px-20 py-4">
                 <div className="flex items-center justify-between relative">
                     {/* Logo */}
                     <div className="flex items-center gap-3">

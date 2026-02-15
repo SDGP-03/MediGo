@@ -15,8 +15,8 @@ import { ForgotPassword } from './components/auth/ForgotPassword';
 import { SupportPage } from './components/auth/SupportPage';
 
 
-type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
-type AuthView = 'login' | 'register' | 'forgot-password' |'support';
+// type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
+type AuthView = 'login' | 'register' | 'forgot-password' | 'support';
 
 export default function App() {
 
@@ -78,7 +78,7 @@ export default function App() {
     }
     if (authView === 'support') {
       return <SupportPage onBackToLogin={() => setAuthView('login')} />;
-  }
+    }
 
     return (
       <LoginPage
@@ -90,8 +90,6 @@ export default function App() {
     );
   }
 
-  // Get display name from email
-  // const displayName = user.email?.split('@')[0] || 'User'; // Moved to Header component
 
   return (
     <div className="min-h-screen bg-slate-50/50">
