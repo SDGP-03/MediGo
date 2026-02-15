@@ -7,9 +7,10 @@ interface LoginPageProps {
   onLogin: () => void;
   onRegister: () => void;
   onForgotPassword: () => void;
+  onSupport: () => void;
 }
 
-export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPageProps) {
+export function LoginPage({ onLogin, onRegister, onForgotPassword, onSupport }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -202,7 +203,7 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword }: LoginPagePr
                 </button>
               </p>
               <p className="text-gray-500 text-xs">
-                Need help? <button className="text-red-600 hover:underline">Contact Support</button>
+                Need help? <button onClick={onSupport} className="text-red-600 hover:underline">Contact Support</button>
               </p>
             </div>
           </div>

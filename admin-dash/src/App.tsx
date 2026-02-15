@@ -12,9 +12,11 @@ import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { Header } from './components/layout/Header';
 import { ForgotPassword } from './components/auth/ForgotPassword';
+import { SupportPage } from './components/auth/SupportPage';
+
 
 type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
-type AuthView = 'login' | 'register' | 'forgot-password';
+type AuthView = 'login' | 'register' | 'forgot-password' |'support';
 
 export default function App() {
 
@@ -74,11 +76,16 @@ export default function App() {
     if (authView === 'forgot-password') {
       return <ForgotPassword onBackToLogin={() => setAuthView('login')} />;
     }
+    if (authView === 'support') {
+      return <SupportPage onBackToLogin={() => setAuthView('login')} />;
+  }
+
     return (
       <LoginPage
         onLogin={handleLogin}
         onRegister={() => setAuthView('register')}
         onForgotPassword={() => setAuthView('forgot-password')}
+        onSupport={() => setAuthView('support')}
       />
     );
   }
