@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Ambulance, Users, BarChart3, LogOut, Activity, ArrowRightLeft } from 'lucide-react';
+import { User as UserIcon, Settings, Moon, Sun, HelpCircle, Ambulance, Users, BarChart3, LogOut, Activity, ArrowRightLeft } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from '@radix-ui/react-dropdown-menu';
 import { User } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -57,6 +58,16 @@ export function Header({ user, onLogout }: HeaderProps) {
         return () => window.removeEventListener('resize', updateIndicator);
     }, [updateIndicator]);
 
+
+    //simple dark mode toggle logic
+    const toggleTheme = () => {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    }
+
     return (
         <header
             className="sticky top-0 z-50 border-b border-white/20"
@@ -66,7 +77,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
             }}
         >
-            <div className="border border-red-500 max-w-full mx-auto px-20 py-4">
+            <div className=" max-w-full mx-auto px-20 py-4">
                 <div className="flex items-center justify-between relative">
                     {/* Logo */}
                     <div className="flex items-center gap-3">
@@ -125,8 +136,63 @@ export function Header({ user, onLogout }: HeaderProps) {
                         ))}
                     </nav>
 
-                    {/* User Profile & Actions */}
-                    <div className="flex items-center gap-4">
+
+
+
+                    {/* User profile dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:bg-white/20 outline-none cursor-pointer'
+                                style={{
+                                    background: 'rgba(255,255,255,0.4)',
+                                    backdropFilter: 'blur(8px)',
+                                    border: '1px solid rgba(255,255,255,0.5)',
+                                }}>
+                                <div className='w-2 h-2 bg-emerald-500 rounded-full animate-pulse'></div>
+                                <span className='text-black-600 text-sm font-medium capitalize'>{displayName}</span>
+                            </button>
+                        </DropdownMenuTrigger>
+
+
+
+                        <DropdownMenuContent align='end' className='w-56 rounded-sm mt-2 p-4 bg-white'>
+                            <DropdownMenuLabel className='pb-4 font-bold'>My account</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+
+
+                            {/* Profile option */}
+                            <DropdownMenuItem onClick={() => navigate('/profile')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-gray-200 hover:pl-6 focus:bg-gray-50 focus:outline-none cursor-pointer group'>
+                                <UserIcon className='mr-2 h-4 w-4' />
+                                <span>Profile</span>
+                            </DropdownMenuItem>
+
+                            {/* Settings */}
+                            <DropdownMenuItem onClick={() => navigate('/settings')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-gray-200 hover:pl-6 focus:bg-gray-50 focus:outline-none cursor-pointer group' >
+                                <Settings className="mr-2 h-4 w-4" />
+                                <span>Settings</span>
+                            </DropdownMenuItem>
+
+                            {/* Dark mode */}
+                            <DropdownMenuItem onClick={toggleTheme} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-gray-200 hover:pl-6 focus:bg-gray-50 focus:outline-none cursor-pointer group' >
+                                <Moon className="mr-2 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                                <Sun className="absolute mr-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                                <span>Toggle Theme</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+
+                            {/* Logout option */}
+                            <DropdownMenuItem onClick={onLogout} className="flex flex-row justify-start items-center py-2 text-red-600 transition-all duration-200 hover:bg-red-100 hover:pl-6 focus:bg-gray-50 focus:outline-none cursor-pointer border-0 group" >
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Log out</span>
+                            </DropdownMenuItem>
+
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+
+                    {/*Previous User Profile & Actions */}
+                    {/* <div className="flex items-center gap-4">
                         <div
                             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full"
                             style={{
@@ -148,7 +214,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                         >
                             <LogOut size={18} />
                         </button>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Mobile Nav — Liquid Glass */}
