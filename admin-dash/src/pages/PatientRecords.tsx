@@ -187,7 +187,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
             placeholder="Search by patient name or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
           />
           {searchTerm && (
             <button
@@ -325,7 +325,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       type="number"
                       value={editedPatient.age}
                       onChange={(e) => setEditedPatient({ ...editedPatient, age: parseInt(e.target.value) })}
-                      className="text-foreground bg-background border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
                     />
                   ) : (
                     <p className="text-foreground font-medium">{selectedPatient.age} years</p>
@@ -337,7 +337,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                     <select
                       value={editedPatient.gender}
                       onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
-                      className="text-foreground bg-background border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
                     >
                       <option>Male</option>
                       <option>Female</option>
@@ -353,7 +353,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                     <select
                       value={editedPatient.bloodGroup}
                       onChange={(e) => setEditedPatient({ ...editedPatient, bloodGroup: e.target.value })}
-                      className="text-foreground bg-background border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
                     >
                       <option>A+</option>
                       <option>A-</option>
@@ -375,7 +375,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       type="text"
                       value={editedPatient.allergies}
                       onChange={(e) => setEditedPatient({ ...editedPatient, allergies: e.target.value })}
-                      className="text-red-600 bg-background border border-input rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
+                      className="text-red-600 bg-input-field-bg border border-input rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
                     />
                   ) : (
                     <p className="text-red-600 font-medium">{selectedPatient.allergies}</p>
@@ -414,7 +414,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                 <textarea
                   value={editedPatient.medicalHistory}
                   onChange={(e) => setEditedPatient({ ...editedPatient, medicalHistory: e.target.value })}
-                  className="w-full text-foreground bg-background border border-input rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
+                  className="w-full text-foreground bg-input-field-bg border border-input rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
                 />
               ) : (
                 <p className="text-foreground leading-relaxed">{selectedPatient.medicalHistory}</p>
@@ -450,7 +450,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                     value={newMedication}
                     onChange={(e) => setNewMedication(e.target.value)}
                     placeholder="Add new medication..."
-                    className="flex-1 border border-input bg-background text-foreground rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                    className="flex-1 border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newMedication.trim()) {
                         setEditedPatient({
@@ -491,12 +491,12 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       type="date"
                       value={newTransfer.date}
                       onChange={(e) => setNewTransfer({ ...newTransfer, date: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
+                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
                     />
                     <select
                       value={newTransfer.status}
                       onChange={(e) => setNewTransfer({ ...newTransfer, status: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
+                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
                     >
                       <option>In Progress</option>
                       <option>Completed</option>
@@ -507,21 +507,21 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
                       placeholder="Reason"
                       value={newTransfer.reason}
                       onChange={(e) => setNewTransfer({ ...newTransfer, reason: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm md:col-span-2"
+                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm md:col-span-2"
                     />
                     <input
                       type="text"
                       placeholder="From Facility"
                       value={newTransfer.from}
                       onChange={(e) => setNewTransfer({ ...newTransfer, from: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
+                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="To Facility"
                       value={newTransfer.to}
                       onChange={(e) => setNewTransfer({ ...newTransfer, to: e.target.value })}
-                      className="border border-input bg-background text-foreground rounded px-3 py-2 text-sm"
+                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
                     />
                   </div>
                   <button

@@ -240,7 +240,7 @@ export function TransferRequest() {
                     required
                     value={formData.patientName}
                     onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                     placeholder="Full name"
                   />
                 </div>
@@ -252,7 +252,7 @@ export function TransferRequest() {
                     required
                     value={formData.patientId}
                     onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                     placeholder="Hospital patient ID"
                   />
                 </div>
@@ -264,7 +264,7 @@ export function TransferRequest() {
                     required
                     value={formData.patientAge}
                     onChange={(e) => setFormData({ ...formData, patientAge: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                     placeholder="Age in years"
                   />
                 </div>
@@ -275,7 +275,7 @@ export function TransferRequest() {
                     required
                     value={formData.patientGender}
                     onChange={(e) => setFormData({ ...formData, patientGender: e.target.value, attendantGender: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                   >
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
@@ -289,7 +289,7 @@ export function TransferRequest() {
                   <select
                     value={formData.bloodGroup}
                     onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                   >
                     <option value="">Select blood group</option>
                     <option value="A+">A+</option>
@@ -309,7 +309,7 @@ export function TransferRequest() {
                     type="text"
                     value={formData.allergies}
                     onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                     placeholder="e.g., Penicillin, Latex"
                   />
                 </div>
@@ -320,7 +320,7 @@ export function TransferRequest() {
                 <textarea
                   value={formData.medicalHistory}
                   onChange={(e) => setFormData({ ...formData, medicalHistory: e.target.value })}
-                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-background text-foreground"
+                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
                   placeholder="Brief medical history and relevant conditions..."
                 />
               </div>
@@ -362,7 +362,7 @@ export function TransferRequest() {
                     required
                     value={formData.toHospital}
                     onChange={(e) => setFormData({ ...formData, toHospital: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground"
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
                   >
                     <option value="">Select destination hospital</option>
                     {hospitals.map(hospital => (
@@ -423,7 +423,7 @@ export function TransferRequest() {
                   required
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-background text-foreground"
+                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
                   placeholder="Detailed reason for inter-hospital transfer..."
                 />
               </div>
@@ -433,7 +433,7 @@ export function TransferRequest() {
                 <textarea
                   value={formData.currentCondition}
                   onChange={(e) => setFormData({ ...formData, currentCondition: e.target.value })}
-                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[80px] bg-background text-foreground"
+                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[80px] bg-input-field-bg text-foreground"
                   placeholder="BP, Heart Rate, Oxygen Saturation, Temperature, etc."
                 />
               </div>
@@ -512,7 +512,7 @@ export function TransferRequest() {
                           required
                           value={selectedDriverId}
                           onChange={(e) => setSelectedDriverId(e.target.value)}
-                          className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-background text-foreground"
+                          className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground"
                         >
                           <option value="">Select a driver...</option>
                           {availableDrivers.map(driver => (

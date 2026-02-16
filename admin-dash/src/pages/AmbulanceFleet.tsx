@@ -296,7 +296,7 @@ export function AmbulanceFleet() {
               placeholder="Search by ID, driver, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-background text-foreground placeholder:text-muted-foreground"
+              className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground placeholder:text-muted-foreground"
             />
           </div>
           <div className="flex gap-2">
