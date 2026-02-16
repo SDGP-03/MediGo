@@ -1,7 +1,9 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity, Ambulance } from 'lucide-react';
 
 export function Analytics() {
+  const navigate = useNavigate();
   // Response time data
   const responseTimeData = [
     { month: 'Jan', avgTime: 8.2 },
@@ -319,6 +321,14 @@ export function Analytics() {
       </div>
 
 
+      <button
+        onClick={() => navigate('/transfer')}
+        className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+        title="New Transfer Request"
+      >
+        <Ambulance size={24} />
+        <span className="hidden group-hover:block transition-all duration-300">New Request</span>
+      </button>
     </div>
   );
 }
