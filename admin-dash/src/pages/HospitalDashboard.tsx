@@ -528,7 +528,7 @@ export function HospitalDashboard() {
 
 
         {/* Active Transfers */}
-        <div className="bg-card rounded-lg shadow-sm border border-border">
+        <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
           <div className="p-6 border-b border-border">
             <h2 className="text-foreground">Active Transfers</h2>
           </div>
@@ -646,17 +646,17 @@ export function HospitalDashboard() {
         </div>
 
         {/* Pending Requests */}
-        <div className="bg-card rounded-lg shadow-sm border border-border">
+        <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
           <div className="p-6 border-b border-border">
             <h2 className="text-foreground">
               Pending Transfer Requests
             </h2>
           </div>
-          <div className="divide-y divide-border">
+          <div className=" divide-y divide-border">
             {pendingRequests.map((request) => (
               <div
                 key={request.id}
-                className="p-6 hover:bg-gray-50 transition-colors"
+                className=" p-6 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
