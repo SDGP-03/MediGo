@@ -1,11 +1,25 @@
 import { useState } from "react";
 import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User } from "lucide-react";
+import { Switch } from "../components/ui/switch";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
 
 export function HospitalDashboard() {
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+
+  const [resources, setResources] = useState([
+    { id: 'icu', name: 'ICU Bed Availability', available: true },
+    { id: 'nicu', name: 'NICU Bed Availability', available: true },
+    { id: 'picu', name: 'PICU Bed Availability', available: true },
+    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: true },
+    { id: 'telemetry', name: 'Telemetry Bed Availability', available: true },
+    { id: 'er', name: 'Emergency Room Availability', available: true },
+  ]);
+
+  const toggleResource = (id: string) => {
+    setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
+  };
 
   // Live driver data from Firebase
   const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
@@ -769,53 +783,30 @@ export function HospitalDashboard() {
 
         {/* Resource Preparation Checklist */}
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <h3 className="text-foreground mb-4">Resource Preparation Checklist</h3>
+          <h3 className="text-foreground mb-4">Resource Availability</h3>
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="text-green-600" size={20} />
-              <span className="text-foreground">Emergency Room 1 - Ready</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="text-green-600" size={20} />
-              <span className="text-foreground">Cardiac Team - On Standby</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-              <AlertCircle className="text-yellow-600" size={20} />
-              <span className="text-foreground">Trauma Team - Being Notified</span>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="text-green-600" size={20} />
-              <span className="text-foreground">Blood Bank - Notified</span>
-            </div>
-          </div>
-        </div>
-
-        {/* System Status */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="text-green-900 mb-2">
-              Protocol Management
-            </h4>
-            <p className="text-green-700 text-sm">
-              ✓ All transfers comply with inter-hospital protocols
-            </p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-blue-900 mb-2">
-              Pre-Arrival Notifications
-            </h4>
-            <p className="text-blue-700 text-sm">
-              ✓ Receiving hospitals notified 15 mins before
-              arrival
-            </p>
-          </div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <h4 className="text-purple-900 mb-2">
-              Gender Compliance
-            </h4>
-            <p className="text-purple-700 text-sm">
-              ✓ Attendants matched according to patient gender
-            </p>
+            {resources.map((resource) => (
+              <div key={resource.id} className={`flex items-center justify-between p-3 rounded-lg border ${resource.available ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50'}`}>
+                <div className="flex items-center gap-3">
+                  {resource.available ? (
+                    <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
+                  ) : (
+                    <AlertCircle className="text-red-600 dark:text-red-400" size={20} />
+                  )}
+                  <span className="text-foreground font-medium">{resource.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${resource.available ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                    {resource.available ? 'Available' : 'Full/Busy'}
+                  </span>
+                  <Switch
+                    checked={resource.available}
+                    onCheckedChange={() => toggleResource(resource.id)}
+                    className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600 dark:data-[state=checked]:bg-green-500 dark:data-[state=unchecked]:bg-red-500"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
