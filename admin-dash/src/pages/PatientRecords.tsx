@@ -1,11 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance } from 'lucide-react';
 
-interface PatientRecordsProps {
-  onNavigate?: (view: any) => void;
-}
-
-export function PatientRecords({ onNavigate }: PatientRecordsProps) {
+export function PatientRecords() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: any[] }>(() => {
@@ -672,7 +670,7 @@ export function PatientRecords({ onNavigate }: PatientRecordsProps) {
         )}
       </div>
       <button
-        onClick={() => onNavigate?.('transfer')}
+        onClick={() => navigate('/transfer')}
         className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
         title="New Transfer Request"
       >
