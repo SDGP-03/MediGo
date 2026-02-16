@@ -292,7 +292,7 @@ export function HospitalDashboard() {
       <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
         <div className="p-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center pl-3">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></div>
             <h2 className="bg-card rounded-lg px-3 py-1 text-foreground">
               Live Ambulance Locations
             </h2>
@@ -444,7 +444,7 @@ export function HospitalDashboard() {
       <div className="grid grid-cols-1 gap-6">
 
         {/* Ambulance Condition */}
-        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+        {/* <div className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-foreground">
               Ambulance Condition
@@ -507,7 +507,7 @@ export function HospitalDashboard() {
               <span className="text-foreground">0</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
 
 

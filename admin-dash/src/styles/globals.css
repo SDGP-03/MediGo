@@ -41,13 +41,23 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Header Variables - Light Mode */
+  --header-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(240, 244, 248, 0.65) 100%);
+  --header-border-color: #111827;
+  --header-nav-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.2) 100%);
+  --header-nav-border-color: #ffffff80;
+  --header-indicator-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  --header-text: #111827;
+  --header-text-muted: #595b5e;
+  --header-nav-item-hover: #005ef4;
 }
 
 .dark {
   --background: #30475E;
   --foreground: #ffffff;
   --card: #222831;
-  --card-foreground: oklch(0.985 0 0);
+  --card-foreground: oklch(100% 0.00011 271.152);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.985 0 0);
@@ -56,9 +66,9 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: oklch(37.761% 0.08159 245.558);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
+  --destructive: oklch(69.256% 0.19734 23.133);
   --destructive-foreground: oklch(0.637 0.237 25.331);
   --border: rgba(255, 255, 255, 0.1);
   --input: oklch(0.269 0 0);
@@ -78,6 +88,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+
+  /* Header Variables - Dark Mode */
+  --header-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.7) 100%);
+  --header-border-color: rgba(255, 255, 255, 0.05);
+  --header-nav-bg: rgba(30, 41, 59, 0.4);
+  --header-nav-border-color: rgba(255, 255, 255, 0.1);
+  --header-indicator-bg: rgba(255, 255, 255, 0.1);
+  --header-text: #ffffff;
+  --header-text-muted: #94a3b8;
+  --header-nav-item-hover: #7aadff;
 }
 
 @theme inline {
@@ -119,6 +139,49 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --animate-in: fade-in 0.2s ease-out, zoom-in 0.2s ease-out;
+  --animate-out: fade-out 0.2s ease-in, zoom-out 0.2s ease-in;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes zoom-in {
+    from {
+      transform: scale(0.95);
+    }
+
+    to {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes zoom-out {
+    from {
+      transform: scale(1);
+    }
+
+    to {
+      transform: scale(0.95);
+    }
+  }
 }
 
 @layer base {
