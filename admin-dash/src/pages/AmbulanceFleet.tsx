@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Ambulance, MapPin, User, Clock, Search, Filter, TrendingUp } from 'lucide-react';
 import {
   LineChart,
@@ -11,6 +12,7 @@ import {
 } from "recharts";
 
 export function AmbulanceFleet() {
+  const navigate = useNavigate();
   const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'in_service' | 'maintenance'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -430,6 +432,15 @@ export function AmbulanceFleet() {
           <p className="text-muted-foreground">Try adjusting your filters or search terms</p>
         </div>
       )}
+      {/* Floating Action Button for Transfer Request */}
+      <button
+        onClick={() => navigate('/transfer')}
+        className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+        title="New Transfer Request"
+      >
+        <Ambulance size={24} />
+        <span className="hidden group-hover:block transition-all duration-300">New Request</span>
+      </button>
     </div>
   );
 }
