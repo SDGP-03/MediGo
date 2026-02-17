@@ -248,77 +248,7 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* Operational Outcomes */}
-      <div className="bg-card rounded-lg shadow-md p-6">
-        <h3 className="text-foreground mb-4">Operational Outcomes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-foreground mb-3">For Ambulance Providers</h4>
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <TrendingUp className="text-green-600 dark:text-green-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Higher Efficiency</p>
-                  <p className="text-muted-foreground text-sm">
-                    Smart filters reduce idle time, increasing trips per day by 23%
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Users className="text-blue-600 dark:text-blue-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">More Visibility</p>
-                  <p className="text-muted-foreground text-sm">
-                    Users easily find services, boosting usage by 34%
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <DollarSign className="text-purple-600 dark:text-purple-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Revenue Growth</p>
-                  <p className="text-muted-foreground text-sm">
-                    Private providers see 22% increase in bookings
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div>
-            <h4 className="text-foreground mb-3">For Public Health</h4>
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <Activity className="text-red-600 dark:text-red-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Better Coverage</p>
-                  <p className="text-muted-foreground text-sm">
-                    Public and private ambulances work together seamlessly
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Clock className="text-orange-600 dark:text-orange-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Transparency</p>
-                  <p className="text-muted-foreground text-sm">
-                    Clear tracking of response times and performance metrics
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <MapPin className="text-green-600 dark:text-green-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Improved Access</p>
-                  <p className="text-muted-foreground text-sm">
-                    Both urban and rural areas benefit from reliable services
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
 
       <button
