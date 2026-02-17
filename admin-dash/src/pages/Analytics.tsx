@@ -214,9 +214,10 @@ export function Analytics() {
           </p>
         </div>
       </div>
-      {/* Hospital Capacity Status */}
+      {/* Hospital Load Distribution */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-        <h3 className="text-foreground mb-4">Current Hospital Capacity Status</h3>
+        <h3 className="text-foreground mb-4">Hospital Load Distribution</h3>
+        <p className="text-sm text-muted-foreground mb-4">Which hospitals receive most transfers?</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border-l-4 border-green-500 pl-4">
             <p className="text-foreground font-semibold">National Hospital</p>
@@ -224,7 +225,7 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">35% occupied</span>
+              <span className="text-sm text-muted-foreground">35% transfers</span>
             </div>
           </div>
           <div className="border-l-4 border-yellow-500 pl-4">
@@ -233,7 +234,7 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">68% occupied</span>
+              <span className="text-sm text-muted-foreground">68% transfers</span>
             </div>
           </div>
           <div className="border-l-4 border-red-500 pl-4">
@@ -242,14 +243,11 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-red-500 h-2 rounded-full" style={{ width: '87%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">87% occupied</span>
+              <span className="text-sm text-muted-foreground">87% transfers</span>
             </div>
           </div>
         </div>
       </div>
-
-
-
 
       <button
         onClick={() => navigate('/transfer')}
