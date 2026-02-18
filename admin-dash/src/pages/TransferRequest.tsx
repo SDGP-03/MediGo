@@ -100,6 +100,22 @@ export function TransferRequest() {
     'Stretcher (Special)',
   ];
 
+  const validatePatientStep = () => {
+    if (!formData.patientName || !formData.patientId || !formData.patientAge || !formData.patientGender) {
+      alert('Please fill in all mandatory patient information fields.');
+      return false;
+    }
+    return true;
+  };
+
+  const validateTransferStep = () => {
+    if (!formData.toHospital || !formData.priority || !formData.reason) {
+      alert('Please fill in all mandatory transfer details fields.');
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -328,7 +344,11 @@ export function TransferRequest() {
 
             <button
               type="button"
-              onClick={() => setStep('transfer')}
+              onClick={() => {
+                if (validatePatientStep()) {
+                  setStep('transfer');
+                }
+              }}
               className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors"
             >
               Continue to Transfer Details
@@ -478,7 +498,11 @@ export function TransferRequest() {
               </button>
               <button
                 type="button"
-                onClick={() => setStep('ambulance')}
+                onClick={() => {
+                  if (validateTransferStep()) {
+                    setStep('ambulance');
+                  }
+                }}
                 className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Continue to Requirements

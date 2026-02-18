@@ -42,6 +42,7 @@ export function Analytics() {
       icon: Activity,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+
     },
     {
       label: 'Active Ambulances',
@@ -92,7 +93,7 @@ export function Analytics() {
                 {stat.change}
               </span>
             </div>
-            <p className="text-muted-foreground text-sm mb-1">{stat.label}</p>
+            <p className="text-muted-foreground text-sm font-bold mb-1">{stat.label}</p>
             <p className={`${stat.color}`}>{stat.value}</p>
           </div>
         ))}
@@ -128,7 +129,7 @@ export function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Incident Types Distribution */}
         <div className="bg-card rounded-lg shadow-md p-6">
-          <h3 className="text-foreground mb-4">Incident Types Distribution</h3>
+          <h3 className="text-foreground font-bold mb-4">Incident Types Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -160,7 +161,7 @@ export function Analytics() {
         {/* Peak Hours Analysis */}
         {/* Peak Hours Analysis */}
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <h3 className="text-foreground mb-4">Transfer Request Peak Hours</h3>
+          <h3 className="text-foreground font-bold mb-4">Transfer Request Peak Hours</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div>
@@ -216,7 +217,7 @@ export function Analytics() {
       </div>
       {/* Hospital Load Distribution */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-        <h3 className="text-foreground mb-4">Hospital Load Distribution</h3>
+        <h3 className="text-foreground font-bold mb-4">Hospital Load Distribution</h3>
         <p className="text-sm text-muted-foreground mb-4">Which hospitals receive most transfers?</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border-l-4 border-green-500 pl-4">
