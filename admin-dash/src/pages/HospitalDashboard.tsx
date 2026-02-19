@@ -9,12 +9,12 @@ export function HospitalDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   const [resources, setResources] = useState([
-    { id: 'icu', name: 'ICU Bed Availability', available: true },
-    { id: 'nicu', name: 'NICU Bed Availability', available: true },
-    { id: 'picu', name: 'PICU Bed Availability', available: true },
-    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: true },
-    { id: 'telemetry', name: 'Telemetry Bed Availability', available: true },
-    { id: 'er', name: 'Emergency Room Availability', available: true },
+    { id: 'icu', name: 'ICU Bed Availability', available: false },
+    { id: 'nicu', name: 'NICU Bed Availability', available: false },
+    { id: 'picu', name: 'PICU Bed Availability', available: false },
+    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
+    { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
+    { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
   const toggleResource = (id: string) => {
@@ -331,22 +331,21 @@ export function HospitalDashboard() {
           {/* Map / List Area */}
           <div className="flex-1 min-w-0">
             {mapView === "map" && (
-              <AmbulanceMap
-                ambulances={ambulances.map(amb => ({
-                  id: amb.id,
-                  status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
-                  driver: amb.driver,
-                  location: amb.location,
-                  eta: amb.eta,
-                  lat: amb.lat,
-                  lng: amb.lng,
-                }))}
+              <AmbulanceMap ambulances={ambulances.map(amb => ({
+                id: amb.id,
+                status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
+                driver: amb.driver,
+                location: amb.location,
+                eta: amb.eta,
+                lat: amb.lat,
+                lng: amb.lng,
+              }))}
                 height="650px"
               />
             )}
 
             {mapView === "list" && (
-              <div className="h-96 overflow-y-auto">
+              <div className="h-162m overflow-y-auto">
                 <div className="divide-y divide-border">
                   {ambulances.map((amb) => (
                     <div
