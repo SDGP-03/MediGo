@@ -8,6 +8,7 @@ import { AmbulanceFleet } from './pages/AmbulanceFleet';
 import { PatientRecords } from './pages/PatientRecords';
 import { HospitalDashboard } from './pages/HospitalDashboard';
 import { Analytics } from './pages/Analytics';
+import { Settings } from './pages/Settings';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 import { Header } from './components/layout/Header';
@@ -115,6 +116,7 @@ export default function App() {
             <Route path='/fleet' element={<AmbulanceFleet />} />
             <Route path='/records' element={<PatientRecords />} />
             <Route path='/analytics' element={<Analytics />} />
+            <Route path='/settings' element={<Settings />} />
 
             {/* catch all redirect to dashboard */}
             <Route path='*' element={<Navigate to='/' replace />} />
