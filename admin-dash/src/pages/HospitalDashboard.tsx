@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft } from "lucide-react";
 import { Switch } from "../components/ui/switch";
@@ -861,7 +861,7 @@ export function HospitalDashboard() {
         </div>
       </div>
       {/* Quick Navigation Dock */}
-      <QuickNav />
+      <QuickNav pendingCount={pendingRequests.length} incomingCount={incomingRequests.length} />
 
       {/* Floating Action Button for Transfer Request */}
       <button
@@ -878,7 +878,9 @@ export function HospitalDashboard() {
 
 // --- SUBSIDIARY COMPONENT: QUICK NAVIGATION DOCK ---
 // Renders the floating sidebar navigation for quick access to sections
-function QuickNav() {
+function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: number; incomingCount?: number }) {
+  const [activeSection, setActiveSection] = useState<string>('');
+
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -886,32 +888,78 @@ function QuickNav() {
     }
   };
 
+  // Track active section on scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    const sections = ['active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+    sections.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   const navItems = [
-    { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'bg-blue-500' },
-    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'bg-orange-500' },
-    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'bg-red-600' },
-    { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'bg-emerald-500' },
+    { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
+    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
+    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
+    { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
   return (
     <div className="fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col gap-3">
-      <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 flex flex-col gap-2">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => scrollToSection(item.id)}
-            className="group relative p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
-          >
-            <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${item.color} blur-md -z-10`} />
-            <item.icon size={20} className="text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
+      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
+        {navItems.map((item) => {
+          const isActive = activeSection === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => scrollToSection(item.id)}
+              className="group relative p-2.5 rounded-full transition-all duration-300 ease-out hover:scale-110"
+            >
+              {/* Active Background Glow */}
+              <div
+                className={`absolute inset-0 rounded-full transition-all duration-300 ${isActive ? `bg-gradient-to-br ${item.color} ${item.shadow} shadow-lg scale-100 opacity-100` : 'opacity-0 scale-75'
+                  }`}
+              />
 
-            {/* Tooltip */}
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-x-2 group-hover:translate-x-0 whitespace-nowrap shadow-xl">
-              {item.label}
-              <div className="absolute top-1/2 -translate-y-1/2 -left-1 border-4 border-transparent border-r-gray-900 dark:border-r-white" />
-            </div>
-          </button>
-        ))}
+              {/* Hover Background */}
+              <div className={`absolute inset-0 rounded-full bg-white/20 transition-all duration-300 ${!isActive ? 'group-hover:opacity-100' : ''} opacity-0`} />
+
+              <item.icon
+                size={18}
+                className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
+                  }`}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
+
+              {/* Notification Badge */}
+              {item.count > 0 && (
+                <div className="absolute -top-1 -right-1 z-20 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm animate-bounce">
+                  {item.count}
+                </div>
+              )}
+
+              {/* Tooltip */}
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2.5 py-1 bg-gray-900/90 dark:bg-white/90 backdrop-blur-sm text-white dark:text-gray-900 text-[10px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-x-1 group-hover:translate-x-0 whitespace-nowrap shadow-xl">
+                {item.label}
+                {/* Arrow */}
+                <div className="absolute top-1/2 -translate-y-1/2 -left-1 border-[4px] border-transparent border-r-gray-900/90 dark:border-r-white/90" />
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
