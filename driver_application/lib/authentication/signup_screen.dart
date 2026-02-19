@@ -25,6 +25,8 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
+  TextEditingController confirmPasswordTextEditingController =
+      TextEditingController();
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
 
@@ -83,6 +85,9 @@ class _SignupScreenState extends State<SignupScreen> {
         "Your password must be atleast 6 or more characters.",
         context,
       );
+    } else if (confirmPasswordTextEditingController.text.trim() !=
+        passwordTextEditingController.text.trim()) {
+      cMethods.displaySnackBar("Passwords do not match.", context);
     } else {
       registerNewUser();
     }
@@ -382,6 +387,30 @@ class _SignupScreenState extends State<SignupScreen> {
                             keyboardType: TextInputType.visiblePassword,
                             decoration: const InputDecoration(
                               hintText: "Enter your password",
+                              prefixIcon: Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          Text(
+                            "Confirm Password",
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          TextField(
+                            controller: confirmPasswordTextEditingController,
+                            obscureText: true,
+                            keyboardType: TextInputType.visiblePassword,
+                            decoration: const InputDecoration(
+                              hintText: "Re-enter your password",
                               prefixIcon: Icon(Icons.lock_outline),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.all(

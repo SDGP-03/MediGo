@@ -1,7 +1,9 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Clock, MapPin, DollarSign, Activity, Ambulance } from 'lucide-react';
 
 export function Analytics() {
+  const navigate = useNavigate();
   // Response time data
   const responseTimeData = [
     { month: 'Jan', avgTime: 8.2 },
@@ -40,6 +42,7 @@ export function Analytics() {
       icon: Activity,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+
     },
     {
       label: 'Active Ambulances',
@@ -90,7 +93,7 @@ export function Analytics() {
                 {stat.change}
               </span>
             </div>
-            <p className="text-muted-foreground text-sm mb-1">{stat.label}</p>
+            <p className="text-muted-foreground text-sm font-bold mb-1">{stat.label}</p>
             <p className={`${stat.color}`}>{stat.value}</p>
           </div>
         ))}
@@ -126,7 +129,7 @@ export function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Incident Types Distribution */}
         <div className="bg-card rounded-lg shadow-md p-6">
-          <h3 className="text-foreground mb-4">Incident Types Distribution</h3>
+          <h3 className="text-foreground font-bold mb-4">Incident Types Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -158,7 +161,7 @@ export function Analytics() {
         {/* Peak Hours Analysis */}
         {/* Peak Hours Analysis */}
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <h3 className="text-foreground mb-4">Transfer Request Peak Hours</h3>
+          <h3 className="text-foreground font-bold mb-4">Transfer Request Peak Hours</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div>
@@ -212,9 +215,10 @@ export function Analytics() {
           </p>
         </div>
       </div>
-      {/* Hospital Capacity Status */}
+      {/* Hospital Load Distribution */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-        <h3 className="text-foreground mb-4">Current Hospital Capacity Status</h3>
+        <h3 className="text-foreground font-bold mb-4">Hospital Load Distribution</h3>
+        <p className="text-sm text-muted-foreground mb-4">Which hospitals receive most transfers?</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border-l-4 border-green-500 pl-4">
             <p className="text-foreground font-semibold">National Hospital</p>
@@ -222,7 +226,7 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-green-500 h-2 rounded-full" style={{ width: '35%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">35% occupied</span>
+              <span className="text-sm text-muted-foreground">35% transfers</span>
             </div>
           </div>
           <div className="border-l-4 border-yellow-500 pl-4">
@@ -231,7 +235,7 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '68%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">68% occupied</span>
+              <span className="text-sm text-muted-foreground">68% transfers</span>
             </div>
           </div>
           <div className="border-l-4 border-red-500 pl-4">
@@ -240,85 +244,20 @@ export function Analytics() {
               <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                 <div className="bg-red-500 h-2 rounded-full" style={{ width: '87%' }}></div>
               </div>
-              <span className="text-sm text-muted-foreground">87% occupied</span>
+              <span className="text-sm text-muted-foreground">87% transfers</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Operational Outcomes */}
-      <div className="bg-card rounded-lg shadow-md p-6">
-        <h3 className="text-foreground mb-4">Operational Outcomes</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-foreground mb-3">For Ambulance Providers</h4>
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <TrendingUp className="text-green-600 dark:text-green-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Higher Efficiency</p>
-                  <p className="text-muted-foreground text-sm">
-                    Smart filters reduce idle time, increasing trips per day by 23%
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Users className="text-blue-600 dark:text-blue-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">More Visibility</p>
-                  <p className="text-muted-foreground text-sm">
-                    Users easily find services, boosting usage by 34%
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <DollarSign className="text-purple-600 dark:text-purple-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Revenue Growth</p>
-                  <p className="text-muted-foreground text-sm">
-                    Private providers see 22% increase in bookings
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-foreground mb-3">For Public Health</h4>
-            <div className="space-y-3">
-              <div className="flex gap-3">
-                <Activity className="text-red-600 dark:text-red-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Better Coverage</p>
-                  <p className="text-muted-foreground text-sm">
-                    Public and private ambulances work together seamlessly
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Clock className="text-orange-600 dark:text-orange-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Transparency</p>
-                  <p className="text-muted-foreground text-sm">
-                    Clear tracking of response times and performance metrics
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <MapPin className="text-green-600 dark:text-green-400 mt-1" size={20} />
-                <div>
-                  <p className="text-foreground">Improved Access</p>
-                  <p className="text-muted-foreground text-sm">
-                    Both urban and rural areas benefit from reliable services
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
+      <button
+        onClick={() => navigate('/transfer')}
+        className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+        title="New Transfer Request"
+      >
+        <Ambulance size={24} />
+        <span className="hidden group-hover:block transition-all duration-300">New Request</span>
+      </button>
     </div>
   );
 }
