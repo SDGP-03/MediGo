@@ -509,163 +509,166 @@ export function TransferRequest() {
               </button>
             </div>
           </div>
-        )}
+        )
+        }
 
         {/* Step 3: Ambulance Requirements */}
-        {step === 'ambulance' && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h2 className="text-foreground mb-6 flex items-center gap-2">
-                <Users size={24} className="text-red-600" />
-                Ambulance & Staff Requirements
-              </h2>
+        {
+          step === 'ambulance' && (
+            <div className="space-y-6">
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h2 className="text-foreground mb-6 flex items-center gap-2">
+                  <Users size={24} className="text-red-600" />
+                  Ambulance & Staff Requirements
+                </h2>
 
-              <div className="space-y-6">
-                {/* Driver Selection */}
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <Truck className="text-green-600 flex-shrink-0 mt-1" size={20} />
-                    <div className="w-full">
-                      <p className="text-green-900 mb-2 font-medium">Select Available Driver</p>
-                      {availableDrivers.length === 0 ? (
-                        <p className="text-orange-600 text-sm">
-                          ⚠️ No drivers currently available. Please wait for a driver to come online.
+                <div className="space-y-6">
+                  {/* Driver Selection */}
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Truck className="text-green-600 flex-shrink-0 mt-1" size={20} />
+                      <div className="w-full">
+                        <p className="text-green-900 mb-2 font-medium">Select Available Driver</p>
+                        {availableDrivers.length === 0 ? (
+                          <p className="text-orange-600 text-sm">
+                            ⚠️ No drivers currently available. Please wait for a driver to come online.
+                          </p>
+                        ) : (
+                          <select
+                            required
+                            value={selectedDriverId}
+                            onChange={(e) => setSelectedDriverId(e.target.value)}
+                            className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground"
+                          >
+                            <option value="">Select a driver...</option>
+                            {availableDrivers.map(driver => (
+                              <option key={driver.id} value={driver.id}>
+                                {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <p className="text-green-700 text-xs mt-2">
+                          {availableDrivers.length} driver(s) currently online
                         </p>
-                      ) : (
-                        <select
-                          required
-                          value={selectedDriverId}
-                          onChange={(e) => setSelectedDriverId(e.target.value)}
-                          className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground"
-                        >
-                          <option value="">Select a driver...</option>
-                          {availableDrivers.map(driver => (
-                            <option key={driver.id} value={driver.id}>
-                              {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <p className="text-green-700 text-xs mt-2">
-                        {availableDrivers.length} driver(s) currently online
-                      </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-                    <div>
-                      <p className="text-blue-900 mb-1">Assignment Information</p>
-                      <p className="text-blue-700 text-sm">
-                        The selected driver will receive a notification on their mobile app with trip details.
-                      </p>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={20} />
+                      <div>
+                        <p className="text-blue-900 mb-1">Assignment Information</p>
+                        <p className="text-blue-700 text-sm">
+                          The selected driver will receive a notification on their mobile app with trip details.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.requiresDoctor}
-                      onChange={(e) => setFormData({ ...formData, requiresDoctor: e.target.checked })}
-                      className="w-5 h-5 text-red-600"
-                    />
-                    <div>
-                      <p className="text-foreground">Doctor Required on Ambulance</p>
-                      <p className="text-muted-foreground text-sm">For critical cases requiring immediate medical intervention</p>
-                    </div>
-                  </label>
-                </div>
+                  <div>
+                    <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requiresDoctor}
+                        onChange={(e) => setFormData({ ...formData, requiresDoctor: e.target.checked })}
+                        className="w-5 h-5 text-red-600"
+                      />
+                      <div>
+                        <p className="text-foreground">Doctor Required on Ambulance</p>
+                        <p className="text-muted-foreground text-sm">For critical cases requiring immediate medical intervention</p>
+                      </div>
+                    </label>
+                  </div>
 
-                <div>
-                  <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.requiresVentilator}
-                      onChange={(e) => setFormData({ ...formData, requiresVentilator: e.target.checked })}
-                      className="w-5 h-5 text-red-600"
-                    />
-                    <div>
-                      <p className="text-foreground">Ventilator Support Required</p>
-                      <p className="text-muted-foreground text-sm">Patient requires mechanical ventilation during transfer</p>
-                    </div>
-                  </label>
-                </div>
+                  <div>
+                    <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requiresVentilator}
+                        onChange={(e) => setFormData({ ...formData, requiresVentilator: e.target.checked })}
+                        className="w-5 h-5 text-red-600"
+                      />
+                      <div>
+                        <p className="text-foreground">Ventilator Support Required</p>
+                        <p className="text-muted-foreground text-sm">Patient requires mechanical ventilation during transfer</p>
+                      </div>
+                    </label>
+                  </div>
 
-                <div>
-                  <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.requiresOxygen}
-                      onChange={(e) => setFormData({ ...formData, requiresOxygen: e.target.checked })}
-                      className="w-5 h-5 text-red-600"
-                    />
-                    <div>
-                      <p className="text-foreground">Oxygen Support Required</p>
-                      <p className="text-muted-foreground text-sm">Patient requires supplemental oxygen</p>
-                    </div>
-                  </label>
-                </div>
+                  <div>
+                    <label className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requiresOxygen}
+                        onChange={(e) => setFormData({ ...formData, requiresOxygen: e.target.checked })}
+                        className="w-5 h-5 text-red-600"
+                      />
+                      <div>
+                        <p className="text-foreground">Oxygen Support Required</p>
+                        <p className="text-muted-foreground text-sm">Patient requires supplemental oxygen</p>
+                      </div>
+                    </label>
+                  </div>
 
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                  <h4 className="text-purple-900 mb-2">Gender-Based Attendant Assignment</h4>
-                  <p className="text-purple-700 text-sm mb-3">
-                    Based on patient gender: <strong>{formData.patientGender}</strong>
-                  </p>
-                  <p className="text-purple-700 text-sm">
-                    ✓ System will automatically assign a {formData.patientGender === 'Female' ? 'female' : 'male'} attendant according to hospital protocol
-                  </p>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                    <h4 className="text-purple-900 mb-2">Gender-Based Attendant Assignment</h4>
+                    <p className="text-purple-700 text-sm mb-3">
+                      Based on patient gender: <strong>{formData.patientGender}</strong>
+                    </p>
+                    <p className="text-purple-700 text-sm">
+                      ✓ System will automatically assign a {formData.patientGender === 'Female' ? 'female' : 'male'} attendant according to hospital protocol
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-foreground mb-4">Transfer Summary</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Patient</p>
-                  <p className="text-foreground">{formData.patientName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Priority</p>
-                  <p className="text-foreground capitalize">{formData.priority}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">From</p>
-                  <p className="text-foreground">{formData.fromHospital}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">To</p>
-                  <p className="text-foreground">{formData.toHospital}</p>
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-4">Transfer Summary</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Patient</p>
+                    <p className="text-foreground">{formData.patientName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Priority</p>
+                    <p className="text-foreground capitalize">{formData.priority}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">From</p>
+                    <p className="text-foreground">{formData.fromHospital}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">To</p>
+                    <p className="text-foreground">{formData.toHospital}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => setStep('transfer')}
-                className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-lg hover:bg-secondary/80 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !selectedDriverId || availableDrivers.length === 0}
-                className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || availableDrivers.length === 0
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-red-600 hover:bg-red-700'
-                  } text-white`}
-              >
-                {isSubmitting ? 'Sending Request...' : 'Submit Transfer Request'}
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStep('transfer')}
+                  className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-lg hover:bg-secondary/80 transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !selectedDriverId || availableDrivers.length === 0}
+                  className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || availableDrivers.length === 0
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                    } text-white`}
+                >
+                  {isSubmitting ? 'Sending Request...' : 'Submit Transfer Request'}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </form>
-    </div>
+          )
+        }
+      </form >
+    </div >
   );
 }
