@@ -1,22 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User } from "lucide-react";
+import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
+
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
+  // --- STATE: RESOURCE AVAILABILITY ---
   const [resources, setResources] = useState([
-    { id: 'icu', name: 'ICU Bed Availability', available: true },
-    { id: 'nicu', name: 'NICU Bed Availability', available: true },
-    { id: 'picu', name: 'PICU Bed Availability', available: true },
-    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: true },
-    { id: 'telemetry', name: 'Telemetry Bed Availability', available: true },
-    { id: 'er', name: 'Emergency Room Availability', available: true },
+    { id: 'icu', name: 'ICU Bed Availability', available: false },
+    { id: 'nicu', name: 'NICU Bed Availability', available: false },
+    { id: 'picu', name: 'PICU Bed Availability', available: false },
+    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
+    { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
+    { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
   const toggleResource = (id: string) => {
@@ -26,7 +28,7 @@ export function HospitalDashboard() {
   // Live driver data from Firebase
   const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
-  // Incoming emergency patients
+  // --- DATA: INCOMING EMERGENCIES ---
   const incomingRequests = [
     {
       id: 1,
@@ -185,7 +187,6 @@ export function HospitalDashboard() {
     },
   ];
 
-  // Compute fleet status counts from live Firebase driver data + hardcoded ambulances
   const liveDriverCount = onlineDrivers.length + offlineDrivers.length;
   const statusCounts = {
     available: onlineDrivers.length,
@@ -304,7 +305,8 @@ export function HospitalDashboard() {
   return (
     <div className="space-y-6">
 
-      {/* Map + Fleet Overview */}
+      {/* --- SECTION: MAP & FLEET OVERVIEW --- */}
+      {/* Contains the interactive map and the sidebar with fleet statistics */}
       <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
         <div className="p-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center pl-3">
@@ -333,22 +335,21 @@ export function HospitalDashboard() {
           {/* Map / List Area */}
           <div className="flex-1 min-w-0">
             {mapView === "map" && (
-              <AmbulanceMap
-                ambulances={ambulances.map(amb => ({
-                  id: amb.id,
-                  status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
-                  driver: amb.driver,
-                  location: amb.location,
-                  eta: amb.eta,
-                  lat: amb.lat,
-                  lng: amb.lng,
-                }))}
+              <AmbulanceMap ambulances={ambulances.map(amb => ({
+                id: amb.id,
+                status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
+                driver: amb.driver,
+                location: amb.location,
+                eta: amb.eta,
+                lat: amb.lat,
+                lng: amb.lng,
+              }))}
                 height="650px"
               />
             )}
 
             {mapView === "list" && (
-              <div className="h-96 overflow-y-auto">
+              <div className="h-162m overflow-y-auto">
                 <div className="divide-y divide-border">
                   {ambulances.map((amb) => (
                     <div
@@ -388,48 +389,55 @@ export function HospitalDashboard() {
           </div>
 
           {/* Fleet Overview Sidebar — Map Key */}
-          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border p-4 bg-muted/30">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-foreground text-sm font-semibold">Fleet Overview</h3>
-              <Activity className="text-red-600" size={16} />
+          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group/sidebar">
+            {/* Simple glow effect */}
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-blue-500/20 transition-all duration-700" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-purple-500/20 transition-all duration-700" />
+
+            <div className="flex items-center justify-between mb-6 relative z-10">
+              <h3 className="text-foreground text-sm font-semibold tracking-wide uppercase opacity-70">Fleet Status</h3>
+              <div className="relative">
+                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20" />
+                <Activity className="text-red-600 relative z-10" size={16} />
+              </div>
             </div>
 
             {/* Total */}
-            <div className="mb-4 pb-3 border-b border-border">
-              <p className="text-muted-foreground text-xs">Total Ambulances</p>
-              <p className="text-foreground text-2xl font-bold">{statusCounts.total}</p>
+            <div className="mb-6 pb-4 border-b border-white/10 dark:border-white/5 relative z-10 group/total">
+              <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Total Fleet</p>
+              <p className="text-foreground text-3xl font-bold tracking-tight group-hover/total:scale-105 transition-transform duration-300 origin-left">{statusCounts.total}</p>
             </div>
 
             {/* Status breakdown */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-emerald-100 rounded-md flex items-center justify-center">
-                    <Ambulance className="text-emerald-600" size={14} />
+            <div className="space-y-4 relative z-10">
+              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-emerald-500/20">
+                    <Ambulance className="text-emerald-600 dark:text-emerald-400" size={16} />
                   </div>
-                  <span className="text-muted-foreground text-sm">Available</span>
+                  <span className="text-muted-foreground text-sm font-medium">Available</span>
                 </div>
-                <span className="text-emerald-600 font-semibold text-sm">{statusCounts.available}</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">{statusCounts.available}</span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-orange-100 rounded-md flex items-center justify-center">
-                    <Clock className="text-orange-600" size={14} />
+              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-orange-500/20">
+                    <Clock className="text-orange-600 dark:text-orange-400" size={16} />
                   </div>
-                  <span className="text-muted-foreground text-sm">Busy</span>
+                  <span className="text-muted-foreground text-sm font-medium">Busy</span>
                 </div>
-                <span className="text-orange-600 font-semibold text-sm">{statusCounts.busy}</span>
+                <span className="text-orange-600 dark:text-orange-400 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">{statusCounts.busy}</span>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-100 rounded-md flex items-center justify-center">
-                    <AlertCircle className="text-red-600" size={14} />
+              <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-red-500/20">
+                    <AlertCircle className="text-red-600 dark:text-red-400" size={16} />
                   </div>
-                  <span className="text-muted-foreground text-sm">Offline</span>
+                  <span className="text-muted-foreground text-sm font-medium">Offline</span>
                 </div>
-                <span className="text-red-600 font-semibold text-sm">{statusCounts.offline}</span>
+                <span className="text-red-600 dark:text-red-400 font-bold text-sm bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">{statusCounts.offline}</span>
               </div>
             </div>
           </div>
@@ -529,10 +537,14 @@ export function HospitalDashboard() {
 
 
 
-        {/* Active Transfers */}
-        <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
-          <div className="p-6 border-b border-border">
-            <h2 className="text-foreground">Active Transfers</h2>
+        {/* --- SECTION: ACTIVE TRANSFERS --- */}
+        {/* List of currently active ambulance transfers */}
+        <div id="active-transfers" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
+          <div className="p-4 border-b border-border flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ArrowRightLeft className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-lg font-bold text-foreground">Active Transfers</h2>
           </div>
           <div className="divide-y divide-border">
             {activeTransfers.map((transfer) => (
@@ -647,10 +659,14 @@ export function HospitalDashboard() {
           </div>
         </div>
 
-        {/* Pending Requests */}
-        <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
-          <div className="p-6 border-b border-border">
-            <h2 className="text-foreground">
+        {/* --- SECTION: PENDING REQUESTS --- */}
+        {/* Transfer requests waiting for assignment */}
+        <div id="pending-requests" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
+          <div className="p-4 border-b border-border flex items-center gap-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <h2 className="text-lg font-bold text-foreground">
               Pending Transfer Requests
             </h2>
           </div>
@@ -717,9 +733,15 @@ export function HospitalDashboard() {
           </div>
         </div>
 
-        {/* Incoming Emergency Patients */}
-        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <h3 className="text-foreground mb-4">Incoming Emergency Patients</h3>
+        {/* --- SECTION: INCOMING EMERGENCY PATIENTS --- */}
+        {/* Real-time feed of incoming emergency patients */}
+        <div id="incoming-emergency" className="bg-card rounded-lg shadow-sm border border-border p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Incoming Emergency Patients</h3>
+          </div>
           <div className="space-y-4">
             {incomingRequests.map((request) => (
               <div
@@ -783,28 +805,54 @@ export function HospitalDashboard() {
           </div>
         </div>
 
-        {/* Resource Preparation Checklist */}
-        <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <h3 className="text-foreground mb-4">Resource Availability</h3>
+        {/* --- SECTION: RESOURCE AVAILABILITY --- */}
+        {/* Checklist for hospital resource availability */}
+        <div id="resource-availability" className="bg-card rounded-lg shadow-sm border border-border p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
+          </div>
           <div className="space-y-3">
             {resources.map((resource) => (
-              <div key={resource.id} className={`flex items-center justify-between p-3 rounded-lg border ${resource.available ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-900/50' : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-900/50'}`}>
-                <div className="flex items-center gap-3">
-                  {resource.available ? (
-                    <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
-                  ) : (
-                    <AlertCircle className="text-red-600 dark:text-red-400" size={20} />
-                  )}
-                  <span className="text-foreground font-medium">{resource.name}</span>
+              <div
+                key={resource.id}
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${resource.available
+                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-200 dark:hover:border-emerald-800'
+                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-200 dark:hover:border-red-800'
+                  }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`p-2.5 rounded-xl shadow-sm transition-colors ${resource.available
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                      }`}
+                  >
+                    {resource.available ? <CheckCircle size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <h4 className="font-semibold text-foreground text-sm tracking-tight">{resource.name}</h4>
+                    <div className="flex">
+                      <span
+                        className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${resource.available
+                          ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
+                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900'
+                          }`}
+                      >
+                        {resource.available ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm ${resource.available ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                    {resource.available ? 'Available' : 'Full/Busy'}
-                  </span>
+
+                <div className="flex items-center gap-3">
+                  <div className={`h-8 w-[1px] ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'}`}></div>
                   <Switch
                     checked={resource.available}
                     onCheckedChange={() => toggleResource(resource.id)}
-                    className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600 dark:data-[state=checked]:bg-green-500 dark:data-[state=unchecked]:bg-red-500"
+                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-110 shadow-sm"
                   />
                 </div>
               </div>
@@ -812,6 +860,9 @@ export function HospitalDashboard() {
           </div>
         </div>
       </div>
+      {/* Quick Navigation Dock */}
+      <QuickNav pendingCount={pendingRequests.length} incomingCount={incomingRequests.length} />
+
       {/* Floating Action Button for Transfer Request */}
       <button
         onClick={() => navigate('/transfer')}
@@ -821,6 +872,95 @@ export function HospitalDashboard() {
         <Ambulance size={24} />
         <span className="hidden group-hover:block transition-all duration-300">New Request</span>
       </button>
+    </div>
+  );
+}
+
+// --- SUBSIDIARY COMPONENT: QUICK NAVIGATION DOCK ---
+// Renders the floating sidebar navigation for quick access to sections
+function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: number; incomingCount?: number }) {
+  const [activeSection, setActiveSection] = useState<string>('');
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  // Track active section on scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    const sections = ['active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+    sections.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const navItems = [
+    { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
+    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
+    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
+    { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
+  ];
+
+  return (
+    <div className="fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col gap-3">
+      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
+        {navItems.map((item) => {
+          const isActive = activeSection === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => scrollToSection(item.id)}
+              className="group relative p-2.5 rounded-full transition-all duration-300 ease-out hover:scale-110"
+            >
+              {/* Active Background Glow */}
+              <div
+                className={`absolute inset-0 rounded-full transition-all duration-300 ${isActive ? `bg-gradient-to-br ${item.color} ${item.shadow} shadow-lg scale-100 opacity-100` : 'opacity-0 scale-75'
+                  }`}
+              />
+
+              {/* Hover Background */}
+              <div className={`absolute inset-0 rounded-full bg-white/20 transition-all duration-300 ${!isActive ? 'group-hover:opacity-100' : ''} opacity-0`} />
+
+              <item.icon
+                size={18}
+                className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
+                  }`}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
+
+              {/* Notification Badge */}
+              {item.count > 0 && (
+                <div className="absolute -top-1 -right-1 z-20 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm animate-bounce">
+                  {item.count}
+                </div>
+              )}
+
+              {/* Tooltip */}
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2.5 py-1 bg-gray-900/90 dark:bg-white/90 backdrop-blur-sm text-white dark:text-gray-900 text-[10px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-x-1 group-hover:translate-x-0 whitespace-nowrap shadow-xl">
+                {item.label}
+                {/* Arrow */}
+                <div className="absolute top-1/2 -translate-y-1/2 -left-1 border-[4px] border-transparent border-r-gray-900/90 dark:border-r-white/90" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
