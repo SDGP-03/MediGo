@@ -609,16 +609,6 @@ export function TransferRequest() {
                     </div>
                   </label>
                 </div>
-
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                  <h4 className="text-purple-900 mb-2">Gender-Based Attendant Assignment</h4>
-                  <p className="text-purple-700 text-sm mb-3">
-                    Based on patient gender: <strong>{formData.patientGender}</strong>
-                  </p>
-                  <p className="text-purple-700 text-sm">
-                    ✓ System will automatically assign a {formData.patientGender === 'Female' ? 'female' : 'male'} attendant according to hospital protocol
-                  </p>
-                </div>
               </div>
             </div>
 
