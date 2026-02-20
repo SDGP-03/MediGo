@@ -33,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   Marker? driverMarker;
 
   String selectedMapStyle = "standard";
+  MapType _mapType = MapType.normal;
 
   Assignment? currentAssignment;
 
@@ -207,6 +208,40 @@ class _HomePageState extends State<HomePage> {
     if (permission == LocationPermission.deniedForever) return;
 
     startLiveLocationUpdates();
+  }
+
+  Future<void> _goToCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission not granted')),
+        );
+        return;
+      }
+
+      startLiveLocationUpdates();
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final target = LatLng(position.latitude, position.longitude);
+      controllerGoogleMap?.animateCamera(CameraUpdate.newLatLngZoom(target, 16));
+    } catch (e) {
+      debugPrint('Failed to get current location: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to get current location')),
+      );
+    }
   }
 
   // ================= MAP STYLE HANDLER =================
@@ -524,20 +559,71 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  children: [
+                    GoogleMap(
+                      mapType: _mapType,
+                      zoomControlsEnabled: false,
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      initialCameraPosition: googlePlexInitialPosition,
+                      markers: driverMarker != null ? {driverMarker!} : {},
+                      polylines: polylines,
+                      onMapCreated: (GoogleMapController mapController) async {
+                        controllerGoogleMap = mapController;
 
-                child: GoogleMap(
-                  mapType: MapType.normal,
-                  myLocationEnabled: true,
-                  initialCameraPosition: googlePlexInitialPosition,
-                  markers: driverMarker != null ? {driverMarker!} : {},
-                  polylines: polylines,
-                  onMapCreated: (GoogleMapController mapController) async {
-                    controllerGoogleMap = mapController;
-
-                    await loadMapStyle();
-                    applyMapStyle();
-                    checkLocationPermission();
-                  },
+                        await loadMapStyle();
+                        applyMapStyle();
+                        checkLocationPermission();
+                      },
+                    ),
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(),
+                        elevation: 4,
+                        child: PopupMenuButton<MapType>(
+                          tooltip: 'Map type',
+                          icon: const Icon(Icons.layers_outlined),
+                          onSelected: (value) {
+                            setState(() {
+                              _mapType = value;
+                            });
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: MapType.normal,
+                              child: Text('Default'),
+                            ),
+                            PopupMenuItem(
+                              value: MapType.satellite,
+                              child: Text('Satellite'),
+                            ),
+                            PopupMenuItem(
+                              value: MapType.terrain,
+                              child: Text('Terrain'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 12,
+                      right: 12,
+                      child: Material(
+                        color: Colors.white,
+                        shape: const CircleBorder(),
+                        elevation: 4,
+                        child: IconButton(
+                          tooltip: 'Current location',
+                          icon: const Icon(Icons.my_location),
+                          onPressed: _goToCurrentLocation,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -565,11 +651,6 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.report_problem_rounded,
-                          color: Colors.red.shade500,
-                        ),
-                        const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
                             "Report Ambulance Issues",
