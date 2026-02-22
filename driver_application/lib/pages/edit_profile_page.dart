@@ -209,13 +209,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> changePassword() async {
     User? user = _auth.currentUser;
     if (user == null) return;
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      throw Exception('This account cannot change password with email credentials');
+    }
 
     String currentPassword = currentPasswordController.text.trim();
     String newPassword = newPasswordController.text.trim();
 
     try {
       AuthCredential credential = EmailAuthProvider.credential(
-        email: user.email!,
+        email: email,
         password: currentPassword,
       );
 
@@ -541,6 +545,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: Validators.validateEmail,
+                    readOnly: true,
                   ),
 
                   const SizedBox(height: 16),
@@ -681,11 +686,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     required String? Function(String?) validator,
+    bool readOnly = false,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      readOnly: readOnly,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon),

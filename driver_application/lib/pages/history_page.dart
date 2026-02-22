@@ -36,12 +36,13 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   List<Trip> _filterTrips(List<Trip> trips) {
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
     return trips.where((trip) {
       // Filter by search query
-      final matchesSearch = _searchQuery.isEmpty ||
-          trip.pickup.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          trip.dropoff.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (trip.patientName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+      final matchesSearch = normalizedQuery.isEmpty ||
+          trip.pickup.toLowerCase().contains(normalizedQuery) ||
+          trip.dropoff.toLowerCase().contains(normalizedQuery) ||
+          (trip.patientName?.toLowerCase().contains(normalizedQuery) ?? false);
 
       // Filter by status
       final matchesStatus = _statusFilter == 'all' ||
@@ -102,7 +103,12 @@ class _HistoryPageState extends State<HistoryPage> {
           }
 
           // Parse trips
-          final data = snapshot.data!.snapshot.value as Map;
+          final rawData = snapshot.data!.snapshot.value;
+          if (rawData is! Map) {
+            return _buildEmptyState();
+          }
+
+          final data = rawData;
           final List<Trip> allTrips = [];
 
           data.forEach((key, value) {

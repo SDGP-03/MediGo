@@ -202,10 +202,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> clearAppCache() async {
     try {
-      // Clear temporary directory
+      // Clear temporary directory contents without deleting the directory itself.
       final tempDir = await getTemporaryDirectory();
       if (tempDir.existsSync()) {
-        tempDir.deleteSync(recursive: true);
+        for (final entity in tempDir.listSync()) {
+          entity.deleteSync(recursive: true);
+        }
       }
 
       // Clear Flutter image cache
@@ -654,7 +656,7 @@ class _SettingsPageState extends State<SettingsPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: iconColor, size: 24),
@@ -682,7 +684,7 @@ class _SettingsPageState extends State<SettingsPage> {
       secondary: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: iconColor, size: 24),
@@ -691,7 +693,7 @@ class _SettingsPageState extends State<SettingsPage> {
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
       value: value,
       onChanged: onChanged,
-      activeColor: Colors.red.shade700,
+      activeThumbColor: Colors.red.shade700,
     );
   }
 
@@ -702,7 +704,7 @@ class _SettingsPageState extends State<SettingsPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.cyan.withOpacity(0.1),
+          color: Colors.cyan.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Icon(Icons.map, color: Colors.cyan, size: 24),
@@ -722,7 +724,7 @@ class _SettingsPageState extends State<SettingsPage> {
           if (value == null) return;
           setState(() => selectedMapStyle = value);
           saveMapStyle(value);
-          Navigator.pop(context, "styleChanged");
+          _showSnackBar("Map style changed to ${value.toUpperCase()}");
         },
         items: const [
           DropdownMenuItem(value: "standard", child: Text("Standard")),
@@ -743,7 +745,7 @@ class _SettingsPageState extends State<SettingsPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.deepPurple.withOpacity(0.1),
+          color: Colors.deepPurple.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Icon(Icons.language, color: Colors.deepPurple, size: 24),
@@ -764,8 +766,8 @@ class _SettingsPageState extends State<SettingsPage> {
         },
         items: const [
           DropdownMenuItem(value: "English", child: Text("English")),
-          DropdownMenuItem(value: "Sinhala", child: Text("සිංහල")),
-          DropdownMenuItem(value: "Tamil", child: Text("தமிழ்")),
+          DropdownMenuItem(value: "Sinhala", child: Text("Sinhala")),
+          DropdownMenuItem(value: "Tamil", child: Text("Tamil")),
         ],
       ),
     );
@@ -778,7 +780,7 @@ class _SettingsPageState extends State<SettingsPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.pink.withOpacity(0.1),
+          color: Colors.pink.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Icon(Icons.straighten, color: Colors.pink, size: 24),
@@ -807,3 +809,4 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
+
