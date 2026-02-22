@@ -74,7 +74,9 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword, onSupport }: 
               <div>
                 <h2 className="text-gray-900 mb-4">Hospital Management Portal</h2>
                 <p className="text-gray-600">
-                  Streamline your hospital's ambulance operations with our comprehensive emergency medical transport management system.
+                  MediGo is the pulse of your hospital’s mobile response. 
+                  We’ve distilled complex coordination into a seamless interface, 
+                  designed to save time when <span className="text-blue-600 font-semibold">every second counts.</span>
                 </p>
               </div>
 
@@ -84,8 +86,8 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword, onSupport }: 
                     <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                   </div>
                   <div>
-                    <h4 className="text-gray-900 mb-1">Real-Time Tracking</h4>
-                    <p className="text-gray-600 text-sm">Monitor all ambulances and transfers in real-time with live GPS tracking and status updates.</p>
+                    <h4 className="text-gray-900 mb-1">Live Intelligence</h4>
+                    <p className="text-gray-600 text-sm">Monitor fleet movement and patient status with zero-latency GPS updates.</p>
                   </div>
                 </div>
 
@@ -95,7 +97,7 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword, onSupport }: 
                   </div>
                   <div>
                     <h4 className="text-gray-900 mb-1">Smart Dispatching</h4>
-                    <p className="text-gray-600 text-sm">Automated ambulance assignment based on proximity, availability, and patient requirements.</p>
+                    <p className="text-gray-600 text-sm">AI-driven assignment based on proximity, traffic, and critical care needs.</p>
                   </div>
                 </div>
 
