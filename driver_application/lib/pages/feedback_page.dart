@@ -20,11 +20,28 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   bool isSending = false;
 
+  @override
+  void dispose() {
+    subjectController.dispose();
+    messageController.dispose();
+    super.dispose();
+  }
+
   Future<void> sendFeedback() async {
-    if (subjectController.text.isEmpty || messageController.text.isEmpty) {
+    final subject = subjectController.text.trim();
+    final message = messageController.text.trim();
+
+    if (subject.isEmpty || message.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      return;
+    }
+
+    if (message.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Message should be at least 10 characters")),
+      );
       return;
     }
 
@@ -33,13 +50,16 @@ class _FeedbackPageState extends State<FeedbackPage> {
     });
 
     try {
-      String uid = _auth.currentUser!.uid;
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) {
+        throw Exception("User not logged in");
+      }
 
       await feedbackRef.push().set({
         "driverId": uid,
-        "subject": subjectController.text.trim(),
-        "message": messageController.text.trim(),
-        "timestamp": DateTime.now().toString(),
+        "subject": subject,
+        "message": message,
+        "timestamp": ServerValue.timestamp,
         "status": "pending",
       });
 
@@ -56,9 +76,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text("Failed to send feedback")));
     } finally {
-      setState(() {
-        isSending = false;
-      });
+      if (mounted) {
+        setState(() {
+          isSending = false;
+        });
+      }
     }
   }
 
@@ -112,7 +134,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -134,7 +156,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     Text(
                       "Help us improve your experience",
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
                       ),
                     ),
@@ -152,7 +174,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),

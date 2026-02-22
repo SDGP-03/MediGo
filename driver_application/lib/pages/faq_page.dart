@@ -1,3 +1,4 @@
+import 'package:driver_application/pages/contact_support_page.dart';
 import 'package:flutter/material.dart';
 
 class FaqPage extends StatefulWidget {
@@ -8,10 +9,10 @@ class FaqPage extends StatefulWidget {
 }
 
 class _FaqPageState extends State<FaqPage> {
+  final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   String selectedCategory = 'all';
 
-  // FAQ Data organized by category
   final Map<String, List<Map<String, String>>> faqData = {
     'getting_started': [
       {
@@ -19,67 +20,63 @@ class _FaqPageState extends State<FaqPage> {
         'answer':
             'You can create an account by downloading the MediGo Driver app, '
             'tapping "Sign Up", and completing the registration form with your '
-            'email, phone number, and vehicle details. You\'ll need to verify '
+            'email, phone number, and vehicle details. You need to verify '
             'your email and upload required documents for approval.',
       },
       {
         'question': 'What documents do I need to register?',
         'answer':
-            'You need a valid driver\'s license, vehicle registration, '
-            'insurance documents, and a profile photo. All documents must be '
-            'current and clearly readable.',
+            'You need a valid driver license, vehicle registration, insurance '
+            'documents, and a profile photo. All documents must be current and readable.',
       },
       {
         'question': 'How long does account verification take?',
         'answer':
-            'Account verification typically takes 24-48 hours. You\'ll receive '
-            'an email notification once your account is approved and ready to use.',
+            'Account verification typically takes 24-48 hours. You receive an email '
+            'notification once your account is approved and ready to use.',
       },
     ],
     'using_app': [
       {
         'question': 'Why does MediGo need my location?',
         'answer':
-            'Your location is required to provide navigation services, '
-            'track rides in real-time, display nearby service requests, and '
-            'ensure accurate pickup and drop-off locations. Location is only '
-            'used while the app is active.',
+            'Your location is required to provide navigation services, track rides '
+            'in real-time, display nearby service requests, and ensure accurate pickup '
+            'and drop-off locations. Location is only used while the app is active.',
       },
       {
         'question': 'How do I accept a ride request?',
         'answer':
             'When a ride request appears, review the pickup location, destination, '
-            'and patient details. Tap "Accept" to confirm. You\'ll then receive '
-            'navigation directions to the pickup location.',
+            'and patient details. Tap "Accept" to confirm and receive navigation '
+            'directions to the pickup location.',
       },
       {
         'question': 'Can I cancel a ride after accepting?',
         'answer':
             'Yes, but frequent cancellations may affect your driver rating. '
-            'To cancel, tap the "Cancel Ride" button and select a reason. '
-            'Try to cancel only when absolutely necessary.',
+            'Tap "Cancel Ride" and select a reason. Cancel only when necessary.',
       },
     ],
     'settings': [
       {
         'question': 'How can I change my profile information?',
         'answer':
-            'Go to Settings → Edit Profile to update your personal information, '
-            'vehicle details, profile photo, and contact information. Changes '
-            'are saved automatically.',
+            'Go to Settings -> Edit Profile to update personal information, '
+            'vehicle details, profile photo, and contact information.',
       },
       {
         'question': 'How do I change my password?',
         'answer':
-            'Navigate to Settings → Edit Profile, scroll to the password section, '
+            'Navigate to Settings -> Edit Profile, scroll to the password section, '
             'enter your current password, then enter and confirm your new password. '
-            'Tap "Update Profile" to save changes.',
+            'Tap "Save Changes".',
       },
       {
         'question': 'How do I enable or disable notifications?',
         'answer':
-            'Go to Settings → Preferences and toggle the "Enable Notifications" '
-            'switch. You can also manage notification permissions in your device settings.',
+            'Go to Settings -> Preferences and toggle "Notifications". '
+            'You can also manage permissions in your device settings.',
       },
     ],
     'privacy': [
@@ -87,71 +84,67 @@ class _FaqPageState extends State<FaqPage> {
         'question': 'Is my personal data safe?',
         'answer':
             'Yes. MediGo uses secure Firebase services with industry-standard '
-            'encryption to protect your data. We follow strict security practices '
-            'and never sell your personal information to third parties.',
+            'encryption and strict data handling practices.',
       },
       {
         'question': 'Who can see my location?',
         'answer':
-            'Your real-time location is only visible to patients you\'re currently '
-            'serving and MediGo support staff for safety purposes. Your location '
-            'history is private and not shared with other drivers.',
+            'Your real-time location is visible only to patients you are currently '
+            'serving and MediGo support staff for operational safety.',
       },
       {
         'question': 'Can I delete my account?',
         'answer':
-            'Yes, you can request account deletion by contacting support through '
-            'Settings → Contact Support. All your personal data will be permanently '
-            'deleted within 30 days, except data required for legal compliance.',
+            'Yes, request account deletion through Settings -> Contact Support. '
+            'Personal data is deleted according to policy and legal requirements.',
       },
     ],
     'payments': [
       {
         'question': 'How do I receive payments?',
         'answer':
-            'Payments are processed automatically after each completed ride. '
-            'Earnings are deposited to your registered bank account weekly. '
-            'You can view your earnings history in the app.',
+            'Payments are processed after completed rides and paid out to your '
+            'registered account on the payout schedule.',
       },
       {
         'question': 'When will I get paid?',
         'answer':
-            'Payments are processed every Monday for rides completed in the previous '
-            'week (Monday to Sunday). It may take 2-3 business days for the funds '
-            'to appear in your bank account.',
+            'Payments are generally processed weekly. Bank posting times may vary.',
       },
     ],
     'troubleshooting': [
       {
         'question': 'What should I do if the app is not working properly?',
         'answer':
-            'First, try clearing the cache from Settings → Clear Cache. If the '
-            'problem persists, restart the app or reinstall it. For ongoing issues, '
-            'contact support with details about the problem.',
+            'Try clearing cache from Settings -> Clear Cache, restart the app, '
+            'and check your internet connection. Contact support if the issue persists.',
       },
       {
         'question': 'The app keeps crashing, what should I do?',
         'answer':
-            'Ensure you have the latest version of the app installed. Clear the '
-            'app cache, restart your device, and check your internet connection. '
-            'If crashes continue, contact support with your device model and app version.',
+            'Ensure you are on the latest app version, clear cache, restart your device, '
+            'and contact support with your device model if crashes continue.',
       },
       {
         'question': 'How do I logout from the app?',
         'answer':
-            'Open Settings and tap on the "Logout" button at the bottom of the page. '
-            'Confirm your choice in the dialog. You can log back in anytime with '
-            'your email and password.',
+            'Open Settings and tap "Logout" at the bottom of the page, then confirm.',
       },
     ],
   };
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<Map<String, dynamic>> get filteredFAQs {
     List<Map<String, dynamic>> allFAQs = [];
 
     faqData.forEach((category, questions) {
       if (selectedCategory == 'all' || selectedCategory == category) {
-        for (var faq in questions) {
+        for (final faq in questions) {
           allFAQs.add({
             'category': category,
             'question': faq['question']!,
@@ -162,15 +155,10 @@ class _FaqPageState extends State<FaqPage> {
     });
 
     if (searchQuery.isNotEmpty) {
+      final normalized = searchQuery.toLowerCase();
       allFAQs = allFAQs.where((faq) {
-        return faq['question']
-                .toString()
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase()) ||
-            faq['answer']
-                .toString()
-                .toLowerCase()
-                .contains(searchQuery.toLowerCase());
+        return faq['question'].toString().toLowerCase().contains(normalized) ||
+            faq['answer'].toString().toLowerCase().contains(normalized);
       }).toList();
     }
 
@@ -182,26 +170,16 @@ class _FaqPageState extends State<FaqPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          "FAQ",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("FAQ", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
       body: Column(
         children: [
-          // Header Card
           _buildHeaderCard(),
-
-          // Search Bar
           _buildSearchBar(),
-
-          // Category Filters
           _buildCategoryFilters(),
-
-          // FAQ List
           Expanded(
             child: filteredFAQs.isEmpty
                 ? _buildEmptyState()
@@ -218,15 +196,11 @@ class _FaqPageState extends State<FaqPage> {
                     },
                   ),
           ),
-
-          // Contact Support Button
           _buildContactSupportButton(),
         ],
       ),
     );
   }
-
-  // ================= HEADER CARD =================
 
   Widget _buildHeaderCard() {
     return Container(
@@ -240,20 +214,12 @@ class _FaqPageState extends State<FaqPage> {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: const Row(
         children: [
-          Icon(
-            Icons.help_outline,
-            color: Colors.white,
-            size: 32,
-          ),
+          Icon(Icons.help_outline, color: Colors.white, size: 32),
           SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -270,10 +236,7 @@ class _FaqPageState extends State<FaqPage> {
                 SizedBox(height: 4),
                 Text(
                   "Find answers to common questions",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ],
             ),
@@ -283,12 +246,11 @@ class _FaqPageState extends State<FaqPage> {
     );
   }
 
-  // ================= SEARCH BAR =================
-
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
+        controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Search FAQs...',
           prefixIcon: const Icon(Icons.search),
@@ -296,9 +258,8 @@ class _FaqPageState extends State<FaqPage> {
               ? IconButton(
                   icon: const Icon(Icons.clear),
                   onPressed: () {
-                    setState(() {
-                      searchQuery = '';
-                    });
+                    _searchController.clear();
+                    setState(() => searchQuery = '');
                   },
                 )
               : null,
@@ -310,16 +271,10 @@ class _FaqPageState extends State<FaqPage> {
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
-        onChanged: (value) {
-          setState(() {
-            searchQuery = value;
-          });
-        },
+        onChanged: (value) => setState(() => searchQuery = value),
       ),
     );
   }
-
-  // ================= CATEGORY FILTERS =================
 
   Widget _buildCategoryFilters() {
     return SingleChildScrollView(
@@ -328,8 +283,7 @@ class _FaqPageState extends State<FaqPage> {
       child: Row(
         children: [
           _buildCategoryChip('all', 'All', Icons.apps),
-          _buildCategoryChip(
-              'getting_started', 'Getting Started', Icons.rocket_launch),
+          _buildCategoryChip('getting_started', 'Getting Started', Icons.rocket_launch),
           _buildCategoryChip('using_app', 'Using App', Icons.directions_car),
           _buildCategoryChip('settings', 'Settings', Icons.settings),
           _buildCategoryChip('privacy', 'Privacy', Icons.security),
@@ -349,20 +303,12 @@ class _FaqPageState extends State<FaqPage> {
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
-            ),
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey.shade700),
             const SizedBox(width: 6),
             Text(label),
           ],
         ),
-        onSelected: (selected) {
-          setState(() {
-            selectedCategory = category;
-          });
-        },
+        onSelected: (_) => setState(() => selectedCategory = category),
         selectedColor: Colors.red.shade700,
         labelStyle: TextStyle(
           color: isSelected ? Colors.white : Colors.grey.shade700,
@@ -374,8 +320,6 @@ class _FaqPageState extends State<FaqPage> {
     );
   }
 
-  // ================= FAQ ITEM =================
-
   Widget _buildFAQItem({
     required String question,
     required String answer,
@@ -386,9 +330,7 @@ class _FaqPageState extends State<FaqPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Theme(
         data: ThemeData().copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
@@ -398,29 +340,18 @@ class _FaqPageState extends State<FaqPage> {
               color: categoryInfo['color'].withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              categoryInfo['icon'],
-              color: categoryInfo['color'],
-              size: 24,
-            ),
+            child: Icon(categoryInfo['icon'], color: categoryInfo['color'], size: 24),
           ),
           title: Text(
             question,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 answer,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.6,
-                  color: Colors.grey.shade800,
-                ),
+                style: TextStyle(fontSize: 14, height: 1.6, color: Colors.grey.shade800),
               ),
             ),
           ],
@@ -448,8 +379,6 @@ class _FaqPageState extends State<FaqPage> {
     }
   }
 
-  // ================= EMPTY STATE =================
-
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -457,11 +386,7 @@ class _FaqPageState extends State<FaqPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'No FAQs found',
@@ -474,10 +399,7 @@ class _FaqPageState extends State<FaqPage> {
             const SizedBox(height: 8),
             Text(
               'Try adjusting your search or category filter',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -486,8 +408,6 @@ class _FaqPageState extends State<FaqPage> {
     );
   }
 
-  // ================= CONTACT SUPPORT BUTTON =================
-
   Widget _buildContactSupportButton() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -495,7 +415,7 @@ class _FaqPageState extends State<FaqPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -508,9 +428,7 @@ class _FaqPageState extends State<FaqPage> {
             backgroundColor: Colors.red.shade700,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 2,
           ),
           icon: const Icon(Icons.contact_support),
@@ -519,9 +437,10 @@ class _FaqPageState extends State<FaqPage> {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () {
-            // Navigate back and show contact support
-            Navigator.pop(context);
-            // Could also open email or support page
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ContactSupportPage()),
+            );
           },
         ),
       ),
