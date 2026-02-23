@@ -78,10 +78,7 @@ class ContactSupportPage extends StatelessWidget {
               title: "FAQ",
               subtitle: "Find answers to common questions",
               description: "Quick solutions to common issues",
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/faq');
-              },
+              onTap: () => Navigator.pushNamed(context, '/faq'),
             ),
 
             const SizedBox(height: 24),
@@ -178,7 +175,7 @@ class ContactSupportPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -323,4 +320,5 @@ class ContactSupportPage extends StatelessWidget {
       ),
     );
   }
+
 }

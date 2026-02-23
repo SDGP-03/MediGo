@@ -65,4 +65,31 @@ class MapStyles {
   }
 ]
 ''';
+
+  static const List<String> supportedStyles = [
+    'standard',
+    'silver',
+    'retro',
+    'dark',
+    'night',
+    'aubergine',
+  ];
+
+  static String byName(String styleName) {
+    switch (styleName) {
+      case 'silver':
+        return silver;
+      case 'retro':
+        return retro;
+      case 'dark':
+        return dark;
+      case 'night':
+        return night;
+      case 'aubergine':
+        return aubergine;
+      case 'standard':
+      default:
+        return standard;
+    }
+  }
 }
