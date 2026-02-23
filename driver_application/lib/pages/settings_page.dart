@@ -10,6 +10,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:driver_application/localization/app_strings.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -25,6 +26,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool vibrationEnabled = true;
   String selectedLanguage = "English";
   String distanceUnit = "km";
+  static const List<String> _supportedLanguages = [
+    "English",
+    "Sinhala",
+    "Tamil",
+  ];
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference driversRef = FirebaseDatabase.instance.ref().child(
@@ -38,6 +44,34 @@ class _SettingsPageState extends State<SettingsPage> {
   String userName = "Driver";
   String userEmail = "";
   String? userProfileImage;
+
+  String _languageCodeFromLabel(String label) {
+    switch (label) {
+      case "Sinhala":
+        return "si";
+      case "Tamil":
+        return "ta";
+      default:
+        return "en";
+    }
+  }
+
+  String _languageDisplayName(String language) {
+    switch (language) {
+      case "Sinhala":
+        return "සිංහල";
+      case "Tamil":
+        return "தமிழ்";
+      default:
+        return "English";
+    }
+  }
+
+  String _t(String key, {Map<String, String> params = const {}}) {
+    return AppStrings(
+      _languageCodeFromLabel(selectedLanguage),
+    ).t(key, params: params);
+  }
 
   @override
   void initState() {
@@ -129,7 +163,10 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         soundEffectsEnabled = prefs.getBool('soundEffects') ?? true;
         vibrationEnabled = prefs.getBool('vibration') ?? true;
-        selectedLanguage = prefs.getString('language') ?? 'English';
+        final savedLanguage = prefs.getString('language') ?? 'English';
+        selectedLanguage = _supportedLanguages.contains(savedLanguage)
+            ? savedLanguage
+            : 'English';
         distanceUnit = prefs.getString('distanceUnit') ?? 'km';
       });
     }
@@ -157,7 +194,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         if (mounted) {
-          _showSnackBar("Notification permission denied", isError: true);
+          _showSnackBar(_t("notification_denied"), isError: true);
         }
       }
     } catch (e) {
@@ -219,11 +256,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (!mounted) return;
 
-      _showSnackBar("Cache cleared successfully");
+      _showSnackBar(_t("cache_cleared"));
     } catch (e) {
       debugPrint('Error clearing cache: $e');
       if (mounted) {
-        _showSnackBar("Failed to clear cache", isError: true);
+        _showSnackBar(_t("cache_clear_failed"), isError: true);
       }
     }
   }
@@ -242,7 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('Error logging out: $e');
       if (mounted) {
-        _showSnackBar("Failed to logout", isError: true);
+        _showSnackBar(_t("logout_failed"), isError: true);
       }
     }
   }
@@ -272,7 +309,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text("Settings", style: TextStyle(color: Colors.white)),
+        title: Text(_t("settings"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -287,24 +324,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Account Section
           _buildSectionCard(
-            title: "Account",
+            title: _t("account"),
             children: [
               _buildSettingsTile(
                 icon: Icons.person_outline,
                 iconColor: Colors.blue,
-                title: "Edit Profile",
+                title: _t("edit_profile"),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
                 icon: Icons.lock_outline,
                 iconColor: Colors.orange,
-                title: "Change Password",
+                title: _t("change_password"),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
                 icon: Icons.history,
                 iconColor: Colors.purple,
-                title: "Trip History",
+                title: _t("trip_history"),
                 onTap: () => Navigator.pushNamed(context, '/history'),
               ),
             ],
@@ -314,13 +351,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Preferences Section
           _buildSectionCard(
-            title: "Preferences",
+            title: _t("preferences"),
             children: [
               _buildSwitchTile(
                 icon: Icons.notifications_outlined,
                 iconColor: Colors.red,
-                title: "Notifications",
-                subtitle: "Receive trip alerts",
+                title: _t("notifications"),
+                subtitle: _t("receive_trip_alerts"),
                 value: notificationsEnabled,
                 onChanged: (value) async {
                   setState(() => notificationsEnabled = value);
@@ -340,8 +377,8 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSwitchTile(
                 icon: Icons.volume_up_outlined,
                 iconColor: Colors.green,
-                title: "Sound Effects",
-                subtitle: "Play sounds for actions",
+                title: _t("sound_effects"),
+                subtitle: _t("play_sounds_for_actions"),
                 value: soundEffectsEnabled,
                 onChanged: (value) {
                   setState(() => soundEffectsEnabled = value);
@@ -351,8 +388,8 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSwitchTile(
                 icon: Icons.vibration,
                 iconColor: Colors.indigo,
-                title: "Vibration",
-                subtitle: "Vibrate on notifications",
+                title: _t("vibration"),
+                subtitle: _t("vibrate_on_notifications"),
                 value: vibrationEnabled,
                 onChanged: (value) {
                   setState(() => vibrationEnabled = value);
@@ -369,13 +406,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // App Information Section
           _buildSectionCard(
-            title: "App Information",
+            title: _t("app_information"),
             children: [
               _buildSettingsTile(
                 icon: Icons.info_outline,
                 iconColor: Colors.blue,
-                title: "About App",
-                subtitle: "Version $appVersion",
+                title: _t("about_app"),
+                subtitle: "${_t("version")} $appVersion",
                 onTap: () {
                   showAboutDialog(
                     context: context,
@@ -386,8 +423,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 48,
                       color: Colors.red.shade700,
                     ),
-                    children: const [
-                      Text("MediGo Driver App for managing ambulance rides."),
+                    children: [
+                      Text(_t("about_description")),
                     ],
                   );
                 },
@@ -395,18 +432,18 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.star_outline,
                 iconColor: Colors.amber,
-                title: "Rate App",
-                subtitle: "Share your feedback",
+                title: _t("rate_app"),
+                subtitle: _t("share_feedback"),
                 onTap: () {
                   // TODO: Replace with actual Play Store URL
-                  _showSnackBar("Thank you for your support!");
+                  _showSnackBar(_t("support_thanks"));
                 },
               ),
               _buildSettingsTile(
                 icon: Icons.support_agent,
                 iconColor: Colors.teal,
-                title: "Contact Support",
-                subtitle: "Get help",
+                title: _t("contact_support"),
+                subtitle: _t("get_help"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -419,8 +456,8 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.help_outline,
                 iconColor: Colors.indigo,
-                title: "FAQ",
-                subtitle: "Frequently asked questions",
+                title: _t("faq"),
+                subtitle: _t("frequently_asked_questions"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -431,7 +468,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 iconColor: Colors.grey,
-                title: "Privacy Policy",
+                title: _t("privacy_policy"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -444,29 +481,28 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.delete_outline,
                 iconColor: Colors.orange,
-                title: "Clear Cache",
+                title: _t("clear_cache"),
                 subtitle: cacheSize,
                 onTap: () {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text("Clear Cache"),
+                      title: Text(_t("clear_cache")),
                       content: Text(
-                        "This will remove $cacheSize of temporary files and cached images. "
-                        "Your account data will not be affected.",
+                        _t("clear_cache_message", params: {"size": cacheSize}),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Cancel"),
+                          child: Text(_t("cancel")),
                         ),
                         TextButton(
                           onPressed: () {
                             Navigator.pop(context);
                             clearAppCache();
                           },
-                          child: const Text(
-                            "Clear",
+                          child: Text(
+                            _t("clear"),
                             style: TextStyle(color: Colors.red),
                           ),
                         ),
@@ -492,28 +528,28 @@ class _SettingsPageState extends State<SettingsPage> {
               elevation: 2,
             ),
             icon: const Icon(Icons.logout),
-            label: const Text(
-              "Logout",
+            label: Text(
+              _t("logout"),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('Are you sure you want to logout?'),
+                  title: Text(_t("logout")),
+                  content: Text(_t("logout_confirm")),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(_t("cancel")),
                     ),
                     TextButton(
                       onPressed: () {
                         Navigator.pop(context);
                         logout();
                       },
-                      child: const Text(
-                        'Logout',
+                      child: Text(
+                        _t("logout"),
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
@@ -709,10 +745,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         child: const Icon(Icons.map, color: Colors.cyan, size: 24),
       ),
-      title: const Text(
-        "Map Style",
-        style: TextStyle(fontWeight: FontWeight.w500),
-      ),
+      title: Text(_t("map_style"), style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: Text(
         selectedMapStyle.toUpperCase(),
         style: const TextStyle(fontSize: 12),
@@ -724,7 +757,9 @@ class _SettingsPageState extends State<SettingsPage> {
           if (value == null) return;
           setState(() => selectedMapStyle = value);
           saveMapStyle(value);
-          _showSnackBar("Map style changed to ${value.toUpperCase()}");
+          _showSnackBar(
+            _t("map_style_changed", params: {"value": value.toUpperCase()}),
+          );
         },
         items: const [
           DropdownMenuItem(value: "standard", child: Text("Standard")),
@@ -750,11 +785,11 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         child: const Icon(Icons.language, color: Colors.deepPurple, size: 24),
       ),
-      title: const Text(
-        "Language",
-        style: TextStyle(fontWeight: FontWeight.w500),
+      title: Text(_t("language"), style: const TextStyle(fontWeight: FontWeight.w500)),
+      subtitle: Text(
+        _languageDisplayName(selectedLanguage),
+        style: const TextStyle(fontSize: 12),
       ),
-      subtitle: Text(selectedLanguage, style: const TextStyle(fontSize: 12)),
       trailing: DropdownButton<String>(
         value: selectedLanguage,
         underline: const SizedBox(),
@@ -762,13 +797,21 @@ class _SettingsPageState extends State<SettingsPage> {
           if (value == null) return;
           setState(() => selectedLanguage = value);
           savePreference('language', value);
-          _showSnackBar("Language changed to $value");
+          _showSnackBar(
+            _t(
+              "language_changed",
+              params: {"value": _languageDisplayName(value)},
+            ),
+          );
         },
-        items: const [
-          DropdownMenuItem(value: "English", child: Text("English")),
-          DropdownMenuItem(value: "Sinhala", child: Text("Sinhala")),
-          DropdownMenuItem(value: "Tamil", child: Text("Tamil")),
-        ],
+        items: _supportedLanguages
+            .map(
+              (language) => DropdownMenuItem(
+                value: language,
+                child: Text(_languageDisplayName(language)),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -785,12 +828,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         child: const Icon(Icons.straighten, color: Colors.pink, size: 24),
       ),
-      title: const Text(
-        "Distance Unit",
-        style: TextStyle(fontWeight: FontWeight.w500),
+      title: Text(
+        _t("distance_unit"),
+        style: const TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
-        distanceUnit == 'km' ? 'Kilometers' : 'Miles',
+        distanceUnit == 'km' ? _t("kilometers") : _t("miles"),
         style: const TextStyle(fontSize: 12),
       ),
       trailing: DropdownButton<String>(
@@ -801,12 +844,13 @@ class _SettingsPageState extends State<SettingsPage> {
           setState(() => distanceUnit = value);
           savePreference('distanceUnit', value);
         },
-        items: const [
-          DropdownMenuItem(value: "km", child: Text("Kilometers")),
-          DropdownMenuItem(value: "mi", child: Text("Miles")),
+        items: [
+          DropdownMenuItem(value: "km", child: Text(_t("kilometers"))),
+          DropdownMenuItem(value: "mi", child: Text(_t("miles"))),
         ],
       ),
     );
   }
 }
+
 
