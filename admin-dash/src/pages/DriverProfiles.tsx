@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
     User, Star, Phone, Clock, Car, Search,
     ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
-    X, CreditCard, Calendar, Mail, ArrowLeft
+    X, CreditCard, Calendar, Mail, ArrowLeft, Ambulance
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -625,6 +625,16 @@ export function DriverProfiles() {
                     onRegister={driver => setDrivers(prev => [driver, ...prev])}
                 />
             )}
+
+            {/* ── Transfer Request Shortcut ── */}
+            <button
+                onClick={() => navigate('/transfer')}
+                className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+                title="New Transfer Request"
+            >
+                <Ambulance size={24} />
+                <span className="hidden group-hover:block transition-all duration-300">New Request</span>
+            </button>
 
         </div>
     );
