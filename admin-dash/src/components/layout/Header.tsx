@@ -26,9 +26,9 @@ export function Header({ user, onLogout }: HeaderProps) {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: Activity },
         { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft },
+        { id: 'records', label: 'Records', icon: Users },
         { id: 'fleet', label: 'Fleet', icon: Ambulance },
         { id: 'drivers', label: 'Drivers', icon: UserIcon },
-        { id: 'records', label: 'Records', icon: Users },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ] as const;
 
