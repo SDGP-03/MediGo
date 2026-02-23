@@ -14,6 +14,7 @@ import { RegisterPage } from './components/auth/RegisterPage';
 import { Header } from './components/layout/Header';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import { SupportPage } from './components/auth/SupportPage';
+import { DriverProfiles } from './pages/DriverProfiles';
 
 
 // type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
@@ -114,6 +115,7 @@ export default function App() {
             <Route path='/' element={<HospitalDashboard />} />
             <Route path='/transfer' element={<TransferRequest />} />
             <Route path='/fleet' element={<AmbulanceFleet />} />
+            <Route path="/drivers" element={<DriverProfiles />} />
             <Route path='/records' element={<PatientRecords />} />
             <Route path='/analytics' element={<Analytics />} />
             <Route path='/settings' element={<Settings />} />

@@ -27,6 +27,7 @@ export function Header({ user, onLogout }: HeaderProps) {
         { id: 'dashboard', label: 'Dashboard', icon: Activity },
         { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft },
         { id: 'fleet', label: 'Fleet', icon: Ambulance },
+        { id: 'drivers', label: 'Drivers', icon: UserIcon },
         { id: 'records', label: 'Records', icon: Users },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ] as const;
