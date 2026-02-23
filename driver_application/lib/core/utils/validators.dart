@@ -9,12 +9,14 @@ class Validators {
       return 'Name is required';
     }
 
-    if (value.trim().length < 2) {
+    final trimmed = value.trim();
+
+    if (trimmed.length < 2) {
       return 'Name must be at least 2 characters';
     }
 
-    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
-      return 'Name can only contain letters and spaces';
+    if (!RegExp(r"^[a-zA-Z][a-zA-Z\s\.\-']+$").hasMatch(trimmed)) {
+      return 'Name contains invalid characters';
     }
 
     return null;
@@ -112,15 +114,13 @@ class Validators {
       return 'Vehicle number is required';
     }
 
-    // Remove spaces and convert to uppercase for validation
-    String cleaned = value.trim().toUpperCase().replaceAll(' ', '');
+    final normalized = value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
+    final compact = normalized.replaceAll(RegExp(r'[\s-]'), '');
 
-    // Sri Lankan vehicle number patterns:
-    // ABC-1234 or ABC1234 (old format)
-    // CAA-1234 or CAA1234 (new format)
-    // WP CAA-1234 (with province)
-    if (RegExp(r'^[A-Z]{2,3}-?\d{4}$').hasMatch(cleaned) ||
-        RegExp(r'^[A-Z]{2}\s?[A-Z]{2,3}-?\d{4}$').hasMatch(cleaned)) {
+    // Common formats:
+    // ABC-1234, ABC1234, WP CAA-1234, WPCAA1234
+    final matchesCommonPattern = RegExp(r'^[A-Z]{2,5}\d{4}$').hasMatch(compact);
+    if (matchesCommonPattern) {
       return null;
     }
 

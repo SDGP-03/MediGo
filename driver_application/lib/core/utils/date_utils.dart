@@ -6,28 +6,42 @@ class AppDateUtils {
   static String getRelativeTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
+    final isFuture = difference.isNegative;
+    final duration = difference.abs();
 
-    if (difference.inSeconds < 60) {
+    if (duration.inSeconds < 60) {
       return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      final minutes = difference.inMinutes;
-      return '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
-    } else if (difference.inHours < 24) {
-      final hours = difference.inHours;
-      return '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
-    } else if (difference.inDays == 1) {
+    } else if (duration.inMinutes < 60) {
+      final minutes = duration.inMinutes;
+      return isFuture
+          ? 'in $minutes ${minutes == 1 ? 'minute' : 'minutes'}'
+          : '$minutes ${minutes == 1 ? 'minute' : 'minutes'} ago';
+    } else if (duration.inHours < 24) {
+      final hours = duration.inHours;
+      return isFuture
+          ? 'in $hours ${hours == 1 ? 'hour' : 'hours'}'
+          : '$hours ${hours == 1 ? 'hour' : 'hours'} ago';
+    } else if (!isFuture && duration.inDays == 1) {
       return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 30) {
-      final weeks = (difference.inDays / 7).floor();
-      return '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
-    } else if (difference.inDays < 365) {
-      final months = (difference.inDays / 30).floor();
-      return '$months ${months == 1 ? 'month' : 'months'} ago';
+    } else if (isFuture && duration.inDays == 1) {
+      return 'Tomorrow';
+    } else if (duration.inDays < 7) {
+      return isFuture ? 'in ${duration.inDays} days' : '${duration.inDays} days ago';
+    } else if (duration.inDays < 30) {
+      final weeks = (duration.inDays / 7).floor();
+      return isFuture
+          ? 'in $weeks ${weeks == 1 ? 'week' : 'weeks'}'
+          : '$weeks ${weeks == 1 ? 'week' : 'weeks'} ago';
+    } else if (duration.inDays < 365) {
+      final months = (duration.inDays / 30).floor();
+      return isFuture
+          ? 'in $months ${months == 1 ? 'month' : 'months'}'
+          : '$months ${months == 1 ? 'month' : 'months'} ago';
     } else {
-      final years = (difference.inDays / 365).floor();
-      return '$years ${years == 1 ? 'year' : 'years'} ago';
+      final years = (duration.inDays / 365).floor();
+      return isFuture
+          ? 'in $years ${years == 1 ? 'year' : 'years'}'
+          : '$years ${years == 1 ? 'year' : 'years'} ago';
     }
   }
 

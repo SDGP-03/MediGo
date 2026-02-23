@@ -62,19 +62,27 @@ class Trip {
   /// Helper to parse timestamp from various formats
   static DateTime _parseTimestamp(dynamic value) {
     if (value == null) return DateTime.now();
-    
+
     if (value is int) {
-      // Milliseconds since epoch
-      return DateTime.fromMillisecondsSinceEpoch(value);
+      final milliseconds = value < 1000000000000 ? value * 1000 : value;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+    } else if (value is double) {
+      final intValue = value.toInt();
+      final milliseconds = intValue < 1000000000000 ? intValue * 1000 : intValue;
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds);
     } else if (value is String) {
-      // Try parsing ISO 8601 string
+      final asInt = int.tryParse(value);
+      if (asInt != null) {
+        final milliseconds = asInt < 1000000000000 ? asInt * 1000 : asInt;
+        return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+      }
       try {
         return DateTime.parse(value);
       } catch (e) {
         return DateTime.now();
       }
     }
-    
+
     return DateTime.now();
   }
 
