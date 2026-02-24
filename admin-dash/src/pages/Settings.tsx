@@ -1,9 +1,11 @@
-import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock, LogOut, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
     updatePassword,
+    signOut,
+    deleteUser,
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -44,6 +46,17 @@ export function Settings() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [pwLoading, setPwLoading] = useState(false);
     const [pwToast, setPwToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    // ── sign-out modal ────────────────────────────────────────────────────
+    const [showSignOut, setShowSignOut] = useState(false);
+    const [signOutLoading, setSignOutLoading] = useState(false);
+
+    // ── delete account modal ──────────────────────────────────────────────
+    const [showDeleteAccount, setShowDeleteAccount] = useState(false);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [showDeletePw, setShowDeletePw] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteToast, setDeleteToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     const strength = getPasswordStrength(pwForm.newPw);
 
@@ -110,6 +123,50 @@ export function Settings() {
                 }
             }
             setPwToast({ type: 'error', message });
+        }
+    };
+
+    const handleSignOut = async () => {
+        setSignOutLoading(true);
+        try {
+            await signOut(auth);
+            // Redirect to login — the app's auth guard will handle navigation
+            window.location.href = '/';
+        } catch {
+            setSignOutLoading(false);
+            setShowSignOut(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        const user = auth.currentUser;
+        if (!user || !user.email) {
+            setDeleteToast({ type: 'error', message: 'No authenticated user found.' });
+            return;
+        }
+        if (!deletePassword) {
+            setDeleteToast({ type: 'error', message: 'Please enter your password to confirm.' });
+            return;
+        }
+        setDeleteLoading(true);
+        setDeleteToast(null);
+        try {
+            const credential = EmailAuthProvider.credential(user.email, deletePassword);
+            await reauthenticateWithCredential(user, credential);
+            await deleteUser(user);
+            window.location.href = '/';
+        } catch (err: unknown) {
+            setDeleteLoading(false);
+            let message = 'Failed to delete account. Please try again.';
+            if (err && typeof err === 'object' && 'code' in err) {
+                const code = (err as { code: string }).code;
+                if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                    message = 'Incorrect password.';
+                } else if (code === 'auth/too-many-requests') {
+                    message = 'Too many attempts. Please wait and try again.';
+                }
+            }
+            setDeleteToast({ type: 'error', message });
         }
     };
 
@@ -439,7 +496,177 @@ export function Settings() {
                     </div>
                 </section>
 
+                {/* Account Section */}
+                <section className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                            <User className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        </div>
+                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Account</h2>
+                    </div>
+
+                    <div className="space-y-3">
+                        {/* Sign Out */}
+                        <button
+                            onClick={() => setShowSignOut(true)}
+                            className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3 group"
+                        >
+                            <LogOut className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" />
+                            <div className="flex-1">
+                                <p className="font-medium text-gray-900 dark:text-white">Sign Out</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Sign out of your account on this device</p>
+                            </div>
+                            <span className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">→</span>
+                        </button>
+
+                        {/* Delete Account */}
+                        <button
+                            onClick={() => { setShowDeleteAccount(true); setDeletePassword(''); setDeleteToast(null); }}
+                            className="w-full text-left px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800/50 transition-colors flex items-center gap-3 group"
+                        >
+                            <Trash2 className="w-4 h-4 text-red-500 dark:text-red-400" />
+                            <div className="flex-1">
+                                <p className="font-medium text-red-600 dark:text-red-400">Delete Account</p>
+                                <p className="text-sm text-red-400 dark:text-red-500">Permanently delete your account and all data</p>
+                            </div>
+                            <span className="text-red-400 group-hover:text-red-600 dark:group-hover:text-red-300">→</span>
+                        </button>
+                    </div>
+                </section>
+
             </div>
+
+            {/* ── Sign Out Confirmation Modal ─────────────────────────────────── */}
+            {showSignOut && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                                    <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sign Out</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowSignOut(false)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">Are you sure you want to sign out? You will need to log in again to access your account.</p>
+                        </div>
+                        <div className="flex items-center gap-3 px-6 pb-6">
+                            <button
+                                onClick={() => setShowSignOut(false)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSignOut}
+                                disabled={signOutLoading}
+                                className="flex-1 py-2.5 rounded-xl bg-gray-800 dark:bg-gray-200 hover:bg-gray-900 dark:hover:bg-white text-white dark:text-gray-900 font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {signOutLoading ? (
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                    </svg>
+                                ) : <LogOut className="w-4 h-4" />}
+                                {signOutLoading ? 'Signing out...' : 'Sign Out'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Delete Account Confirmation Modal ───────────────────────────── */}
+            {showDeleteAccount && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-red-200/50 dark:border-red-800/50 overflow-hidden">
+                        <div className="flex items-center justify-between p-6 border-b border-red-100 dark:border-red-900/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                    <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">Delete Account</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowDeleteAccount(false)}
+                                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {/* Warning banner */}
+                            <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm">
+                                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <p><strong>This action is irreversible.</strong> All your data, settings, and history will be permanently deleted.</p>
+                            </div>
+
+                            {/* Toast */}
+                            {deleteToast && (
+                                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${deleteToast.type === 'success'
+                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                                    }`}>
+                                    {deleteToast.type === 'success'
+                                        ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                        : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                                    {deleteToast.message}
+                                </div>
+                            )}
+
+                            {/* Password confirmation */}
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm with your password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showDeletePw ? 'text' : 'password'}
+                                        value={deletePassword}
+                                        onChange={e => setDeletePassword(e.target.value)}
+                                        placeholder="Enter your current password"
+                                        className="w-full pr-10 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeletePw(v => !v)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                    >
+                                        {showDeletePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 px-6 pb-6">
+                            <button
+                                onClick={() => setShowDeleteAccount(false)}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={deleteLoading || !deletePassword}
+                                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-all shadow-md hover:shadow-red-500/25 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {deleteLoading ? (
+                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                    </svg>
+                                ) : <Trash2 className="w-4 h-4" />}
+                                {deleteLoading ? 'Deleting...' : 'Delete Account'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
