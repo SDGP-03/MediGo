@@ -3,6 +3,7 @@ import 'package:driver_application/models/trip_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -21,11 +22,28 @@ class _HistoryPageState extends State<HistoryPage> {
 
   String _searchQuery = '';
   String _statusFilter = 'all'; // all, completed, cancelled
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
   }
 
   Future<void> _refreshData() async {
@@ -59,19 +77,19 @@ class _HistoryPageState extends State<HistoryPage> {
     if (uid == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text("Trip History", style: TextStyle(color: Colors.white)),
+          title: Text(t("Trip History", "ගමන් ඉතිහාසය"), style: const TextStyle(color: Colors.white)),
           backgroundColor: Colors.red.shade700,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: const Center(
-          child: Text("Please log in to view trip history"),
+        body: Center(
+          child: Text(t("Please log in to view trip history", "ගමන් ඉතිහාසය බලන්න පිවිසෙන්න")),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Trip History", style: TextStyle(color: Colors.white)),
+        title: Text(t("Trip History", "ගමන් ඉතිහාසය"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -86,7 +104,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 children: [
                   CircularProgressIndicator(color: Colors.red.shade700),
                   const SizedBox(height: 12),
-                  const Text("Loading trip history..."),
+                  Text(t("Loading trip history...", "ගමන් ඉතිහාසය පූරණය වෙයි...")),
                 ],
               ),
             );
@@ -186,11 +204,11 @@ class _HistoryPageState extends State<HistoryPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('Total', totalTrips.toString(), Icons.local_shipping),
+          _buildStatItem(t('Total', 'මුළු ගමන්'), totalTrips.toString(), Icons.local_shipping),
           _buildStatDivider(),
-          _buildStatItem('Completed', completedTrips.toString(), Icons.check_circle),
+          _buildStatItem(t('Completed', 'අවසන්'), completedTrips.toString(), Icons.check_circle),
           _buildStatDivider(),
-          _buildStatItem('This Month', thisMonthTrips.toString(), Icons.calendar_today),
+          _buildStatItem(t('This Month', 'මේ මාසය'), thisMonthTrips.toString(), Icons.calendar_today),
         ],
       ),
     );
@@ -245,7 +263,7 @@ class _HistoryPageState extends State<HistoryPage> {
               });
             },
             decoration: InputDecoration(
-              hintText: 'Search trips...',
+              hintText: t('Search trips...', 'ගමන් සොයන්න...'),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -272,18 +290,18 @@ class _HistoryPageState extends State<HistoryPage> {
           // Filter Chips
           Row(
             children: [
-              const Text('Filter: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(t('Filter: ', 'පෙරහන්: '), style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(width: 8),
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip('All', 'all'),
+                      _buildFilterChip(t('All', 'සියලු'), 'all'),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Completed', 'completed'),
+                      _buildFilterChip(t('Completed', 'අවසන්'), 'completed'),
                       const SizedBox(width: 8),
-                      _buildFilterChip('Cancelled', 'cancelled'),
+                      _buildFilterChip(t('Cancelled', 'අවලංගු'), 'cancelled'),
                     ],
                   ),
                 ),
@@ -466,23 +484,27 @@ class _HistoryPageState extends State<HistoryPage> {
     Color bgColor;
     Color textColor;
     IconData icon;
+    String label = status.trim().toUpperCase();
 
     switch (normalizedStatus) {
       case 'completed':
         bgColor = Colors.green.shade100;
         textColor = Colors.green.shade700;
         icon = Icons.check_circle;
+        label = t('COMPLETED', 'අවසන්');
         break;
       case 'cancelled':
       case 'canceled':
         bgColor = Colors.red.shade100;
         textColor = Colors.red.shade700;
         icon = Icons.cancel;
+        label = t('CANCELLED', 'අවලංගු');
         break;
       default:
         bgColor = Colors.orange.shade100;
         textColor = Colors.orange.shade700;
         icon = Icons.info_outline;
+        label = t(status.trim().toUpperCase(), 'වෙනත්');
         break;
     }
 
@@ -498,7 +520,7 @@ class _HistoryPageState extends State<HistoryPage> {
           Icon(icon, size: 14, color: textColor),
           const SizedBox(width: 4),
           Text(
-            status.trim().toUpperCase(),
+            label,
             style: TextStyle(
               color: textColor,
               fontWeight: FontWeight.bold,
@@ -526,7 +548,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              'No Trips Yet',
+              t('No Trips Yet', 'තවම ගමන් නැහැ'),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -535,7 +557,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Your completed trips will appear here',
+              t('Your completed trips will appear here', 'ඔබ අවසන් කළ ගමන් මෙතැන දිස්වේ'),
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey.shade500,
@@ -562,7 +584,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No trips found',
+              t('No trips found', 'ගමන් හමු වුණේ නැහැ'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -571,7 +593,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Try adjusting your search or filters',
+              t('Try adjusting your search or filters', 'සෙවුම හෝ පෙරහන් වෙනස් කර බලන්න'),
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade500,
@@ -599,7 +621,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Oops! Something went wrong',
+              t('Oops! Something went wrong', 'අප්පා! ගැටලුවක් ඇති වුණා'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -608,7 +630,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Failed to load trip history',
+              t('Failed to load trip history', 'ගමන් ඉතිහාසය පූරණයට බැරි වුණා'),
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade500,
@@ -618,7 +640,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ElevatedButton.icon(
               onPressed: () => setState(() {}),
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(t('Retry', 'නැවත උත්සාහ කරන්න')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
@@ -673,8 +695,8 @@ class _HistoryPageState extends State<HistoryPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Trip Details',
+                    Text(
+                      t('Trip Details', 'ගමන් විස්තර'),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -689,12 +711,12 @@ class _HistoryPageState extends State<HistoryPage> {
                 // Date and Time
                 _buildDetailRow(
                   Icons.calendar_today,
-                  'Date',
+                  t('Date', 'දිනය'),
                   AppDateUtils.formatDate(trip.timestamp),
                 ),
                 _buildDetailRow(
                   Icons.access_time,
-                  'Time',
+                  t('Time', 'වේලාව'),
                   AppDateUtils.formatTime(trip.timestamp),
                 ),
 
@@ -704,20 +726,20 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (trip.patientName != null)
                   _buildDetailRow(
                     Icons.person,
-                    'Patient',
+                    t('Patient', 'රෝගියා'),
                     trip.patientName!,
                   ),
 
                 // Locations
                 _buildDetailRow(
                   Icons.circle,
-                  'Pickup',
+                  t('Pickup', 'ගන්න තැන'),
                   trip.pickup,
                   iconColor: Colors.green,
                 ),
                 _buildDetailRow(
                   Icons.location_on,
-                  'Dropoff',
+                  t('Dropoff', 'දමන්න තැන'),
                   trip.dropoff,
                   iconColor: Colors.red,
                 ),
@@ -728,25 +750,25 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (trip.distance != null)
                   _buildDetailRow(
                     Icons.route,
-                    'Distance',
+                    t('Distance', 'දුර'),
                     trip.formattedDistance,
                   ),
                 if (trip.duration != null)
                   _buildDetailRow(
                     Icons.timer,
-                    'Duration',
+                    t('Duration', 'කාලය'),
                     trip.formattedDuration,
                   ),
                 if (trip.earnings != null)
                   _buildDetailRow(
                     Icons.payments,
-                    'Earnings',
+                    t('Earnings', 'ආදායම'),
                     trip.formattedEarnings,
                   ),
                 if (trip.priority != null)
                   _buildDetailRow(
                     Icons.priority_high,
-                    'Priority',
+                    t('Priority', 'ප්‍රමුඛතාව'),
                     trip.priority!.toUpperCase(),
                   ),
 
@@ -755,7 +777,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   const Divider(height: 32),
                   _buildDetailRow(
                     Icons.note,
-                    'Notes',
+                    t('Notes', 'සටහන්'),
                     trip.notes!,
                   ),
                 ],
@@ -775,8 +797,8 @@ class _HistoryPageState extends State<HistoryPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Close',
+                    child: Text(
+                      t('Close', 'වසන්න'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
