@@ -1,5 +1,20 @@
-import { User, Bell, Shield, Moon, Smartphone, Mail, Globe, Monitor } from 'lucide-react';
+import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { useState } from 'react';
+
+// ── password strength helper ──────────────────────────────────────────────
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (score <= 1) return { score, label: 'Very Weak', color: 'bg-red-500' };
+    if (score === 2) return { score, label: 'Weak', color: 'bg-orange-500' };
+    if (score === 3) return { score, label: 'Fair', color: 'bg-yellow-500' };
+    if (score === 4) return { score, label: 'Strong', color: 'bg-blue-500' };
+    return { score, label: 'Very Strong', color: 'bg-green-500' };
+}
 
 export function Settings() {
     const [notifications, setNotifications] = useState({
@@ -14,6 +29,54 @@ export function Settings() {
         }
         return 'light';
     });
+
+    // ── change-password modal ─────────────────────────────────────────────
+    const [showChangePassword, setShowChangePassword] = useState(false);
+    const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [pwLoading, setPwLoading] = useState(false);
+    const [pwToast, setPwToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    const strength = getPasswordStrength(pwForm.newPw);
+
+    const resetPasswordModal = () => {
+        setPwForm({ current: '', newPw: '', confirm: '' });
+        setShowCurrent(false);
+        setShowNew(false);
+        setShowConfirm(false);
+        setPwToast(null);
+        setShowChangePassword(false);
+    };
+
+    const handleChangePassword = async () => {
+        if (!pwForm.current || !pwForm.newPw || !pwForm.confirm) {
+            setPwToast({ type: 'error', message: 'All fields are required.' });
+            return;
+        }
+        if (pwForm.newPw.length < 8) {
+            setPwToast({ type: 'error', message: 'New password must be at least 8 characters.' });
+            return;
+        }
+        if (pwForm.newPw !== pwForm.confirm) {
+            setPwToast({ type: 'error', message: 'New passwords do not match.' });
+            return;
+        }
+        if (pwForm.current === pwForm.newPw) {
+            setPwToast({ type: 'error', message: 'New password must differ from the current password.' });
+            return;
+        }
+
+        setPwLoading(true);
+        setPwToast(null);
+        // Simulate API call
+        await new Promise(r => setTimeout(r, 1200));
+        setPwLoading(false);
+        setPwToast({ type: 'success', message: 'Password changed successfully!' });
+        // Auto-close after success
+        setTimeout(() => resetPasswordModal(), 1800);
+    };
 
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -146,7 +209,10 @@ export function Settings() {
                     </div>
 
                     <div className="space-y-4">
-                        <button className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group">
+                        <button
+                            onClick={() => setShowChangePassword(true)}
+                            className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group"
+                        >
                             <span className="font-medium text-gray-900 dark:text-white">Change Password</span>
                             <span className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">→</span>
                         </button>
@@ -156,6 +222,158 @@ export function Settings() {
                         </button>
                     </div>
                 </section>
+
+                {/* ── Change Password Modal ──────────────────────────────────────── */}
+                {showChangePassword && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                                        <Lock className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Change Password</h3>
+                                </div>
+                                <button
+                                    onClick={resetPasswordModal}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 space-y-5">
+                                {/* Toast */}
+                                {pwToast && (
+                                    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${pwToast.type === 'success'
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                                        }`}>
+                                        {pwToast.type === 'success'
+                                            ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                            : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                                        {pwToast.message}
+                                    </div>
+                                )}
+
+                                {/* Current Password */}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showCurrent ? 'text' : 'password'}
+                                            value={pwForm.current}
+                                            onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+                                            placeholder="Enter current password"
+                                            className="w-full pr-10 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrent(v => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                            {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* New Password */}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showNew ? 'text' : 'password'}
+                                            value={pwForm.newPw}
+                                            onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+                                            placeholder="Enter new password"
+                                            className="w-full pr-10 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNew(v => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+
+                                    {/* Strength meter */}
+                                    {pwForm.newPw && (
+                                        <div className="space-y-1">
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map(i => (
+                                                    <div
+                                                        key={i}
+                                                        className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= strength.score ? strength.color : 'bg-gray-200 dark:bg-gray-700'
+                                                            }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <p className={`text-xs font-medium ${strength.color
+                                                    .replace('bg-', 'text-')
+                                                    .replace('-500', '-600')
+                                                }`}>{strength.label}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Confirm Password */}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showConfirm ? 'text' : 'password'}
+                                            value={pwForm.confirm}
+                                            onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+                                            placeholder="Confirm new password"
+                                            className={`w-full pr-10 px-4 py-2.5 rounded-xl border ${pwForm.confirm && pwForm.newPw !== pwForm.confirm
+                                                    ? 'border-red-400 dark:border-red-600 focus:ring-red-500'
+                                                    : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'
+                                                } bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:border-transparent outline-none transition`}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirm(v => !v)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                    {pwForm.confirm && pwForm.newPw !== pwForm.confirm && (
+                                        <p className="text-xs text-red-500">Passwords do not match.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex items-center gap-3 px-6 pb-6">
+                                <button
+                                    onClick={resetPasswordModal}
+                                    className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleChangePassword}
+                                    disabled={pwLoading}
+                                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium transition-all shadow-md hover:shadow-blue-500/25 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {pwLoading ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                            </svg>
+                                            Updating...
+                                        </>
+                                    ) : 'Update Password'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Language & Region */}
                 <section className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 shadow-sm">
