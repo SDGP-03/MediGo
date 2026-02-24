@@ -1,5 +1,11 @@
 import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { useState } from 'react';
+import {
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword,
+} from 'firebase/auth';
+import { auth } from '../firebase';
 
 // ── password strength helper ──────────────────────────────────────────────
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
@@ -68,14 +74,43 @@ export function Settings() {
             return;
         }
 
+        const user = auth.currentUser;
+        if (!user || !user.email) {
+            setPwToast({ type: 'error', message: 'No authenticated user found. Please log in again.' });
+            return;
+        }
+
         setPwLoading(true);
         setPwToast(null);
-        // Simulate API call
-        await new Promise(r => setTimeout(r, 1200));
-        setPwLoading(false);
-        setPwToast({ type: 'success', message: 'Password changed successfully!' });
-        // Auto-close after success
-        setTimeout(() => resetPasswordModal(), 1800);
+
+        try {
+            // Re-authenticate to verify the current password with Firebase
+            const credential = EmailAuthProvider.credential(user.email, pwForm.current);
+            await reauthenticateWithCredential(user, credential);
+
+            // Current password verified — now update to the new password
+            await updatePassword(user, pwForm.newPw);
+
+            setPwLoading(false);
+            setPwToast({ type: 'success', message: 'Password changed successfully!' });
+            setTimeout(() => resetPasswordModal(), 1800);
+        } catch (err: unknown) {
+            setPwLoading(false);
+            let message = 'Failed to update password. Please try again.';
+            if (err && typeof err === 'object' && 'code' in err) {
+                const code = (err as { code: string }).code;
+                if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                    message = 'Current password is incorrect.';
+                } else if (code === 'auth/too-many-requests') {
+                    message = 'Too many attempts. Please wait a moment and try again.';
+                } else if (code === 'auth/weak-password') {
+                    message = 'New password is too weak. Choose a stronger password.';
+                } else if (code === 'auth/requires-recent-login') {
+                    message = 'Session expired. Please log out and log in again before changing your password.';
+                }
+            }
+            setPwToast({ type: 'error', message });
+        }
     };
 
     const toggleTheme = () => {
@@ -248,8 +283,8 @@ export function Settings() {
                                 {/* Toast */}
                                 {pwToast && (
                                     <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${pwToast.type === 'success'
-                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
-                                            : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
                                         }`}>
                                         {pwToast.type === 'success'
                                             ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
@@ -312,8 +347,8 @@ export function Settings() {
                                                 ))}
                                             </div>
                                             <p className={`text-xs font-medium ${strength.color
-                                                    .replace('bg-', 'text-')
-                                                    .replace('-500', '-600')
+                                                .replace('bg-', 'text-')
+                                                .replace('-500', '-600')
                                                 }`}>{strength.label}</p>
                                         </div>
                                     )}
@@ -329,8 +364,8 @@ export function Settings() {
                                             onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
                                             placeholder="Confirm new password"
                                             className={`w-full pr-10 px-4 py-2.5 rounded-xl border ${pwForm.confirm && pwForm.newPw !== pwForm.confirm
-                                                    ? 'border-red-400 dark:border-red-600 focus:ring-red-500'
-                                                    : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'
+                                                ? 'border-red-400 dark:border-red-600 focus:ring-red-500'
+                                                : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500'
                                                 } bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:border-transparent outline-none transition`}
                                         />
                                         <button
