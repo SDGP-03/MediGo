@@ -29,6 +29,15 @@ class _StartScreenState extends State<StartScreen> {
     });
   }
 
+  Future<void> _setLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', language);
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = language == 'Sinhala';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -54,7 +63,57 @@ class _StartScreenState extends State<StartScreen> {
                     children: [
                       Column(
                         children: [
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: PopupMenuButton<String>(
+                              tooltip: t("Select language", "භාෂාව තෝරන්න"),
+                              onSelected: _setLanguage,
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: "Sinhala",
+                                  child: Text("සිංහල (SI)"),
+                                ),
+                                const PopupMenuItem(
+                                  value: "English",
+                                  child: Text("English (EN)"),
+                                ),
+                              ],
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.red.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.language,
+                                      size: 18,
+                                      color: Colors.red.shade700,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isSinhala ? "SI" : "EN",
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
 
                           TweenAnimationBuilder<double>(
                             duration: const Duration(milliseconds: 650),
