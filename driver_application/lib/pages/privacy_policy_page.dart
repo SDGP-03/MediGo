@@ -102,8 +102,8 @@ class PrivacyPolicyPage extends StatelessWidget {
                   "If you have questions, concerns, or requests regarding this "
                   "Privacy Policy or your personal data, please contact our "
                   "support team through:\n\n"
-                  "- In-app support chat\n"
                   "- Email: support@medigo.com\n"
+                  "- Phone: +94 11 234 5678\n"
                   "- Settings > Contact Support\n\n"
                   "We will respond to your inquiry within 48 hours.",
             ),
@@ -193,7 +193,7 @@ class PrivacyPolicyPage extends StatelessWidget {
           Icon(Icons.calendar_today, size: 16, color: Colors.blue.shade700),
           const SizedBox(width: 8),
           Text(
-            "Last updated: February 2026",
+            "Last updated: February 24, 2026",
             style: TextStyle(
               fontSize: 13,
               color: Colors.blue.shade700,

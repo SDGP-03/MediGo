@@ -10,6 +10,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:path_provider/path_provider.dart';
+import '../widgets/map_styles.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -188,16 +189,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
+    final normalizedStyle = MapStyles.normalizeStyle(prefs.getString("mapStyle"));
     if (mounted) {
       setState(() {
-        selectedMapStyle = prefs.getString("mapStyle") ?? "standard";
+        selectedMapStyle = normalizedStyle;
       });
     }
+    MapStyles.setSelectedStyle(normalizedStyle);
   }
 
   Future<void> saveMapStyle(String style) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString("mapStyle", style);
+    final normalizedStyle = MapStyles.normalizeStyle(style);
+    await prefs.setString("mapStyle", normalizedStyle);
+    MapStyles.setSelectedStyle(normalizedStyle);
   }
 
   Future<void> clearAppCache() async {
@@ -393,14 +398,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               _buildSettingsTile(
-                icon: Icons.star_outline,
+                icon: Icons.feedback_outlined,
                 iconColor: Colors.amber,
-                title: "Rate App",
-                subtitle: "Share your feedback",
-                onTap: () {
-                  // TODO: Replace with actual Play Store URL
-                  _showSnackBar("Thank you for your support!");
-                },
+                title: "Send Feedback",
+                subtitle: "Tell us how we can improve",
+                onTap: () => Navigator.pushNamed(context, '/feedback'),
               ),
               _buildSettingsTile(
                 icon: Icons.support_agent,

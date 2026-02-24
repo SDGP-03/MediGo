@@ -4,14 +4,22 @@ import 'package:url_launcher/url_launcher.dart';
 class ContactSupportPage extends StatelessWidget {
   const ContactSupportPage({super.key});
 
-  Future<void> _launchURL(String url) async {
+  Future<void> _launchURL(BuildContext context, String url) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final Uri uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(content: Text("Could not open this link")),
+        );
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Failed to open support option")),
+      );
     }
   }
 
@@ -46,7 +54,7 @@ class ContactSupportPage extends StatelessWidget {
               title: "Email Support",
               subtitle: "support@medigo.com",
               description: "Get a response within 24 hours",
-              onTap: () => _launchURL("mailto:support@medigo.com"),
+              onTap: () => _launchURL(context, "mailto:support@medigo.com"),
             ),
 
             _buildContactMethod(
@@ -56,7 +64,7 @@ class ContactSupportPage extends StatelessWidget {
               title: "Phone Support",
               subtitle: "+94 11 234 5678",
               description: "Available Mon-Fri, 9 AM - 6 PM",
-              onTap: () => _launchURL("tel:+94112345678"),
+              onTap: () => _launchURL(context, "tel:+94112345678"),
             ),
 
             _buildContactMethod(

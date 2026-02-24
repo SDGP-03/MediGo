@@ -20,6 +20,16 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   bool isSending = false;
 
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
+      ),
+    );
+  }
+
   @override
   void dispose() {
     subjectController.dispose();
@@ -32,16 +42,12 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final message = messageController.text.trim();
 
     if (subject.isEmpty || message.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      _showSnackBar("Please fill all fields", isError: true);
       return;
     }
 
     if (message.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Message should be at least 10 characters")),
-      );
+      _showSnackBar("Message should be at least 10 characters", isError: true);
       return;
     }
 
@@ -68,13 +74,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
       subjectController.clear();
       messageController.clear();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Feedback sent successfully")),
-      );
+      _showSnackBar("Feedback sent successfully");
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Failed to send feedback")));
+      _showSnackBar("Failed to send feedback", isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -195,6 +197,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: subjectController,
+                      textInputAction: TextInputAction.next,
+                      maxLength: 80,
                       decoration: InputDecoration(
                         hintText: "Brief summary of your feedback",
                         hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -240,6 +244,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     TextField(
                       controller: messageController,
                       maxLines: 6,
+                      minLines: 4,
+                      maxLength: 1000,
                       decoration: InputDecoration(
                         hintText: "Describe your issue or suggestion in detail...",
                         hintStyle: TextStyle(color: Colors.grey.shade400),

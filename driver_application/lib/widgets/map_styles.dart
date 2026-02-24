@@ -1,4 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 class MapStyles {
+  const MapStyles._();
+
   static const String standard = '';
 
   static const String silver = '''
@@ -75,8 +79,12 @@ class MapStyles {
     'aubergine',
   ];
 
+  static final ValueNotifier<String> selectedStyleNotifier = ValueNotifier(
+    'standard',
+  );
+
   static String byName(String styleName) {
-    switch (styleName) {
+    switch (normalizeStyle(styleName)) {
       case 'silver':
         return silver;
       case 'retro':
@@ -91,5 +99,14 @@ class MapStyles {
       default:
         return standard;
     }
+  }
+
+  static String normalizeStyle(String? styleName) {
+    final normalized = (styleName ?? 'standard').trim().toLowerCase();
+    return supportedStyles.contains(normalized) ? normalized : 'standard';
+  }
+
+  static void setSelectedStyle(String? styleName) {
+    selectedStyleNotifier.value = normalizeStyle(styleName);
   }
 }

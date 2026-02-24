@@ -48,6 +48,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initConnectivityListener();
+    MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
   }
 
   void _initConnectivityListener() {
@@ -248,36 +249,25 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
-    selectedMapStyle = prefs.getString("mapStyle") ?? "standard";
+    selectedMapStyle = MapStyles.normalizeStyle(prefs.getString("mapStyle"));
+    MapStyles.setSelectedStyle(selectedMapStyle);
   }
 
   void applyMapStyle() {
     if (controllerGoogleMap == null) return;
+    final styleJson = MapStyles.byName(selectedMapStyle);
+    controllerGoogleMap!.setMapStyle(styleJson.isEmpty ? null : styleJson);
+  }
 
-    switch (selectedMapStyle) {
-      case "silver":
-        controllerGoogleMap!.setMapStyle(MapStyles.silver);
-        break;
+  void _onMapStyleChanged() {
+    if (!mounted) return;
+    final newStyle = MapStyles.selectedStyleNotifier.value;
+    if (newStyle == selectedMapStyle) return;
 
-      case "retro":
-        controllerGoogleMap!.setMapStyle(MapStyles.retro);
-        break;
-
-      case "dark":
-        controllerGoogleMap!.setMapStyle(MapStyles.dark);
-        break;
-
-      case "night":
-        controllerGoogleMap!.setMapStyle(MapStyles.night);
-        break;
-
-      case "aubergine":
-        controllerGoogleMap!.setMapStyle(MapStyles.aubergine);
-        break;
-
-      default:
-        controllerGoogleMap!.setMapStyle(null); // Standard
-    }
+    setState(() {
+      selectedMapStyle = newStyle;
+    });
+    applyMapStyle();
   }
 
   // ================= ASSIGNMENT HANDLER =================
@@ -490,6 +480,7 @@ class _HomePageState extends State<HomePage> {
     positionStream?.cancel();
     _assignmentSubscription?.cancel();
     _connectivitySubscription?.cancel();
+    MapStyles.selectedStyleNotifier.removeListener(_onMapStyleChanged);
     _setDriverOffline();
     super.dispose();
   }

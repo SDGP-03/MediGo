@@ -462,10 +462,29 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildStatusBadge(String status) {
-    final isCompleted = status.toLowerCase() == 'completed';
-    final bgColor = isCompleted ? Colors.green.shade100 : Colors.red.shade100;
-    final textColor = isCompleted ? Colors.green.shade700 : Colors.red.shade700;
-    final icon = isCompleted ? Icons.check_circle : Icons.cancel;
+    final normalizedStatus = status.trim().toLowerCase();
+    Color bgColor;
+    Color textColor;
+    IconData icon;
+
+    switch (normalizedStatus) {
+      case 'completed':
+        bgColor = Colors.green.shade100;
+        textColor = Colors.green.shade700;
+        icon = Icons.check_circle;
+        break;
+      case 'cancelled':
+      case 'canceled':
+        bgColor = Colors.red.shade100;
+        textColor = Colors.red.shade700;
+        icon = Icons.cancel;
+        break;
+      default:
+        bgColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade700;
+        icon = Icons.info_outline;
+        break;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -479,7 +498,7 @@ class _HistoryPageState extends State<HistoryPage> {
           Icon(icon, size: 14, color: textColor),
           const SizedBox(width: 4),
           Text(
-            status.toUpperCase(),
+            status.trim().toUpperCase(),
             style: TextStyle(
               color: textColor,
               fontWeight: FontWeight.bold,

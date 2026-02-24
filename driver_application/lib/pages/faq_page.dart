@@ -337,7 +337,7 @@ class _FaqPageState extends State<FaqPage> {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: categoryInfo['color'].withOpacity(0.1),
+              color: categoryInfo['color'].withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(categoryInfo['icon'], color: categoryInfo['color'], size: 24),

@@ -10,7 +10,7 @@ class AppDateUtils {
     final duration = difference.abs();
 
     if (duration.inSeconds < 60) {
-      return 'Just now';
+      return isFuture ? 'in a few seconds' : 'Just now';
     } else if (duration.inMinutes < 60) {
       final minutes = duration.inMinutes;
       return isFuture
@@ -92,7 +92,15 @@ class AppDateUtils {
 
   /// Get end of day
   static DateTime endOfDay(DateTime dateTime) {
-    return DateTime(dateTime.year, dateTime.month, dateTime.day, 23, 59, 59);
+    return DateTime(
+      dateTime.year,
+      dateTime.month,
+      dateTime.day,
+      23,
+      59,
+      59,
+      999,
+    );
   }
 
   /// Check if date is today

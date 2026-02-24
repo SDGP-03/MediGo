@@ -48,7 +48,7 @@ class Validators {
     }
 
     // Remove spaces and dashes
-    String cleaned = value.replaceAll(RegExp(r'[\s-]'), '');
+    String cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
 
     // Check for Sri Lankan format: 0XXXXXXXXX (10 digits starting with 0)
     if (RegExp(r'^0\d{9}$').hasMatch(cleaned)) {
@@ -99,6 +99,9 @@ class Validators {
     String? originalPassword,
   ) {
     if (originalPassword != null && originalPassword.isNotEmpty) {
+      if (value == null || value.isEmpty) {
+        return 'Please confirm your new password';
+      }
       if (value != originalPassword) {
         return 'Passwords do not match';
       }

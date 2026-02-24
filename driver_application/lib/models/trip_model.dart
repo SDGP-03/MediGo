@@ -34,7 +34,7 @@ class Trip {
       dropoff: json['dropoff'] ?? json['dropName'] ?? 'Unknown',
       patientName: json['patientName'],
       timestamp: _parseTimestamp(json['timestamp'] ?? json['date']),
-      status: json['status'] ?? 'unknown',
+      status: _normalizeStatus(json['status']),
       distance: _parseDouble(json['distance']),
       duration: _parseInt(json['duration']),
       earnings: _parseDouble(json['earnings'] ?? json['fare']),
@@ -100,15 +100,26 @@ class Trip {
     if (value == null) return null;
     if (value is int) return value;
     if (value is double) return value.toInt();
-    if (value is String) return int.tryParse(value);
+    if (value is String) {
+      final asInt = int.tryParse(value);
+      if (asInt != null) return asInt;
+      final asDouble = double.tryParse(value);
+      return asDouble?.toInt();
+    }
     return null;
   }
 
+  static String _normalizeStatus(dynamic value) {
+    final status = (value?.toString().trim().toLowerCase() ?? 'unknown');
+    if (status == 'canceled') return 'cancelled';
+    return status;
+  }
+
   /// Check if trip is completed
-  bool get isCompleted => status.toLowerCase() == 'completed';
+  bool get isCompleted => status == 'completed';
 
   /// Check if trip is cancelled
-  bool get isCancelled => status.toLowerCase() == 'cancelled';
+  bool get isCancelled => status == 'cancelled';
 
   /// Get formatted distance string
   String get formattedDistance {

@@ -87,13 +87,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (event.snapshot.value != null) {
         Map data = event.snapshot.value as Map;
 
-        setState(() {
-          networkProfileImage = data["profileImage"];
-          nameController.text = data["name"] ?? "";
-          phoneController.text = data["phone"] ?? "";
-          vehicleController.text = data["vehicleNumber"] ?? "";
-          emailController.text = data["email"] ?? "";
-        });
+        if (mounted) {
+          setState(() {
+            networkProfileImage = data["profileImage"];
+            nameController.text = data["name"] ?? "";
+            phoneController.text = data["phone"] ?? "";
+            vehicleController.text = data["vehicleNumber"] ?? "";
+            emailController.text = data["email"] ?? user.email ?? "";
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading profile: $e');
