@@ -9,6 +9,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -29,8 +30,36 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
+  bool _isSinhala = false;
 
   CommonMethods cMethods = CommonMethods();
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
+
+  @override
+  void dispose() {
+    userNameTextEditingController.dispose();
+    userPhoneTextEditingController.dispose();
+    userVehicleNumberEditingController.dispose();
+    emailTextEditingController.dispose();
+    passwordTextEditingController.dispose();
+    confirmPasswordTextEditingController.dispose();
+    super.dispose();
+  }
 
   Future<void> pickProfileImage() async {
     final XFile? image = await _picker.pickImage(
@@ -70,24 +99,42 @@ class _SignupScreenState extends State<SignupScreen> {
   void signUpFormValidation() {
     if (userNameTextEditingController.text.trim().length < 4) {
       cMethods.displaySnackBar(
-        "Your name must be atleast 4 or more characters.",
+        t(
+          "Your name must be atleast 4 or more characters.",
+          "නම අකුරු 4කට වැඩි විය යුතුයි.",
+        ),
         context,
       );
     } else if (userPhoneTextEditingController.text.trim().length < 10) {
       cMethods.displaySnackBar(
-        "Your phone number must be atleast 10 or more characters.",
+        t(
+          "Your phone number must be atleast 10 or more characters.",
+          "දුරකථන අංකය අංක 10ක් විය යුතුයි.",
+        ),
         context,
       );
     } else if (!emailTextEditingController.text.contains("@medigo.lk")) {
-      cMethods.displaySnackBar("Please write valid email.", context);
+      cMethods.displaySnackBar(
+        t(
+          "Please write valid email.",
+          "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+        ),
+        context,
+      );
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(
-        "Your password must be atleast 6 or more characters.",
+        t(
+          "Your password must be atleast 6 or more characters.",
+          "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
+        ),
         context,
       );
     } else if (confirmPasswordTextEditingController.text.trim() !=
         passwordTextEditingController.text.trim()) {
-      cMethods.displaySnackBar("Passwords do not match.", context);
+      cMethods.displaySnackBar(
+        t("Passwords do not match.", "මුරපද දෙක එකිනෙකට නොගැලපේ."),
+        context,
+      );
     } else {
       registerNewUser();
     }
@@ -97,8 +144,12 @@ class _SignupScreenState extends State<SignupScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const LoadingDialog(messageText: "Registering, Please wait..."),
+      builder: (_) => LoadingDialog(
+        messageText: t(
+          "Registering, please wait...",
+          "ලියාපදිංචි වෙමින්... කරුණාකර රැඳී සිටින්න",
+        ),
+      ),
     );
 
     try {
@@ -142,24 +193,38 @@ class _SignupScreenState extends State<SignupScreen> {
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      String errorMessage = "Something went wrong. Please try again.";
+      String errorMessage = t(
+        "Something went wrong. Please try again.",
+        "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+      );
 
       switch (e.code) {
         case 'invalid-email':
-          errorMessage = "Please enter a valid email address.";
+          errorMessage = t(
+            "Please enter a valid email address.",
+            "වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+          );
           break;
 
         case 'email-already-in-use':
-          errorMessage = "This email is already registered.";
+          errorMessage = t(
+            "This email is already registered.",
+            "මෙම විද්‍යුත් තැපෑල දැනටමත් ලියාපදිංචි කර ඇත.",
+          );
           break;
 
         case 'weak-password':
-          errorMessage = "Password is too weak. Use at least 6 characters.";
+          errorMessage = t(
+            "Password is too weak. Use at least 6 characters.",
+            "මුරපදය දුර්වලයි. අවමයෙන් අකුරු 6ක් භාවිතා කරන්න.",
+          );
           break;
 
         case 'network-request-failed':
-          errorMessage =
-              "Network error. Please check your internet connection.";
+          errorMessage = t(
+            "Network error. Please check your internet connection.",
+            "ජාල දෝෂයක්. ඔබේ අන්තර්ජාල සබැඳිය පරීක්ෂා කරන්න.",
+          );
           break;
       }
 
@@ -168,7 +233,10 @@ class _SignupScreenState extends State<SignupScreen> {
       if (context.mounted) {
         Navigator.pop(context);
         cMethods.displaySnackBar(
-          "Something went wrong. Please try again.",
+          t(
+            "Something went wrong. Please try again.",
+            "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+          ),
           context,
         );
       }
@@ -259,9 +327,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Welcome",
+                            t("Welcome", "සාදරයෙන් පිළිගනිමු"),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -270,7 +338,10 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                           SizedBox(height: 5),
                           Text(
-                            "Create a new user account",
+                            t(
+                              "Create a new user account",
+                              "නව රියදුරු ගිණුමක් සාදන්න",
+                            ),
                             style: TextStyle(color: Colors.white70),
                           ),
                         ],
@@ -283,7 +354,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Username",
+                            t("Username", "පරිශීලක නම"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -292,10 +363,13 @@ class _SignupScreenState extends State<SignupScreen> {
                           TextField(
                             controller: userNameTextEditingController,
                             keyboardType: TextInputType.text,
-                            decoration: const InputDecoration(
-                              hintText: "Enter your user name",
-                              prefixIcon: Icon(Icons.person_outline),
-                              border: OutlineInputBorder(
+                            decoration: InputDecoration(
+                              hintText: t(
+                                "Enter your user name",
+                                "ඔබගේ නම ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(Icons.person_outline),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -306,7 +380,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Phone Number",
+                            t("Phone Number", "දුරකථන අංකය"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -316,9 +390,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: userPhoneTextEditingController,
                             keyboardType: TextInputType.phone,
                             decoration: InputDecoration(
-                              hintText: "Enter your phone number",
-                              prefixIcon: Icon(Icons.phone_outlined),
-                              border: OutlineInputBorder(
+                              hintText: t(
+                                "Enter your phone number",
+                                "ඔබගේ දුරකථන අංකය ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(Icons.phone_outlined),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -329,7 +406,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Vehicle Number",
+                            t("Vehicle Number", "වාහන අංකය"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -339,9 +416,14 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: userVehicleNumberEditingController,
                             keyboardType: TextInputType.text,
                             decoration: InputDecoration(
-                              hintText: "Enter your vehicle number",
-                              prefixIcon: Icon(Icons.directions_car_outlined),
-                              border: OutlineInputBorder(
+                              hintText: t(
+                                "Enter your vehicle number",
+                                "ඔබගේ වාහන අංකය ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.directions_car_outlined,
+                              ),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -352,7 +434,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Email Address",
+                            t("Email Address", "විද්‍යුත් තැපෑල"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -375,7 +457,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Password",
+                            t("Password", "මුරපදය"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -385,10 +467,13 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: passwordTextEditingController,
                             obscureText: true,
                             keyboardType: TextInputType.visiblePassword,
-                            decoration: const InputDecoration(
-                              hintText: "Enter your password",
-                              prefixIcon: Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(
+                            decoration: InputDecoration(
+                              hintText: t(
+                                "Enter your password",
+                                "ඔබගේ මුරපදය ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -399,7 +484,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Confirm Password",
+                            t("Confirm Password", "මුරපදය තහවුරු කරන්න"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -409,10 +494,13 @@ class _SignupScreenState extends State<SignupScreen> {
                             controller: confirmPasswordTextEditingController,
                             obscureText: true,
                             keyboardType: TextInputType.visiblePassword,
-                            decoration: const InputDecoration(
-                              hintText: "Re-enter your password",
-                              prefixIcon: Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(
+                            decoration: InputDecoration(
+                              hintText: t(
+                                "Re-enter your password",
+                                "මුරපදය නැවත ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -437,8 +525,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                 checkIfNetworkIsAvailable();
                               },
 
-                              child: const Text(
-                                "Sign Up",
+                              child: Text(
+                                t("Sign Up", "ලියාපදිංචි වන්න"),
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.white,
@@ -458,9 +546,12 @@ class _SignupScreenState extends State<SignupScreen> {
                             MaterialPageRoute(builder: (_) => LoginScreen()),
                           );
                         },
-                        child: const Text(
-                          "Already have an Account? Login Here",
-                          style: TextStyle(color: Colors.grey),
+                        child: Text(
+                          t(
+                            "Already have an Account? Login Here",
+                            "දැනටමත් ගිණුමක් තියෙනවාද? මෙතනින් පිවිසෙන්න",
+                          ),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                     ),

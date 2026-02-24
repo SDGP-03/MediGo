@@ -5,6 +5,7 @@ import 'package:driver_application/widgets/loading_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +18,30 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
+
+  @override
+  void dispose() {
+    emailTextEditingController.dispose();
+    passwordTextEditingController.dispose();
+    super.dispose();
+  }
 
   Future<void> checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
@@ -27,10 +52,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void signInFormValidation() {
     if (!emailTextEditingController.text.contains("@medigo.lk")) {
-      cMethods.displaySnackBar("Please write valid email.", context);
+      cMethods.displaySnackBar(
+        t(
+          "Please write valid email.",
+          "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+        ),
+        context,
+      );
     } else if (passwordTextEditingController.text.trim().length < 6) {
       cMethods.displaySnackBar(
-        "Your password must be atleast 6 or more characters.",
+        t(
+          "Your password must be atleast 6 or more characters.",
+          "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
+        ),
         context,
       );
     } else {
@@ -42,8 +76,12 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) =>
-          const LoadingDialog(messageText: "Signing in, Please wait..."),
+      builder: (_) => LoadingDialog(
+        messageText: t(
+          "Signing in, please wait...",
+          "පිවිසෙමින්... කරුණාකර රැඳී සිටින්න",
+        ),
+      ),
     );
 
     try {
@@ -67,7 +105,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (event.snapshot.value == null) {
         cMethods.displaySnackBar(
-          "No user data found. Please contact support.",
+          t(
+            "No user data found. Please contact support.",
+            "පරිශීලක දත්ත හමු වුණේ නැහැ. සහාය අමතන්න.",
+          ),
           context,
         );
         await FirebaseAuth.instance.signOut();
@@ -78,7 +119,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (userData["blockStatus"] != "unblocked") {
         cMethods.displaySnackBar(
-          "Your account is blocked. Please contact support.",
+          t(
+            "Your account is blocked. Please contact support.",
+            "ඔබේ ගිණුම අවහිර කර ඇත. සහාය අමතන්න.",
+          ),
           context,
         );
         await FirebaseAuth.instance.signOut();
@@ -93,24 +137,38 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
       Navigator.pop(context);
 
-      String errorMessage = "Something went wrong. Please try again.";
+      String errorMessage = t(
+        "Something went wrong. Please try again.",
+        "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+      );
 
       switch (e.code) {
         case 'invalid-email':
-          errorMessage = "Please enter a valid email address.";
+          errorMessage = t(
+            "Please enter a valid email address.",
+            "වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+          );
           break;
 
         case 'user-not-found':
-          errorMessage = "No account found with this email.";
+          errorMessage = t(
+            "No account found with this email.",
+            "මේ විද්‍යුත් තැපෑලට ගිණුමක් හමු වුණේ නැහැ.",
+          );
           break;
 
         case 'wrong-password':
-          errorMessage = "Incorrect password. Please try again.";
+          errorMessage = t(
+            "Incorrect password. Please try again.",
+            "මුරපදය වැරදියි. නැවත උත්සාහ කරන්න.",
+          );
           break;
 
         case 'network-request-failed':
-          errorMessage =
-              "Network error. Please check your internet connection.";
+          errorMessage = t(
+            "Network error. Please check your internet connection.",
+            "ජාල දෝෂයක්. ඔබේ අන්තර්ජාල සබැඳිය පරීක්ෂා කරන්න.",
+          );
           break;
       }
 
@@ -119,7 +177,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (context.mounted) {
         Navigator.pop(context);
         cMethods.displaySnackBar(
-          "Something went wrong. Please try again.",
+          t(
+            "Something went wrong. Please try again.",
+            "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+          ),
           context,
         );
       }
@@ -168,9 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text(
-                            "Welcome Back",
+                            t("Welcome Back", "නැවත සාදරයෙන් පිළිගනිමු"),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -179,7 +240,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           SizedBox(height: 5),
                           Text(
-                            "Sign in to continue as driver",
+                            t(
+                              "Sign in to continue as driver",
+                              "රියදුරෙකු ලෙස ඉදිරියට යාමට පිවිසෙන්න",
+                            ),
                             style: TextStyle(color: Colors.white70),
                           ),
                         ],
@@ -192,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Email Address",
+                            t("Email Address", "විද්‍යුත් තැපෑල"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -215,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            "Password",
+                            t("Password", "මුරපදය"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -225,10 +289,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: passwordTextEditingController,
                             obscureText: true,
                             keyboardType: TextInputType.visiblePassword,
-                            decoration: const InputDecoration(
-                              hintText: "Enter your password",
-                              prefixIcon: Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(
+                            decoration: InputDecoration(
+                              hintText: t(
+                                "Enter your password",
+                                "ඔබගේ මුරපදය ඇතුල් කරන්න",
+                              ),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),
                                 ),
@@ -253,8 +320,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 checkIfNetworkIsAvailable();
                               },
 
-                              child: const Text(
-                                "Sign Up",
+                              child: Text(
+                                t("Sign In", "පිවිසෙන්න"),
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.white,
@@ -274,9 +341,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             MaterialPageRoute(builder: (_) => SignupScreen()),
                           );
                         },
-                        child: const Text(
-                          "Don't have an Account? Register Here",
-                          style: TextStyle(color: Colors.grey),
+                        child: Text(
+                          t(
+                            "Don't have an Account? Register Here",
+                            "ගිණුමක් නැද්ද? මෙතනින් ලියාපදිංචි වන්න",
+                          ),
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                     ),
