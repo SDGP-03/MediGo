@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:driver_application/authentication/signup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class StartScreen extends StatelessWidget {
+class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
+
+  @override
+  State<StartScreen> createState() => _StartScreenState();
+}
+
+class _StartScreenState extends State<StartScreen> {
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +74,7 @@ class StartScreen extends StatelessWidget {
                               );
                             },
                             child: Semantics(
-                              label: 'MediGo logo',
+                              label: t('MediGo logo', 'MediGo ලාංඡනය'),
                               child: Image.asset(
                                 "assets/logo/logo.png",
                                 height: 170,
@@ -61,7 +85,10 @@ class StartScreen extends StatelessWidget {
                           const SizedBox(height: 22),
 
                           Text(
-                            "Fast, Reliable Ambulance Management",
+                            t(
+                              "Fast, Reliable Ambulance Management",
+                              "ඉක්මන් සහ විශ්වාසදායක රථ ගිලන් කළමනාකරණය",
+                            ),
                             textAlign: TextAlign.center,
                             style: textTheme.titleLarge?.copyWith(
                               color: const Color(0xFF4D5757),
@@ -73,7 +100,10 @@ class StartScreen extends StatelessWidget {
                           const SizedBox(height: 10),
 
                           Text(
-                            "Real-time tracking, seamless coordination, and efficient patient care delivery",
+                            t(
+                              "Real-time tracking, seamless coordination, and efficient patient care delivery",
+                              "සජීවී ලුහුබැඳීම, පහසු සම්බන්ධීකරණය සහ කාර්යක්ෂම රෝගී සේවාව",
+                            ),
                             textAlign: TextAlign.center,
                             style: textTheme.titleMedium?.copyWith(
                               color: Colors.grey.shade700,
@@ -96,17 +126,26 @@ class StartScreen extends StatelessWidget {
                                 children: [
                                   _FeatureRow(
                                     icon: Icons.location_on_outlined,
-                                    text: "Live driver & patient tracking",
+                                    text: t(
+                                      "Live driver & patient tracking",
+                                      "රියදුරු සහ රෝගී සජීවී ලුහුබැඳීම",
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                   _FeatureRow(
                                     icon: Icons.schedule_outlined,
-                                    text: "Faster dispatch & coordination",
+                                    text: t(
+                                      "Faster dispatch & coordination",
+                                      "ඉක්මන් යොමු කිරීම සහ සම්බන්ධීකරණය",
+                                    ),
                                   ),
                                   const SizedBox(height: 10),
                                   _FeatureRow(
                                     icon: Icons.shield_outlined,
-                                    text: "Secure driver access",
+                                    text: t(
+                                      "Secure driver access",
+                                      "ආරක්ෂිත රියදුරු ප්‍රවේශය",
+                                    ),
                                   ),
                                 ],
                               ),
@@ -139,9 +178,9 @@ class StartScreen extends StatelessWidget {
                                 Icons.arrow_forward_rounded,
                                 color: Colors.white,
                               ),
-                              label: const Text(
-                                "Get Started",
-                                style: TextStyle(
+                              label: Text(
+                                t("Get Started", "ආරම්භ කරමු"),
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
@@ -171,7 +210,10 @@ class StartScreen extends StatelessWidget {
                                 );
                               },
                               child: Text(
-                                "I already have an account",
+                                t(
+                                  "I already have an account",
+                                  "මට ගිණුමක් තියෙනවා",
+                                ),
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,

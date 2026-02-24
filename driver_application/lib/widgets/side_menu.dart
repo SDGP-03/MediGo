@@ -5,6 +5,7 @@ import 'package:driver_application/pages/contact_support_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SideMenu extends StatefulWidget {
   const SideMenu({super.key, this.currentRoute});
@@ -18,13 +19,25 @@ class SideMenu extends StatefulWidget {
 class _SideMenuState extends State<SideMenu> {
   String? profileImageUrl;
   String userName = 'Driver';
+  bool _isSinhala = false;
 
   StreamSubscription<DatabaseEvent>? _driverSubscription;
+
+  String t(String en, String si) => _isSinhala ? si : en;
 
   @override
   void initState() {
     super.initState();
+    _loadLanguage();
     _setupDriverListener();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
   }
 
   @override
@@ -185,16 +198,21 @@ class _SideMenuState extends State<SideMenu> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Do you really want to logout?'),
+        title: Text(t('Logout', 'ඉවත් වන්න')),
+        content: Text(
+          t('Do you really want to logout?', 'ඔබට ඇත්තටම ඉවත් වීමට අවශ්‍යද?'),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel', 'අවලංගු')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: Text(
+              t('Logout', 'ඉවත් වන්න'),
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -225,7 +243,7 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.home_outlined,
-            title: 'Home',
+            title: t('Home', 'මුල් පිටුව'),
             selected: currentRoute == '/home',
             onTap: () {
               Navigator.of(
@@ -237,14 +255,14 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.person_outline,
-            title: 'Edit Profile',
+            title: t('Edit Profile', 'පැතිකඩ සංස්කරණය'),
             selected: currentRoute == '/edit-profile',
             onTap: () => _openNamedRoute('/edit-profile'),
           ),
 
           _buildMenuTile(
             icon: Icons.history,
-            title: 'History',
+            title: t('History', 'ඉතිහාසය'),
             selected: currentRoute == '/history',
             onTap: () => _openNamedRoute('/history'),
           ),
@@ -253,27 +271,27 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.support_agent_outlined,
-            title: 'Contact Support',
+            title: t('Contact Support', 'සහාය අමතන්න'),
             onTap: _openContactSupport,
           ),
 
           _buildMenuTile(
             icon: Icons.feedback_outlined,
-            title: 'Feedback / Complaints',
+            title: t('Feedback / Complaints', 'ප්‍රතිචාර / පැමිණිලි'),
             selected: currentRoute == '/feedback',
             onTap: () => _openNamedRoute('/feedback'),
           ),
 
           _buildMenuTile(
             icon: Icons.help_outline,
-            title: 'FAQ',
+            title: t('FAQ', 'නිතර අසන ප්‍රශ්න'),
             selected: currentRoute == '/faq',
             onTap: () => _openNamedRoute('/faq'),
           ),
 
           _buildMenuTile(
             icon: Icons.privacy_tip_outlined,
-            title: 'Privacy Policy',
+            title: t('Privacy Policy', 'පෞද්ගලිකත්ව ප්‍රතිපත්තිය'),
             selected: currentRoute == '/privacy-policy',
             onTap: () => _openNamedRoute('/privacy-policy'),
           ),
@@ -283,14 +301,27 @@ class _SideMenuState extends State<SideMenu> {
           /// SETTINGS MENU
           _buildMenuTile(
             icon: Icons.settings_outlined,
-            title: 'Settings',
+            title: t('Settings', 'සැකසුම්'),
             selected: currentRoute == '/settings',
             onTap: () async {
               Navigator.of(context).pop(); // close drawer
 
               final navigator = Navigator.of(context, rootNavigator: true);
+              final prefs = await SharedPreferences.getInstance();
+              final languageBefore = prefs.getString('language') ?? 'English';
 
               final result = await navigator.pushNamed('/settings');
+              await _loadLanguage();
+
+              final languageAfter =
+                  (await SharedPreferences.getInstance()).getString(
+                    'language',
+                  ) ??
+                  'English';
+
+              if (languageBefore != languageAfter) {
+                navigator.pushReplacementNamed('/home');
+              }
 
               if (result == 'styleChanged') {
                 navigator.pushReplacementNamed('/home');
@@ -304,9 +335,9 @@ class _SideMenuState extends State<SideMenu> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
+              title: Text(
+                t('Logout', 'ඉවත් වන්න'),
+                style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,
                 ),
