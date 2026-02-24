@@ -767,8 +767,8 @@ class _SettingsPageState extends State<SettingsPage> {
           _showSnackBar("Language changed to $value");
         },
         items: const [
-          DropdownMenuItem(value: "English", child: Text("English")),
           DropdownMenuItem(value: "Sinhala", child: Text("Sinhala")),
+          DropdownMenuItem(value: "English", child: Text("English")),
           DropdownMenuItem(value: "Tamil", child: Text("Tamil")),
         ],
       ),
