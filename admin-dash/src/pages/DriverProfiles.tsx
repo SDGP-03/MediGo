@@ -557,7 +557,7 @@ export function DriverProfiles() {
                 </div>
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Avg Rating</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating} ⭐</p>
+                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating} </p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Total Overtime Hrs</p>
