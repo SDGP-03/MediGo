@@ -1,5 +1,6 @@
 import 'package:driver_application/pages/contact_support_page.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FaqPage extends StatefulWidget {
   const FaqPage({super.key});
@@ -12,8 +13,11 @@ class _FaqPageState extends State<FaqPage> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   String selectedCategory = 'all';
+  bool _isSinhala = false;
 
-  final Map<String, List<Map<String, String>>> faqData = {
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  final Map<String, List<Map<String, String>>> faqDataEnglish = {
     'getting_started': [
       {
         'question': 'How do I create a MediGo Driver account?',
@@ -133,6 +137,141 @@ class _FaqPageState extends State<FaqPage> {
     ],
   };
 
+  final Map<String, List<Map<String, String>>> faqDataSinhala = {
+    'getting_started': [
+      {
+        'question': 'MediGo Driver ගිණුමක් හදන්නේ කොහොමද?',
+        'answer':
+            'MediGo Driver app එක download කර "Sign Up" ඔබා ලියාපදිංචි පෝරමය '
+            'පුරවන්න. ඊමේල්, දුරකථන අංකය සහ වාහන තොරතුරු දාන්න. '
+            'ඊමේල් තහවුරු කර අවශ්‍ය ලේඛන upload කළාම අනුමැතිය ලැබේ.',
+      },
+      {
+        'question': 'ලියාපදිංචියට ඕනේ ලේඛන මොනවාද?',
+        'answer':
+            'වලංගු රියදුරු බලපත්‍රය, වාහන ලියාපදිංචි ලේඛන, රක්ෂණ ලේඛන සහ '
+            'පැතිකඩ පින්තූරයක් ඕනේ. ලේඛන පැහැදිලි සහ යාවත්කාලීන විය යුතුයි.',
+      },
+      {
+        'question': 'ගිණුම් තහවුරු කිරීමට කොච්චර වෙලාවක් යනවද?',
+        'answer':
+            'සාමාන්‍යයෙන් පැය 24-48ක් යයි. ගිණුම අනුමත වුණාම ඊමේල් පණිවිඩයක් '
+            'එවනු ලැබේ.',
+      },
+    ],
+    'using_app': [
+      {
+        'question': 'MediGoට මගේ location එක ඕනේ ඇයි?',
+        'answer':
+            'මාර්ග පෙන්වීම, ගමන් ලුහුබැඳීම, ලඟම සේවා ඉල්ලීම් පෙන්වීම සහ '
+            'නිවැරදි pickup/drop-off තැන් සඳහා location ඕනේ. '
+            'යෙදුම භාවිතා කරන විට පමණක් ඒක භාවිතා වෙනවා.',
+      },
+      {
+        'question': 'ride request එක accept කරන්නේ කොහොමද?',
+        'answer':
+            'request එක එනකොට pickup තැන, ගමනාන්තය සහ රෝගියාගේ තොරතුරු බලන්න. '
+            '"Accept" ඔබා අනුමත කරන්න. පසුව pickup තැනට යන මාර්ගය ලැබේ.',
+      },
+      {
+        'question': 'request එක accept කරලා පස්සේ cancel කරන්න පුළුවන්ද?',
+        'answer':
+            'ඔව්, පුළුවන්. හැබැයි නිතර cancel කළොත් driver rating එකට බලපෑම් '
+            'වෙන්න පුළුවන්. අවශ්‍ය වුනොත් පමණක් "Cancel Ride" කරන්න.',
+      },
+    ],
+    'settings': [
+      {
+        'question': 'මගේ profile තොරතුරු වෙනස් කරන්නේ කොහොමද?',
+        'answer':
+            'Settings -> Edit Profile වෙත ගිහින් පුද්ගලික තොරතුරු, වාහන තොරතුරු, '
+            'පැතිකඩ පින්තූරය සහ සම්බන්ධතා තොරතුරු යාවත්කාලීන කරන්න.',
+      },
+      {
+        'question': 'මුරපදය වෙනස් කරන්නේ කොහොමද?',
+        'answer':
+            'Settings -> Edit Profile වෙත ගිහින් password කොටසට යන්න. '
+            'වත්මන් මුරපදය සහ නව මුරපදය දාලා "Save Changes" ඔබන්න.',
+      },
+      {
+        'question': 'notifications on/off කරන්නේ කොහොමද?',
+        'answer':
+            'Settings -> Preferences වෙත ගිහින් "Notifications" toggle කරන්න. '
+            'අවශ්‍ය නම් දුරකථන settings වලින් permissions වෙනස් කරන්න.',
+      },
+    ],
+    'privacy': [
+      {
+        'question': 'මගේ පෞද්ගලික දත්ත ආරක්ෂිතද?',
+        'answer':
+            'ඔව්. MediGo ආරක්ෂිත Firebase සේවා, encryption සහ දැඩි දත්ත '
+            'පරිහරණ ක්‍රම භාවිතා කරයි.',
+      },
+      {
+        'question': 'මගේ location එක කවුද බලන්නෙ?',
+        'answer':
+            'ඔබ සේවය කරන රෝගීන්ට සහ ආරක්ෂාව සඳහා MediGo support කණ්ඩායමට '
+            'පමණක් real-time location පෙන්වයි.',
+      },
+      {
+        'question': 'මගේ account එක delete කරන්න පුළුවන්ද?',
+        'answer':
+            'ඔව්. Settings -> Contact Support හරහා account deletion ඉල්ලීමක් '
+            'දෙන්න. නීතිමය හා ප්‍රතිපත්ති අනුව දත්ත ඉවත් කරයි.',
+      },
+    ],
+    'payments': [
+      {
+        'question': 'ගෙවීම් ලැබෙන්නේ කොහොමද?',
+        'answer':
+            'ගමන් අවසන් වුණාම ගෙවීම් process කර ඔබ ලියාපදිංචි කර ඇති ගිණුමට '
+            'pay-out සැලසුම අනුව යවයි.',
+      },
+      {
+        'question': 'මට ගෙවීම ලැබෙන්නේ කවදාද?',
+        'answer':
+            'සාමාන්‍යයෙන් සතියකට වරක් ගෙවීම් process කරයි. '
+            'බැංකු ක්‍රියාවලිය අනුව කාලය ටිකක් වෙනස් වෙන්න පුළුවන්.',
+      },
+    ],
+    'troubleshooting': [
+      {
+        'question': 'app එක හරියට වැඩ නොකළොත් මොකද්ද කරන්න ඕනේ?',
+        'answer':
+            'Settings -> Clear Cache මගින් cache ඉවත් කර app එක restart කරන්න. '
+            'internet connection එකත් බලන්න. ගැටලුව තියෙනවානම් support අමතන්න.',
+      },
+      {
+        'question': 'app එක නිතර crash වෙනවා. මොකද්ද කරන්න?',
+        'answer':
+            'ඔබට latest app version තියෙනවද බලන්න. cache clear කර device restart කරන්න. '
+            'තවමත් crash වෙනවානම් device model එකත් එක්ක support අමතන්න.',
+      },
+      {
+        'question': 'app එකෙන් logout වෙන්නේ කොහොමද?',
+        'answer':
+            'Settings විවෘත කර පහලින් "Logout" ඔබන්න. පසුව confirm කරන්න.',
+      },
+    ],
+  };
+
+  Map<String, List<Map<String, String>>> get faqData =>
+      _isSinhala ? faqDataSinhala : faqDataEnglish;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -170,7 +309,7 @@ class _FaqPageState extends State<FaqPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text("FAQ", style: TextStyle(color: Colors.white)),
+        title: Text(t("FAQ", "නිතර අහන ප්‍රශ්න"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -217,7 +356,7 @@ class _FaqPageState extends State<FaqPage> {
           BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
-      child: const Row(
+      child: Row(
         children: [
           Icon(Icons.help_outline, color: Colors.white, size: 32),
           SizedBox(width: 12),
@@ -226,7 +365,7 @@ class _FaqPageState extends State<FaqPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Frequently Asked Questions",
+                  t("Frequently Asked Questions", "නිතර අහන ප්‍රශ්න"),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -235,7 +374,7 @@ class _FaqPageState extends State<FaqPage> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  "Find answers to common questions",
+                  t("Find answers to common questions", "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න"),
                   style: TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ],
@@ -252,7 +391,7 @@ class _FaqPageState extends State<FaqPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search FAQs...',
+          hintText: t('Search FAQs...', 'ප්‍රශ්න සොයන්න...'),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
@@ -282,13 +421,13 @@ class _FaqPageState extends State<FaqPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          _buildCategoryChip('all', 'All', Icons.apps),
-          _buildCategoryChip('getting_started', 'Getting Started', Icons.rocket_launch),
-          _buildCategoryChip('using_app', 'Using App', Icons.directions_car),
-          _buildCategoryChip('settings', 'Settings', Icons.settings),
-          _buildCategoryChip('privacy', 'Privacy', Icons.security),
-          _buildCategoryChip('payments', 'Payments', Icons.payments),
-          _buildCategoryChip('troubleshooting', 'Help', Icons.help),
+          _buildCategoryChip('all', t('All', 'සියලු'), Icons.apps),
+          _buildCategoryChip('getting_started', t('Getting Started', 'ආරම්භය'), Icons.rocket_launch),
+          _buildCategoryChip('using_app', t('Using App', 'යෙදුම භාවිතය'), Icons.directions_car),
+          _buildCategoryChip('settings', t('Settings', 'සැකසුම්'), Icons.settings),
+          _buildCategoryChip('privacy', t('Privacy', 'පෞද්ගලිකතාව'), Icons.security),
+          _buildCategoryChip('payments', t('Payments', 'ගෙවීම්'), Icons.payments),
+          _buildCategoryChip('troubleshooting', t('Help', 'උදව්'), Icons.help),
         ],
       ),
     );
@@ -389,7 +528,7 @@ class _FaqPageState extends State<FaqPage> {
             Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
-              'No FAQs found',
+              t('No FAQs found', 'ප්‍රශ්න හමු වුණේ නැහැ'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -398,7 +537,7 @@ class _FaqPageState extends State<FaqPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Try adjusting your search or category filter',
+              t('Try adjusting your search or category filter', 'සෙවුම හෝ ප්‍රවර්ග පෙරහන වෙනස් කර බලන්න'),
               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
@@ -432,8 +571,8 @@ class _FaqPageState extends State<FaqPage> {
             elevation: 2,
           ),
           icon: const Icon(Icons.contact_support),
-          label: const Text(
-            "Still Need Help? Contact Support",
+          label: Text(
+            t("Still Need Help? Contact Support", "තව උදව් ඕනේද? සහාය අමතන්න"),
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () {

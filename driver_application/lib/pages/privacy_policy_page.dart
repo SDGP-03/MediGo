@@ -1,14 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class PrivacyPolicyPage extends StatelessWidget {
+class PrivacyPolicyPage extends StatefulWidget {
   const PrivacyPolicyPage({super.key});
+
+  @override
+  State<PrivacyPolicyPage> createState() => _PrivacyPolicyPageState();
+}
+
+class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text("Privacy Policy", style: TextStyle(color: Colors.white)),
+        title: Text(t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -25,87 +49,65 @@ class PrivacyPolicyPage extends StatelessWidget {
             _buildExpandableSection(
               icon: Icons.info_outline,
               iconColor: Colors.blue,
-              title: "1. Information We Collect",
-              content:
-                  "We collect personal information such as name, email address, "
-                  "phone number, vehicle details, and profile photo when you "
-                  "register and use the MediGo Driver Application. This information "
-                  "helps us provide you with a personalized experience and ensure "
-                  "the safety and security of our services.",
+              title: t("1. Information We Collect", "1. අපි එකතු කරන දත්ත"),
+              content: t(
+                "We collect your name, email, phone number, vehicle details, and profile photo when you register and use the app.",
+                "ඔබ ලියාපදිංචි වන විට සහ යෙදුම භාවිතා කරන විට නම, ඊමේල්, දුරකථන අංකය, වාහන තොරතුරු සහ පැතිකඩ පින්තූරය එකතු කරනවා.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.location_on_outlined,
               iconColor: Colors.red,
-              title: "2. Location Information",
-              content:
-                  "MediGo uses your real-time location to provide navigation, "
-                  "ride tracking, and nearby service features. Location data "
-                  "is only used while the app is active and is essential for "
-                  "connecting you with patients who need ambulance services. "
-                  "You can control location permissions through your device settings.",
+              title: t("2. Location Information", "2. ස්ථාන තොරතුරු"),
+              content: t(
+                "MediGo uses real-time location for navigation, ride tracking, and nearby requests while the app is active.",
+                "MediGo යෙදුම සක්‍රීය විට මාර්ගය, ගමන් ලුහුබැඳීම සහ ලඟම ඉල්ලීම් සඳහා ඔබගේ වත්මන් ස්ථානය භාවිතා කරනවා.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.settings_outlined,
               iconColor: Colors.orange,
-              title: "3. How We Use Your Information",
-              content:
-                  "We use your data to:\n"
-                  "- Provide and improve our services\n"
-                  "- Enable ride matching and navigation\n"
-                  "- Process payments and maintain records\n"
-                  "- Ensure safety and security\n"
-                  "- Communicate important updates\n"
-                  "- Analyze app performance and user experience",
+              title: t("3. How We Use Your Information", "3. ඔබගේ දත්ත භාවිතා කරන ආකාරය"),
+              content: t(
+                "We use data to provide rides, improve the app, process payments, and keep services safe.",
+                "ගමන් සේවාව ලබාදීමට, යෙදුම වැඩිදියුණු කිරීමට, ගෙවීම් කළමනාකරණයට සහ ආරක්ෂාවට ඔබගේ දත්ත භාවිතා කරනවා.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.security_outlined,
               iconColor: Colors.green,
-              title: "4. Data Security",
-              content:
-                  "Your data is securely stored using Firebase services with "
-                  "industry-standard encryption. We implement appropriate technical "
-                  "and organizational measures to protect your information from "
-                  "unauthorized access, disclosure, alteration, or destruction. "
-                  "However, no method of transmission over the internet is 100% secure.",
+              title: t("4. Data Security", "4. දත්ත ආරක්ෂාව"),
+              content: t(
+                "Your data is protected using secure systems and encryption, but no internet system is 100% risk-free.",
+                "ඔබගේ දත්ත ආරක්ෂිත පද්ධති සහ ගුප්තකේතනයෙන් සුරකිනවා. එසේ වුවත් අන්තර්ජාල පද්ධතියක් 100% අවදානම් රහිත නොවේ.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.share_outlined,
               iconColor: Colors.purple,
-              title: "5. Data Sharing",
-              content:
-                  "We do not sell or rent your personal data to third parties. "
-                  "Your information may be shared only in the following circumstances:\n"
-                  "- With patients to facilitate ride services\n"
-                  "- When required by law or legal process\n"
-                  "- To protect the rights and safety of our users\n"
-                  "- With service providers who assist in app operations",
+              title: t("5. Data Sharing", "5. දත්ත බෙදාගැනීම"),
+              content: t(
+                "We do not sell your data. We only share when needed for service delivery, legal reasons, or user safety.",
+                "අපි ඔබගේ දත්ත විකුණන්නේ නැහැ. සේවාව, නීතිමය අවශ්‍යතා හෝ ආරක්ෂාව සඳහා පමණක් බෙදාගන්නවා.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.gavel_outlined,
               iconColor: Colors.indigo,
-              title: "6. Your Rights",
-              content:
-                  "You have the right to:\n"
-                  "- Access your personal information\n"
-                  "- Update or correct your data\n"
-                  "- Delete your account and associated data\n"
-                  "- Opt-out of non-essential communications\n"
-                  "- Control location permissions\n\n"
-                  "You can exercise these rights through the application settings "
-                  "or by contacting our support team.",
+              title: t("6. Your Rights", "6. ඔබගේ අයිතිවාසිකම්"),
+              content: t(
+                "You can view, update, or delete your data and control app permissions from settings.",
+                "සැකසුම් හරහා ඔබගේ දත්ත බලන්න, යාවත්කාලීන කරන්න, ඉවත් කරන්න සහ අවසර පාලනය කරන්න ඔබට හැකියි.",
+              ),
             ),
             _buildExpandableSection(
               icon: Icons.contact_support_outlined,
               iconColor: Colors.teal,
-              title: "7. Contact Us",
-              content:
-                  "If you have questions, concerns, or requests regarding this "
-                  "Privacy Policy or your personal data, please contact our "
-                  "support team through:\n\n"
-                  "- Email: support@medigo.com\n"
-                  "- Phone: +94 11 234 5678\n"
-                  "- Settings > Contact Support\n\n"
-                  "We will respond to your inquiry within 48 hours.",
+              title: t("7. Contact Us", "7. අප අමතන්න"),
+              content: t(
+                "If you have questions, contact support by email, phone, or Settings > Contact Support.",
+                "ඔබට ප්‍රශ්න ඇත්නම් ඊමේල්, දුරකථනය හෝ සැකසුම් > සහාය අමතන්න මගින් සම්බන්ධ වන්න.",
+              ),
             ),
             const SizedBox(height: 30),
             SizedBox(
@@ -121,9 +123,9 @@ class PrivacyPolicyPage extends StatelessWidget {
                   elevation: 2,
                 ),
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text(
-                  "I Understand",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                label: Text(
+                  t("I Understand", "මට තේරුණා"),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -149,17 +151,17 @@ class PrivacyPolicyPage extends StatelessWidget {
           BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.privacy_tip, color: Colors.white, size: 32),
-              SizedBox(width: 12),
+              const Icon(Icons.privacy_tip, color: Colors.white, size: 32),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "MediGo Privacy Policy",
-                  style: TextStyle(
+                  t("MediGo Privacy Policy", "MediGo පෞද්ගලිකතා ප්‍රතිපත්තිය"),
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -168,11 +170,13 @@ class PrivacyPolicyPage extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            "We value your privacy and are committed to protecting your personal information. "
-            "Please read this policy to understand how we collect, use, and safeguard your data.",
-            style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+            t(
+              "We value your privacy. Please read how we collect, use, and protect your personal information.",
+              "අපි ඔබගේ පෞද්ගලිකතාවට වටිනාකම දෙනවා. දත්ත එකතු කරන, භාවිතා කරන සහ සුරකින ආකාරය මෙතැනින් බලන්න.",
+            ),
+            style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
           ),
         ],
       ),
@@ -193,7 +197,7 @@ class PrivacyPolicyPage extends StatelessWidget {
           Icon(Icons.calendar_today, size: 16, color: Colors.blue.shade700),
           const SizedBox(width: 8),
           Text(
-            "Last updated: February 24, 2026",
+            t("Last updated: February 24, 2026", "අවසන් යාවත්කාලීන කිරීම: 2026 පෙබරවාරි 24"),
             style: TextStyle(
               fontSize: 13,
               color: Colors.blue.shade700,
