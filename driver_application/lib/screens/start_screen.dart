@@ -203,41 +203,9 @@ class _StartScreenState extends State<StartScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [const Color(0xFFFFEAEA), Colors.white],
-              ),
-            ),
-          ),
-          Positioned(
-            top: -80,
-            right: -40,
-            child: Container(
-              width: 210,
-              height: 210,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF6B6B).withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 180,
-            left: -70,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF9B7B).withValues(alpha: 0.15),
-              ),
-            ),
-          ),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {

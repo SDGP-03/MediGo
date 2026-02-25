@@ -1,4 +1,5 @@
 import 'package:driver_application/pages/home_page.dart';
+import 'package:driver_application/widgets/app_background.dart';
 import 'package:driver_application/screens/start_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -34,8 +35,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       theme: ThemeData.light().copyWith(
-        scaffoldBackgroundColor: const Color(0xFFF4E6EA),
+        scaffoldBackgroundColor: Colors.transparent,
       ),
+
+      builder: (context, child) => AppBackground(child: child!),
 
       home: FirebaseAuth.instance.currentUser == null
           ? const StartScreen()
@@ -63,3 +66,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
