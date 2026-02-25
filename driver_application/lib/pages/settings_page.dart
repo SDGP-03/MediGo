@@ -182,7 +182,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         if (mounted) {
           _showSnackBar(
-            t("Notification permission denied", "දැනුම්දීම් අවසරය ප්‍රතික්ෂේප වුණා"),
+            t(
+              "Notification permission denied",
+              "දැනුම්දීම් අවසරය ප්‍රතික්ෂේප වුණා",
+            ),
             isError: true,
           );
         }
@@ -215,7 +218,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> loadMapStyle() async {
     final prefs = await SharedPreferences.getInstance();
-    final normalizedStyle = MapStyles.normalizeStyle(prefs.getString("mapStyle"));
+    final normalizedStyle = MapStyles.normalizeStyle(
+      prefs.getString("mapStyle"),
+    );
     if (mounted) {
       setState(() {
         selectedMapStyle = normalizedStyle;
@@ -254,7 +259,10 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('Error clearing cache: $e');
       if (mounted) {
-        _showSnackBar(t("Failed to clear cache", "කැෂේ ඉවත් කිරීමට බැරි වුණා"), isError: true);
+        _showSnackBar(
+          t("Failed to clear cache", "කැෂේ ඉවත් කිරීමට බැරි වුණා"),
+          isError: true,
+        );
       }
     }
   }
@@ -273,7 +281,10 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       debugPrint('Error logging out: $e');
       if (mounted) {
-        _showSnackBar(t("Failed to logout", "ඉවත් වීමට බැරි වුණා"), isError: true);
+        _showSnackBar(
+          t("Failed to logout", "ඉවත් වීමට බැරි වුණා"),
+          isError: true,
+        );
       }
     }
   }
@@ -301,9 +312,11 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(t("Settings", "සැකසුම්"), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          t("Settings", "සැකසුම්"),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -372,7 +385,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.volume_up_outlined,
                 iconColor: Colors.green,
                 title: t("Sound Effects", "ශබ්ද"),
-                subtitle: t("Play sounds for actions", "ක්‍රියා සඳහා ශබ්ද දාන්න"),
+                subtitle: t(
+                  "Play sounds for actions",
+                  "ක්‍රියා සඳහා ශබ්ද දාන්න",
+                ),
                 value: soundEffectsEnabled,
                 onChanged: (value) {
                   setState(() => soundEffectsEnabled = value);
@@ -383,7 +399,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.vibration,
                 iconColor: Colors.indigo,
                 title: t("Vibration", "කම්පනය"),
-                subtitle: t("Vibrate on notifications", "දැනුම්දීම්වලදී කම්පනය"),
+                subtitle: t(
+                  "Vibrate on notifications",
+                  "දැනුම්දීම්වලදී කම්පනය",
+                ),
                 value: vibrationEnabled,
                 onChanged: (value) {
                   setState(() => vibrationEnabled = value);
@@ -432,7 +451,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.feedback_outlined,
                 iconColor: Colors.amber,
                 title: t("Send Feedback", "ප්‍රතිචාර යවන්න"),
-                subtitle: t("Tell us how we can improve", "අපි හොඳ කරගන්න දේ කියන්න"),
+                subtitle: t(
+                  "Tell us how we can improve",
+                  "අපි හොඳ කරගන්න දේ කියන්න",
+                ),
                 onTap: () => Navigator.pushNamed(context, '/feedback'),
               ),
               _buildSettingsTile(
@@ -537,7 +559,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 context: context,
                 builder: (context) => AlertDialog(
                   title: Text(t('Logout', 'ඉවත් වීම')),
-                  content: Text(t('Are you sure you want to logout?', 'ඔබට ඉවත් වෙන්න ඕනෙද?')),
+                  content: Text(
+                    t(
+                      'Are you sure you want to logout?',
+                      'ඔබට ඉවත් වෙන්න ඕනෙද?',
+                    ),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -799,8 +826,8 @@ class _SettingsPageState extends State<SettingsPage> {
         selectedLanguage == "Sinhala"
             ? "සිංහල"
             : selectedLanguage == "Tamil"
-                ? "தமிழ்"
-                : "English",
+            ? "தமிழ்"
+            : "English",
         style: const TextStyle(fontSize: 12),
       ),
       trailing: DropdownButton<String>(

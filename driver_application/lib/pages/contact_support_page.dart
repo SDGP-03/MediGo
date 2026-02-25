@@ -58,7 +58,6 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           t("Contact Support", "සහාය අමතන්න"),

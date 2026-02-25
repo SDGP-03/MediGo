@@ -30,9 +30,11 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය"), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය"),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -67,7 +69,10 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
             _buildExpandableSection(
               icon: Icons.settings_outlined,
               iconColor: Colors.orange,
-              title: t("3. How We Use Your Information", "3. ඔබගේ දත්ත භාවිතා කරන ආකාරය"),
+              title: t(
+                "3. How We Use Your Information",
+                "3. ඔබගේ දත්ත භාවිතා කරන ආකාරය",
+              ),
               content: t(
                 "We use data to provide rides, improve the app, process payments, and keep services safe.",
                 "ගමන් සේවාව ලබාදීමට, යෙදුම වැඩිදියුණු කිරීමට, ගෙවීම් කළමනාකරණයට සහ ආරක්ෂාවට ඔබගේ දත්ත භාවිතා කරනවා.",
@@ -125,7 +130,10 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
                 icon: const Icon(Icons.check_circle_outline),
                 label: Text(
                   t("I Understand", "මට තේරුණා"),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -176,7 +184,11 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               "We value your privacy. Please read how we collect, use, and protect your personal information.",
               "අපි ඔබගේ පෞද්ගලිකතාවට වටිනාකම දෙනවා. දත්ත එකතු කරන, භාවිතා කරන සහ සුරකින ආකාරය මෙතැනින් බලන්න.",
             ),
-            style: const TextStyle(fontSize: 14, color: Colors.white70, height: 1.5),
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -197,7 +209,10 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
           Icon(Icons.calendar_today, size: 16, color: Colors.blue.shade700),
           const SizedBox(width: 8),
           Text(
-            t("Last updated: February 24, 2026", "අවසන් යාවත්කාලීන කිරීම: 2026 පෙබරවාරි 24"),
+            t(
+              "Last updated: February 24, 2026",
+              "අවසන් යාවත්කාලීන කිරීම: 2026 පෙබරවාරි 24",
+            ),
             style: TextStyle(
               fontSize: 13,
               color: Colors.blue.shade700,
@@ -239,7 +254,11 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 content,
-                style: TextStyle(fontSize: 14, height: 1.6, color: Colors.grey.shade800),
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Colors.grey.shade800,
+                ),
               ),
             ),
           ],
