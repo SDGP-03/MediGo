@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck } from 'lucide-react';
+import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2 } from 'lucide-react';
 import { database } from '../firebase';
 import { ref, push, set, onValue, off } from 'firebase/database';
 
@@ -358,159 +358,255 @@ export function TransferRequest() {
 
         {/* Step 2: Transfer Details */}
         {step === 'transfer' && (
-          <div className="space-y-6">
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h2 className="text-foreground mb-6 flex items-center gap-2">
-                <MapPin size={24} className="text-red-600" />
-                Transfer Details
-              </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Column 1: Transfer Form */}
+            <div className="space-y-6 flex flex-col">
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6 flex-1">
+                <h2 className="text-foreground mb-6 flex items-center gap-2">
+                  <MapPin size={24} className="text-red-600" />
+                  Transfer Details
+                </h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-foreground mb-2">From Hospital</label>
-                  <input
-                    type="text"
-                    disabled
-                    value={formData.fromHospital}
-                    className="w-full px-4 py-3 border border-input rounded-lg bg-muted text-muted-foreground"
+                <div className="grid grid-cols-1 gap-6 mb-6">
+                  <div>
+                    <label className="block text-foreground mb-2">From Hospital</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={formData.fromHospital}
+                      className="w-full px-4 py-3 border border-input rounded-lg bg-muted text-muted-foreground"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-foreground mb-2">To Hospital *</label>
+                    <select
+                      required
+                      value={formData.toHospital}
+                      onChange={(e) => setFormData({ ...formData, toHospital: e.target.value })}
+                      className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    >
+                      <option value="">Select destination hospital</option>
+                      {hospitals.map(hospital => (
+                        <option key={hospital} value={hospital}>{hospital}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-foreground mb-2">Priority Level *</label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, priority: 'critical' })}
+                      className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'critical'
+                        ? 'border-red-600 bg-red-50 dark:bg-red-900/20'
+                        : 'border-border hover:border-red-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-red-600"></div>
+                        <span className="text-foreground text-sm font-medium">Critical</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, priority: 'urgent' })}
+                      className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'urgent'
+                        ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20'
+                        : 'border-border hover:border-orange-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                        <span className="text-foreground text-sm font-medium">Urgent</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, priority: 'standard' })}
+                      className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'standard'
+                        ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
+                        : 'border-border hover:border-green-300'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full bg-green-600"></div>
+                        <span className="text-foreground text-sm font-medium">Standard</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-foreground mb-2">Reason for Transfer *</label>
+                  <textarea
+                    required
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
+                    placeholder="Detailed reason for inter-hospital transfer..."
+                  />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-foreground mb-2">Current Condition & Vital Signs</label>
+                  <textarea
+                    value={formData.currentCondition}
+                    onChange={(e) => setFormData({ ...formData, currentCondition: e.target.value })}
+                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[80px] bg-input-field-bg text-foreground"
+                    placeholder="BP, Heart Rate, Oxygen Saturation, Temperature, etc."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-foreground mb-2">To Hospital *</label>
-                  <select
-                    required
-                    value={formData.toHospital}
-                    onChange={(e) => setFormData({ ...formData, toHospital: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                  >
-                    <option value="">Select destination hospital</option>
-                    {hospitals.map(hospital => (
-                      <option key={hospital} value={hospital}>{hospital}</option>
+                  <label className="block text-foreground mb-2">Required Equipment</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {equipment.map(item => (
+                      <label key={item} className="flex items-center gap-2 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.requiredEquipment.includes(item)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({
+                                ...formData,
+                                requiredEquipment: [...formData.requiredEquipment, item]
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                requiredEquipment: formData.requiredEquipment.filter(i => i !== item)
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-red-600"
+                        />
+                        <span className="text-foreground text-sm">{item}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-foreground mb-2">Priority Level *</label>
-                <div className="grid grid-cols-3 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, priority: 'critical' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'critical'
-                      ? 'border-red-600 bg-red-50 dark:bg-red-900/20'
-                      : 'border-border hover:border-red-300'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-red-600"></div>
-                      <span className="text-foreground">Critical</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, priority: 'urgent' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'urgent'
-                      ? 'border-orange-600 bg-orange-50 dark:bg-orange-900/20'
-                      : 'border-border hover:border-orange-300'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-                      <span className="text-foreground">Urgent</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, priority: 'standard' })}
-                    className={`p-4 rounded-lg border-2 transition-all ${formData.priority === 'standard'
-                      ? 'border-green-600 bg-green-50 dark:bg-green-900/20'
-                      : 'border-border hover:border-green-300'
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-green-600"></div>
-                      <span className="text-foreground">Standard</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-foreground mb-2">Reason for Transfer *</label>
-                <textarea
-                  required
-                  value={formData.reason}
-                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
-                  placeholder="Detailed reason for inter-hospital transfer..."
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-foreground mb-2">Current Condition & Vital Signs</label>
-                <textarea
-                  value={formData.currentCondition}
-                  onChange={(e) => setFormData({ ...formData, currentCondition: e.target.value })}
-                  className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[80px] bg-input-field-bg text-foreground"
-                  placeholder="BP, Heart Rate, Oxygen Saturation, Temperature, etc."
-                />
-              </div>
-
-              <div>
-                <label className="block text-foreground mb-2">Required Equipment</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {equipment.map(item => (
-                    <label key={item} className="flex items-center gap-2 p-3 border border-border rounded-lg hover:bg-accent cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.requiredEquipment.includes(item)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setFormData({
-                              ...formData,
-                              requiredEquipment: [...formData.requiredEquipment, item]
-                            });
-                          } else {
-                            setFormData({
-                              ...formData,
-                              requiredEquipment: formData.requiredEquipment.filter(i => i !== item)
-                            });
-                          }
-                        }}
-                        className="w-4 h-4 text-red-600"
-                      />
-                      <span className="text-foreground text-sm">{item}</span>
-                    </label>
-                  ))}
-                </div>
+              <div className="flex gap-4 mt-auto">
+                <button
+                  type="button"
+                  onClick={() => setStep('patient')}
+                  className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-lg hover:bg-secondary/80 transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (validateTransferStep()) {
+                      setStep('ambulance');
+                    }
+                  }}
+                  className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Continue to Requirements
+                </button>
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => setStep('patient')}
-                className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-lg hover:bg-secondary/80 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (validateTransferStep()) {
-                    setStep('ambulance');
-                  }
-                }}
-                className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Continue to Requirements
-              </button>
+            {/* Column 2: Hospital Resource Availability & Guidance */}
+            <div className="space-y-6">
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6 shadow-md transition-all">
+                <h2 className="text-foreground mb-6 flex items-center gap-2 font-semibold">
+                  <Building2 size={24} className="text-blue-600" />
+                  Hospital Resource Availability
+                </h2>
+
+                {!formData.toHospital ? (
+                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl text-center bg-accent/30 py-16">
+                    <Building2 size={48} className="text-muted-foreground mb-4 opacity-50" />
+                    <p className="text-muted-foreground text-sm max-w-xs">Select a destination hospital to view its real-time resource availability.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg mb-6 shadow-inner">
+                      <p className="text-blue-900 dark:text-blue-300 text-sm font-medium opacity-80 mb-1">Viewing live data for:</p>
+                      <p className="text-blue-700 dark:text-blue-400 font-bold text-lg">{formData.toHospital}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 content-start">
+                      {[
+                        { id: 'icu', name: 'ICU Beds', status: formData.toHospital.includes('Central') ? 'full' : 'available' },
+                        { id: 'nicu', name: 'NICU Beds', status: formData.toHospital.includes('Specialist') ? 'limited' : 'available' },
+                        { id: 'picu', name: 'PICU Beds', status: 'available' },
+                        { id: 'er', name: 'Emergency Room', status: formData.toHospital.includes('East') ? 'full' : 'available' },
+                        { id: 'med_surg', name: 'Med/Surg Beds', status: formData.toHospital.includes('Metro') ? 'limited' : 'available' },
+                      ].map((resource) => (
+                        <div key={resource.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                          <span className="text-foreground font-medium text-sm">{resource.name}</span>
+                          <div className="flex items-center gap-2">
+                            {resource.status === 'available' && (
+                              <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                                <CheckCircle2 size={16} /> Available
+                              </span>
+                            )}
+                            {resource.status === 'limited' && (
+                              <span className="flex items-center gap-1.5 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                                <AlertTriangle size={16} /> Limited
+                              </span>
+                            )}
+                            {resource.status === 'full' && (
+                              <span className="flex items-center gap-1.5 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                                <XCircle size={16} /> Full
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Guidance / Legend Section */}
+              <div className="bg-gradient-to-br from-card to-accent/20 rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-5 flex items-center gap-2 font-semibold">
+                  <Info size={20} className="text-muted-foreground" />
+                  Availability Indicator Guide
+                </h3>
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg shrink-0">
+                      <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm font-semibold mb-1">Available resource</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">Sufficient capacity exists to accommodate incoming patients without delay. Preferred destination for standard transfers.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg shrink-0">
+                      <AlertTriangle size={20} className="text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm font-semibold mb-1">Limited capacity</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">Resources are nearing capacity limits. Patient may experience boarding delays. Proceed only if closer alternatives are full.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg shrink-0">
+                      <XCircle size={20} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm font-semibold mb-1">Full / Critical status</p>
+                      <p className="text-muted-foreground text-xs leading-relaxed">No resources currently available. Selecting this hospital may result in immediate rejection or severe diversion.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        )
-        }
+        )}
 
         {/* Step 3: Ambulance Requirements */}
         {
