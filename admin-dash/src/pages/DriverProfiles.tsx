@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
     User, Star, Phone, Clock, Car, Search,
     ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
-    X, CreditCard, Calendar, Mail, ArrowLeft, Ambulance
+    X, CreditCard, Calendar, Mail, ArrowLeft, Ambulance, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -290,6 +290,58 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
     );
 }
 
+// ─── Delete Confirm Modal ────────────────────────────────────────────────────
+
+function DeleteConfirmModal({
+    driver,
+    onClose,
+    onConfirm,
+}: {
+    driver: Driver;
+    onClose: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-md p-6"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                        <Trash2 size={20} className="text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-foreground font-semibold text-base">Remove Driver</h2>
+                        <p className="text-muted-foreground text-sm mt-1">
+                            Are you sure you want to remove{' '}
+                            <span className="text-foreground font-medium">{driver.name}</span>{' '}
+                            ({driver.id})? This action cannot be undone.
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="p-1 hover:bg-accent rounded-lg transition-colors">
+                        <X size={16} className="text-muted-foreground" />
+                    </button>
+                </div>
+                <div className="flex gap-3 mt-6">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2.5 text-sm border border-border rounded-lg text-foreground hover:bg-accent transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                        Yes, Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Driver Detail Expanded Panel ─────────────────────────────────────────────
 
 function DriverDetailPanel({ driver }: { driver: Driver }) {
@@ -446,6 +498,14 @@ export function DriverProfiles() {
     const [filterStatus, setFilterStatus] = useState<'all' | DriverStatus>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
+
+    const handleDeleteConfirm = () => {
+        if (!deleteTarget) return;
+        setDrivers(prev => prev.filter(d => d.id !== deleteTarget.id));
+        if (expandedId === deleteTarget.id) setExpandedId(null);
+        setDeleteTarget(null);
+    };
 
     const filtered = drivers.filter(d => {
         const matchStatus = filterStatus === 'all' || d.status === filterStatus;
@@ -593,15 +653,24 @@ export function DriverProfiles() {
                                 ))}
                             </div>
 
-                            {/* Expand Button */}
-                            <button
-                                onClick={() => setExpandedId(expandedId === driver.id ? null : driver.id)}
-                                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors self-end md:self-auto flex-shrink-0"
-                            >
-                                {expandedId === driver.id
-                                    ? <><ChevronUp size={17} /> Hide</>
-                                    : <><ChevronDown size={17} /> Details</>}
-                            </button>
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
+                                <button
+                                    onClick={() => setExpandedId(expandedId === driver.id ? null : driver.id)}
+                                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {expandedId === driver.id
+                                        ? <><ChevronUp size={17} /> Hide</>
+                                        : <><ChevronDown size={17} /> Details</>}
+                                </button>
+                                <button
+                                    onClick={() => setDeleteTarget(driver)}
+                                    className="p-2 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    title="Remove driver"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Expanded Panel */}
@@ -623,6 +692,15 @@ export function DriverProfiles() {
                 <RegisterDriverModal
                     onClose={() => setShowRegisterModal(false)}
                     onRegister={driver => setDrivers(prev => [driver, ...prev])}
+                />
+            )}
+
+            {/* ── Delete Confirm Modal ── */}
+            {deleteTarget && (
+                <DeleteConfirmModal
+                    driver={deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDeleteConfirm}
                 />
             )}
 
