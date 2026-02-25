@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({super.key});
@@ -19,6 +20,23 @@ class _FeedbackPageState extends State<FeedbackPage> {
   );
 
   bool isSending = false;
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
@@ -42,12 +60,12 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final message = messageController.text.trim();
 
     if (subject.isEmpty || message.isEmpty) {
-      _showSnackBar("Please fill all fields", isError: true);
+      _showSnackBar(t("Please fill all fields", "කරුණාකර සියලුම තොරතුරු පුරවන්න"), isError: true);
       return;
     }
 
     if (message.length < 10) {
-      _showSnackBar("Message should be at least 10 characters", isError: true);
+      _showSnackBar(t("Message should be at least 10 characters", "පණිවිඩය අකුරු 10ක් වත් තිබිය යුතුයි"), isError: true);
       return;
     }
 
@@ -74,9 +92,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
       subjectController.clear();
       messageController.clear();
 
-      _showSnackBar("Feedback sent successfully");
+      _showSnackBar(t("Feedback sent successfully", "ප්‍රතිචාරය සාර්ථකව යැව්වා"));
     } catch (e) {
-      _showSnackBar("Failed to send feedback", isError: true);
+      _showSnackBar(t("Failed to send feedback", "ප්‍රතිචාරය යැවීමට බැරි වුණා"), isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -92,8 +110,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
       backgroundColor: const Color(0xFFF4E6EA),
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          "Feedback & Support",
+        title: Text(
+          t("Feedback & Support", "ප්‍රතිචාර සහ සහාය"),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -146,8 +164,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      "We Value Your Feedback",
+                    Text(
+                      t("We Value Your Feedback", "ඔබගේ ප්‍රතිචාර අපට වටිනවා"),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 22,
@@ -156,7 +174,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Help us improve your experience",
+                      t("Help us improve your experience", "ඔබගේ අත්දැකීම හොඳ කරගන්න අපට උදව් කරන්න"),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
@@ -186,8 +204,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Subject Field
-                    const Text(
-                      "Subject",
+                    Text(
+                      t("Subject", "මාතෘකාව"),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -200,7 +218,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       textInputAction: TextInputAction.next,
                       maxLength: 80,
                       decoration: InputDecoration(
-                        hintText: "Brief summary of your feedback",
+                        hintText: t("Brief summary of your feedback", "ඔබගේ ප්‍රතිචාරය කෙටියෙන්"),
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Colors.grey.shade50,
@@ -232,8 +250,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(height: 24),
 
                     // Message Field
-                    const Text(
-                      "Message",
+                    Text(
+                      t("Message", "පණිවිඩය"),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -247,7 +265,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       minLines: 4,
                       maxLength: 1000,
                       decoration: InputDecoration(
-                        hintText: "Describe your issue or suggestion in detail...",
+                        hintText: t("Describe your issue or suggestion in detail...", "ඔබගේ ගැටලුව හෝ යෝජනාව විස්තරයෙන් ලියන්න..."),
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Colors.grey.shade50,
@@ -300,11 +318,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
                               )
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
+                                children: [
                                   Icon(Icons.send, size: 20),
                                   SizedBox(width: 8),
                                   Text(
-                                    "Submit Feedback",
+                                    t("Submit Feedback", "ප්‍රතිචාර යවන්න"),
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -341,7 +359,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        "We typically respond within 24-48 hours",
+                        t("We typically respond within 24-48 hours", "සාමාන්‍යයෙන් පැය 24-48ක් ඇතුළත පිළිතුරු දෙනවා"),
                         style: TextStyle(
                           color: Colors.blue.shade900,
                           fontSize: 14,

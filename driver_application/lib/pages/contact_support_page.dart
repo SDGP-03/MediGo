@@ -1,8 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ContactSupportPage extends StatelessWidget {
+class ContactSupportPage extends StatefulWidget {
   const ContactSupportPage({super.key});
+
+  @override
+  State<ContactSupportPage> createState() => _ContactSupportPageState();
+}
+
+class _ContactSupportPageState extends State<ContactSupportPage> {
+  bool _isSinhala = false;
+
+  String t(String en, String si) => _isSinhala ? si : en;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _isSinhala = prefs.getString('language') == 'Sinhala';
+    });
+  }
 
   Future<void> _launchURL(BuildContext context, String url) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -12,13 +36,21 @@ class ContactSupportPage extends StatelessWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         messenger.showSnackBar(
-          const SnackBar(content: Text("Could not open this link")),
+          SnackBar(
+            content: Text(
+              t("Could not open this link", "මෙම ලින්ක් එක විවෘත කළේ නැහැ"),
+            ),
+          ),
         );
       }
     } catch (e) {
       debugPrint('Error launching URL: $e');
       messenger.showSnackBar(
-        const SnackBar(content: Text("Failed to open support option")),
+        SnackBar(
+          content: Text(
+            t("Failed to open support option", "සහාය විකල්පය විවෘත කළේ නැහැ"),
+          ),
+        ),
       );
     }
   }
@@ -28,9 +60,9 @@ class ContactSupportPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text(
-          "Contact Support",
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          t("Contact Support", "සහාය අමතන්න"),
+          style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -41,65 +73,71 @@ class ContactSupportPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Card
             _buildHeaderCard(),
-
             const SizedBox(height: 24),
-
-            // Contact Methods
             _buildContactMethod(
               context: context,
               icon: Icons.email_outlined,
               iconColor: Colors.blue,
-              title: "Email Support",
+              title: t("Email Support", "ඊමේල් සහාය"),
               subtitle: "support@medigo.com",
-              description: "Get a response within 24 hours",
+              description: t(
+                "Get a response within 24 hours",
+                "පැය 24ක් ඇතුළත පිළිතුරක් ලැබේ",
+              ),
               onTap: () => _launchURL(context, "mailto:support@medigo.com"),
             ),
-
             _buildContactMethod(
               context: context,
               icon: Icons.phone_outlined,
               iconColor: Colors.green,
-              title: "Phone Support",
+              title: t("Phone Support", "දුරකථන සහාය"),
               subtitle: "+94 11 234 5678",
-              description: "Available Mon-Fri, 9 AM - 6 PM",
+              description: t(
+                "Available Mon-Fri, 9 AM - 6 PM",
+                "සඳුදා-සිකුරාදා, පෙ.ව. 9 - ප.ව. 6",
+              ),
               onTap: () => _launchURL(context, "tel:+94112345678"),
             ),
-
             _buildContactMethod(
               context: context,
               icon: Icons.chat_outlined,
               iconColor: Colors.purple,
-              title: "Live Chat",
-              subtitle: "Chat with our support team",
-              description: "Average response time: 5 minutes",
+              title: t("Live Chat", "සජීවී කතාබහ"),
+              subtitle: t(
+                "Chat with our support team",
+                "අපේ සහාය කණ්ඩායම සමඟ කතා කරන්න",
+              ),
+              description: t(
+                "Average response time: 5 minutes",
+                "සාමාන්‍ය පිළිතුරු කාලය: මිනිත්තු 5",
+              ),
               onTap: () {
                 _showComingSoonDialog(context);
               },
             ),
-
             _buildContactMethod(
               context: context,
               icon: Icons.help_outline,
               iconColor: Colors.orange,
               title: "FAQ",
-              subtitle: "Find answers to common questions",
-              description: "Quick solutions to common issues",
+              subtitle: t(
+                "Find answers to common questions",
+                "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න",
+              ),
+              description: t(
+                "Quick solutions to common issues",
+                "සාමාන්‍ය ගැටලු වලට ඉක්මන් පිළිතුරු",
+              ),
               onTap: () => Navigator.pushNamed(context, '/faq'),
             ),
-
             const SizedBox(height: 24),
-
-            // Quick Tips Card
             _buildQuickTipsCard(),
           ],
         ),
       ),
     );
   }
-
-  // ================= HEADER CARD =================
 
   Widget _buildHeaderCard() {
     return Container(
@@ -112,28 +150,20 @@ class ContactSupportPage extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.support_agent,
-                color: Colors.white,
-                size: 32,
-              ),
-              SizedBox(width: 12),
+              const Icon(Icons.support_agent, color: Colors.white, size: 32),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  "We're Here to Help",
-                  style: TextStyle(
+                  t("We're Here to Help", "අපි උදව් කිරීමට මෙහි සිටිමු"),
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -142,10 +172,13 @@ class ContactSupportPage extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            "Our support team is ready to assist you with any questions or issues you may have.",
-            style: TextStyle(
+            t(
+              "Our support team is ready to assist you with any questions or issues you may have.",
+              "ඔබට ඇති ඕනෑම ප්‍රශ්නයකට හෝ ගැටලුවකට අපේ සහාය කණ්ඩායම සූදානම්.",
+            ),
+            style: const TextStyle(
               fontSize: 14,
               color: Colors.white70,
               height: 1.5,
@@ -155,8 +188,6 @@ class ContactSupportPage extends StatelessWidget {
       ),
     );
   }
-
-  // ================= CONTACT METHOD CARD =================
 
   Widget _buildContactMethod({
     required BuildContext context,
@@ -170,9 +201,7 @@ class ContactSupportPage extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -186,11 +215,7 @@ class ContactSupportPage extends StatelessWidget {
                   color: iconColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 28,
-                ),
+                child: Icon(icon, color: iconColor, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -235,8 +260,6 @@ class ContactSupportPage extends StatelessWidget {
     );
   }
 
-  // ================= QUICK TIPS CARD =================
-
   Widget _buildQuickTipsCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -257,7 +280,7 @@ class ContactSupportPage extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                "Quick Tips",
+                t("Quick Tips", "ඉක්මන් උපදෙස්"),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -267,10 +290,30 @@ class ContactSupportPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _buildTipItem("Check FAQ first for instant answers"),
-          _buildTipItem("Include your driver ID when contacting support"),
-          _buildTipItem("Provide screenshots for technical issues"),
-          _buildTipItem("Be specific about the problem you're facing"),
+          _buildTipItem(
+            t(
+              "Check FAQ first for instant answers",
+              "ඉක්මන් පිළිතුරු සඳහා මුලින් FAQ බලන්න",
+            ),
+          ),
+          _buildTipItem(
+            t(
+              "Include your driver ID when contacting support",
+              "සහාය අමතන විට ඔබගේ රියදුරු ID දාන්න",
+            ),
+          ),
+          _buildTipItem(
+            t(
+              "Provide screenshots for technical issues",
+              "තාක්ෂණික ගැටලු සඳහා තිර රූප එවන්න",
+            ),
+          ),
+          _buildTipItem(
+            t(
+              "Be specific about the problem you're facing",
+              "ඔබට ඇති ගැටලුව පැහැදිලිව කියන්න",
+            ),
+          ),
         ],
       ),
     );
@@ -282,19 +325,12 @@ class ContactSupportPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.check_circle,
-            size: 16,
-            color: Colors.blue.shade700,
-          ),
+          Icon(Icons.check_circle, size: 16, color: Colors.blue.shade700),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade800,
-              ),
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
             ),
           ),
         ],
@@ -302,31 +338,30 @@ class ContactSupportPage extends StatelessWidget {
     );
   }
 
-  // ================= COMING SOON DIALOG =================
-
   void _showComingSoonDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.blue),
-            SizedBox(width: 8),
-            Text("Coming Soon"),
+            const Icon(Icons.info_outline, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(t("Coming Soon", "ඉදිරියේදී")),
           ],
         ),
-        content: const Text(
-          "Live chat support will be available in a future update. "
-          "For now, please use email or phone support.",
+        content: Text(
+          t(
+            "Live chat support will be available in a future update. For now, please use email or phone support.",
+            "සජීවී කතාබහ සහාය ඉදිරි යාවත්කාලීනයක එයි. දැනට ඊමේල් හෝ දුරකථන සහාය භාවිතා කරන්න.",
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: Text(t("OK", "හරි")),
           ),
         ],
       ),
     );
   }
-
 }
