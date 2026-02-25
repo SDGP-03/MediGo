@@ -527,13 +527,107 @@ class _HomePageState extends State<HomePage> {
 
   // ================= UI =================
 
+  Widget _mapControlButton({
+    required IconData icon,
+    required String tooltip,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(14),
+      elevation: 5,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Tooltip(
+          message: tooltip,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(icon, color: const Color(0xFF394145)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetActionTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: const Color(0xFFF9FAFC),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 13,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.black45),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const SideMenu(),
 
       appBar: AppBar(
-        backgroundColor: Colors.red.shade500,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.red.shade600, Colors.red.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         leading: Builder(
           builder: (context) => Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
@@ -541,74 +635,128 @@ class _HomePageState extends State<HomePage> {
               onTap: () => Scaffold.of(context).openDrawer(),
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(133, 237, 164, 164),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: const Icon(Icons.menu, color: Colors.white),
               ),
             ),
           ),
         ),
-        title: const Text('MediGo', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'MediGo',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  color: _isOnline ? Colors.green : Colors.grey,
-                  size: 12,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _isOnline ? t('Online', 'සබැඳි') : t('Offline', 'නොසබැඳි'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    color: _isOnline ? Colors.lightGreenAccent : Colors.white70,
+                    size: 10,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    _isOnline ? t('Online', 'සබැඳි') : t('Offline', 'නොසබැඳි'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
 
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
         child: Column(
           children: [
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  children: [
-                    GoogleMap(
-                      mapType: _mapType,
-                      zoomControlsEnabled: false,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: false,
-                      initialCameraPosition: googlePlexInitialPosition,
-                      markers: driverMarker != null ? {driverMarker!} : {},
-                      polylines: polylines,
-                      onMapCreated: (GoogleMapController mapController) async {
-                        controllerGoogleMap = mapController;
-
-                        await loadMapStyle();
-                        applyMapStyle();
-                        checkLocationPermission();
-                      },
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x22000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 6),
                     ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: Material(
-                        color: Colors.white,
-                        shape: const CircleBorder(),
-                        elevation: 4,
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Stack(
+                    children: [
+                      GoogleMap(
+                        mapType: _mapType,
+                        zoomControlsEnabled: false,
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: false,
+                        initialCameraPosition: googlePlexInitialPosition,
+                        markers: driverMarker != null ? {driverMarker!} : {},
+                        polylines: polylines,
+                        onMapCreated:
+                            (GoogleMapController mapController) async {
+                              controllerGoogleMap = mapController;
+
+                              await loadMapStyle();
+                              applyMapStyle();
+                              checkLocationPermission();
+                            },
+                      ),
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: Colors.red.shade600,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                t("Live Map", "සජීවී සිතියම"),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF3A3F45),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 12,
+                        right: 12,
                         child: PopupMenuButton<MapType>(
                           tooltip: t('Map type', 'සිතියම් වර්ගය'),
-                          icon: const Icon(Icons.layers_outlined),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           onSelected: (value) {
                             setState(() {
                               _mapType = value;
@@ -628,24 +776,23 @@ class _HomePageState extends State<HomePage> {
                               child: Text(t('Terrain', 'භූමි')),
                             ),
                           ],
+                          child: _mapControlButton(
+                            icon: Icons.layers_outlined,
+                            tooltip: t('Map type', 'සිතියම් වර්ගය'),
+                          ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      right: 12,
-                      child: Material(
-                        color: Colors.white,
-                        shape: const CircleBorder(),
-                        elevation: 4,
-                        child: IconButton(
+                      Positioned(
+                        bottom: 12,
+                        right: 12,
+                        child: _mapControlButton(
+                          icon: Icons.my_location,
                           tooltip: t('Current location', 'වත්මන් ස්ථානය'),
-                          icon: const Icon(Icons.my_location),
-                          onPressed: _goToCurrentLocation,
+                          onTap: _goToCurrentLocation,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -658,7 +805,11 @@ class _HomePageState extends State<HomePage> {
                 margin: const EdgeInsets.only(bottom: 6),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, Color(0xFFFFF6F6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: const [
                     BoxShadow(
@@ -673,6 +824,19 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Row(
                       children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.red.shade600,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             t(
@@ -696,6 +860,16 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(color: Colors.black54),
                     ),
                     const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _miniTag(t("Service", "සේවාව")),
+                        _miniTag(t("Maintenance", "නඩත්තු")),
+                        _miniTag(t("Breakdown", "බිඳවැටීම")),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
 
                     SizedBox(
                       width: double.infinity,
@@ -716,6 +890,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade500,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -747,7 +922,11 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.red.shade500,
+                        gradient: LinearGradient(
+                          colors: [Colors.red.shade600, Colors.red.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(24),
                           topRight: Radius.circular(24),
@@ -833,6 +1012,7 @@ class _HomePageState extends State<HomePage> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade500,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -852,15 +1032,31 @@ class _HomePageState extends State<HomePage> {
   void _showIssueReportOptions() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 46,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Text(
               t("Report Issue Type", "ගැටලුවේ වර්ගය"),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -874,29 +1070,30 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(color: Colors.black54),
             ),
             const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(
-                Icons.miscellaneous_services,
-                color: Colors.blue,
-              ),
-              title: Text(t("Service", "සේවාව")),
+            _sheetActionTile(
+              icon: Icons.miscellaneous_services,
+              color: Colors.blue,
+              title: t("Service", "සේවාව"),
               onTap: () => _showIssueDetailsDialog(ctx, t("Service", "සේවාව")),
             ),
-            ListTile(
-              leading: const Icon(Icons.build_circle, color: Colors.orange),
-              title: Text(t("Maintenance", "නඩත්තු")),
+            _sheetActionTile(
+              icon: Icons.build_circle,
+              color: Colors.orange,
+              title: t("Maintenance", "නඩත්තු"),
               onTap: () =>
                   _showIssueDetailsDialog(ctx, t("Maintenance", "නඩත්තු")),
             ),
-            ListTile(
-              leading: const Icon(Icons.car_repair, color: Colors.red),
-              title: Text(t("Breakdown", "බිඳවැටීම")),
+            _sheetActionTile(
+              icon: Icons.car_repair,
+              color: Colors.red,
+              title: t("Breakdown", "බිඳවැටීම"),
               onTap: () =>
                   _showIssueDetailsDialog(ctx, t("Breakdown", "බිඳවැටීම")),
             ),
-            ListTile(
-              leading: const Icon(Icons.error_outline, color: Colors.grey),
-              title: Text(t("Other Problems", "වෙනත් ගැටලු")),
+            _sheetActionTile(
+              icon: Icons.error_outline,
+              color: Colors.grey,
+              title: t("Other Problems", "වෙනත් ගැටලු"),
               onTap: () => _showIssueDetailsDialog(
                 ctx,
                 t("Other Problems", "වෙනත් ගැටලු"),
@@ -915,6 +1112,7 @@ class _HomePageState extends State<HomePage> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text("$issueType ${t("Issue", "ගැටළුව")}"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -936,7 +1134,15 @@ class _HomePageState extends State<HomePage> {
                   "Describe the problem...",
                   "ගැටලුව විස්තර කරන්න...",
                 ),
-                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE3E6EC)),
+                ),
               ),
             ),
           ],
@@ -981,28 +1187,43 @@ class _HomePageState extends State<HomePage> {
   void _showNavigationOptionDialog() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 46,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Text(
               t("Select Navigation Method", "නාවිකරණ ක්‍රමය තෝරන්න"),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.map, color: Colors.blue),
-              title: Text(t("Google Maps", "Google Maps")),
-              subtitle: Text(
-                t(
-                  "Use external Google Maps app",
-                  "බාහිර Google Maps යෙදුම භාවිතා කරන්න",
-                ),
+            const SizedBox(height: 16),
+            _sheetActionTile(
+              icon: Icons.map,
+              color: Colors.blue,
+              title: t("Google Maps", "Google Maps"),
+              subtitle: t(
+                "Use external Google Maps app",
+                "බාහිර Google Maps යෙදුම භාවිතා කරන්න",
               ),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -1028,12 +1249,13 @@ class _HomePageState extends State<HomePage> {
                 }
               },
             ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.navigation, color: Colors.red),
-              title: Text(t("MediGo Navigation", "MediGo නාවිකරණය")),
-              subtitle: Text(
-                t("Stay inside the MediGo app", "MediGo යෙදුම තුළම සිටින්න"),
+            _sheetActionTile(
+              icon: Icons.navigation,
+              color: Colors.red,
+              title: t("MediGo Navigation", "MediGo නාවිකරණය"),
+              subtitle: t(
+                "Stay inside the MediGo app",
+                "MediGo යෙදුම තුළම සිටින්න",
               ),
               onTap: () {
                 Navigator.pop(ctx);
@@ -1047,7 +1269,7 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -1055,12 +1277,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _priorityBadge(String priority) {
-    Color bgColor = Colors.green;
+    Color bgColor = const Color(0xFF2E7D32);
     String label = t("Standard", "සාමාන්‍ය");
 
     if (priority == "critical") {
+      bgColor = const Color(0xFFC62828);
       label = t("Critical", "අති ආපදා");
     } else if (priority == "urgent") {
+      bgColor = const Color(0xFFF57C00);
       label = t("Urgent", "හදිසි");
     }
 
@@ -1081,39 +1305,84 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _miniTag(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFECEC),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFD1D1)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFFA83A3A),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   Widget _locationTile({
     required String title,
     required String name,
     required String address,
     required IconData icon,
   }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: icon == Icons.circle ? 12 : 24,
-          color: icon == Icons.circle ? Colors.grey : Colors.red,
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.black54)),
-              const SizedBox(height: 4),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(address, style: const TextStyle(color: Colors.black54)),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE7EAF0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: icon == Icons.circle
+                  ? const Color(0xFFE8EEF6)
+                  : const Color(0xFFFFECEC),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: icon == Icons.circle ? 10 : 18,
+              color: icon == Icons.circle ? Colors.blueGrey : Colors.red,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(address, style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
