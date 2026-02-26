@@ -10,6 +10,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 import '../widgets/map_styles.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -312,7 +313,21 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const SideMenu(currentRoute: '/settings'),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
         title: Text(
           t("Settings", "සැකසුම්"),
           style: const TextStyle(color: Colors.white),

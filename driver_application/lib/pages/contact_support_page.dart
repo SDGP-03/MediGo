@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 
 class ContactSupportPage extends StatefulWidget {
   const ContactSupportPage({super.key});
@@ -58,7 +59,21 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const SideMenu(currentRoute: '/contact-support'),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
         title: Text(
           t("Contact Support", "සහාය අමතන්න"),
           style: const TextStyle(color: Colors.white),

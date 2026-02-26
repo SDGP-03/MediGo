@@ -170,6 +170,7 @@ class _SideMenuState extends State<SideMenu> {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       trailing: const Icon(Icons.chevron_right, size: 20),
       selected: selected,
+      selectedColor: Colors.black87,
       selectedTileColor: Colors.red.withOpacity(0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -272,6 +273,7 @@ class _SideMenuState extends State<SideMenu> {
           _buildMenuTile(
             icon: Icons.support_agent_outlined,
             title: t('Contact Support', 'සහාය අමතන්න'),
+            selected: currentRoute == '/contact-support',
             onTap: _openContactSupport,
           ),
 

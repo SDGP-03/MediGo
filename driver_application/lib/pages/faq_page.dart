@@ -1,4 +1,5 @@
 import 'package:driver_application/pages/contact_support_page.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -307,7 +308,21 @@ class _FaqPageState extends State<FaqPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const SideMenu(currentRoute: '/faq'),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
         title: Text(
           t("FAQ", "නිතර අහන ප්‍රශ්න"),
           style: const TextStyle(color: Colors.white),

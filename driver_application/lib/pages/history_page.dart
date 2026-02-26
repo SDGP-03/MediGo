@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -76,7 +77,21 @@ class _HistoryPageState extends State<HistoryPage> {
 
     if (uid == null) {
       return Scaffold(
+        drawer: const SideMenu(currentRoute: '/history'),
         appBar: AppBar(
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                final scaffoldState = Scaffold.maybeOf(context);
+                if (scaffoldState?.hasDrawer ?? false) {
+                  scaffoldState!.openDrawer();
+                } else {
+                  Navigator.maybePop(context);
+                }
+              },
+            ),
+          ),
           title: Text(t("Trip History", "ගමන් ඉතිහාසය"), style: const TextStyle(color: Colors.white)),
           backgroundColor: Colors.red.shade700,
           iconTheme: const IconThemeData(color: Colors.white),
@@ -88,7 +103,21 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     return Scaffold(
+      drawer: const SideMenu(currentRoute: '/history'),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
         title: Text(t("Trip History", "ගමන් ඉතිහාසය"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
