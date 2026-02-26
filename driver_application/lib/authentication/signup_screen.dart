@@ -246,11 +246,10 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(22),
-          child: Column(
-            children: [
+      body: ScrollIfNeeded(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          children: [
               const SizedBox(height: 50),
 
               // PROFILE IMAGE (SIGNUP)
@@ -559,7 +558,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
             ],
-          ),
         ),
       ),
     );
