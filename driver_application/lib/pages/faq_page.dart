@@ -1,4 +1,5 @@
 import 'package:driver_application/pages/contact_support_page.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -307,9 +308,25 @@ class _FaqPageState extends State<FaqPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      drawer: const SideMenu(currentRoute: '/faq'),
       appBar: AppBar(
-        title: Text(t("FAQ", "නිතර අහන ප්‍රශ්න"), style: const TextStyle(color: Colors.white)),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
+        title: Text(
+          t("FAQ", "නිතර අහන ප්‍රශ්න"),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
@@ -374,7 +391,10 @@ class _FaqPageState extends State<FaqPage> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  t("Find answers to common questions", "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න"),
+                  t(
+                    "Find answers to common questions",
+                    "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න",
+                  ),
                   style: TextStyle(fontSize: 14, color: Colors.white70),
                 ),
               ],
@@ -422,11 +442,31 @@ class _FaqPageState extends State<FaqPage> {
       child: Row(
         children: [
           _buildCategoryChip('all', t('All', 'සියලු'), Icons.apps),
-          _buildCategoryChip('getting_started', t('Getting Started', 'ආරම්භය'), Icons.rocket_launch),
-          _buildCategoryChip('using_app', t('Using App', 'යෙදුම භාවිතය'), Icons.directions_car),
-          _buildCategoryChip('settings', t('Settings', 'සැකසුම්'), Icons.settings),
-          _buildCategoryChip('privacy', t('Privacy', 'පෞද්ගලිකතාව'), Icons.security),
-          _buildCategoryChip('payments', t('Payments', 'ගෙවීම්'), Icons.payments),
+          _buildCategoryChip(
+            'getting_started',
+            t('Getting Started', 'ආරම්භය'),
+            Icons.rocket_launch,
+          ),
+          _buildCategoryChip(
+            'using_app',
+            t('Using App', 'යෙදුම භාවිතය'),
+            Icons.directions_car,
+          ),
+          _buildCategoryChip(
+            'settings',
+            t('Settings', 'සැකසුම්'),
+            Icons.settings,
+          ),
+          _buildCategoryChip(
+            'privacy',
+            t('Privacy', 'පෞද්ගලිකතාව'),
+            Icons.security,
+          ),
+          _buildCategoryChip(
+            'payments',
+            t('Payments', 'ගෙවීම්'),
+            Icons.payments,
+          ),
           _buildCategoryChip('troubleshooting', t('Help', 'උදව්'), Icons.help),
         ],
       ),
@@ -442,7 +482,11 @@ class _FaqPageState extends State<FaqPage> {
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey.shade700),
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : Colors.grey.shade700,
+            ),
             const SizedBox(width: 6),
             Text(label),
           ],
@@ -479,7 +523,11 @@ class _FaqPageState extends State<FaqPage> {
               color: categoryInfo['color'].withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(categoryInfo['icon'], color: categoryInfo['color'], size: 24),
+            child: Icon(
+              categoryInfo['icon'],
+              color: categoryInfo['color'],
+              size: 24,
+            ),
           ),
           title: Text(
             question,
@@ -490,7 +538,11 @@ class _FaqPageState extends State<FaqPage> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 answer,
-                style: TextStyle(fontSize: 14, height: 1.6, color: Colors.grey.shade800),
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: Colors.grey.shade800,
+                ),
               ),
             ),
           ],
@@ -537,7 +589,10 @@ class _FaqPageState extends State<FaqPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              t('Try adjusting your search or category filter', 'සෙවුම හෝ ප්‍රවර්ග පෙරහන වෙනස් කර බලන්න'),
+              t(
+                'Try adjusting your search or category filter',
+                'සෙවුම හෝ ප්‍රවර්ග පෙරහන වෙනස් කර බලන්න',
+              ),
               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
@@ -567,7 +622,9 @@ class _FaqPageState extends State<FaqPage> {
             backgroundColor: Colors.red.shade700,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 2,
           ),
           icon: const Icon(Icons.contact_support),
@@ -578,7 +635,9 @@ class _FaqPageState extends State<FaqPage> {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ContactSupportPage()),
+              MaterialPageRoute(
+                builder: (context) => const ContactSupportPage(),
+              ),
             );
           },
         ),

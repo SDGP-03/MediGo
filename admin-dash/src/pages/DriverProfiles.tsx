@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
     User, Star, Phone, Clock, Car, Search,
     ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
-    X, CreditCard, Calendar, Mail, ArrowLeft, Ambulance, Trash2
+    X, CreditCard, Calendar, Mail, Ambulance, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -526,24 +526,15 @@ export function DriverProfiles() {
     };
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 pt-2 px-6 pb-6">
 
             {/* ── Page Header ── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="p-2 hover:bg-accent rounded-lg transition-colors"
-                        title="Go back"
-                    >
-                        <ArrowLeft size={20} className="text-muted-foreground" />
-                    </button>
-                    <div>
-                        <h1 className="text-foreground text-2xl font-bold">Driver Profiles</h1>
-                        <p className="text-muted-foreground text-sm">
-                            Manage drivers, view performance and calculate salaries
-                        </p>
-                    </div>
+                <div>
+                    <h1 className="text-foreground text-2xl font-bold">Driver Profiles</h1>
+                    <p className="text-muted-foreground text-sm">
+                        Manage drivers, view performance and calculate salaries
+                    </p>
                 </div>
                 <button
                     onClick={() => setShowRegisterModal(true)}
@@ -566,7 +557,7 @@ export function DriverProfiles() {
                 </div>
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Avg Rating</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating} ⭐</p>
+                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating} </p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Total Overtime Hrs</p>

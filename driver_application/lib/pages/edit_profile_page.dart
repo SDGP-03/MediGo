@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:driver_application/widgets/side_menu.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -368,7 +369,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const SideMenu(currentRoute: '/edit-profile'),
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              final scaffoldState = Scaffold.maybeOf(context);
+              if (scaffoldState?.hasDrawer ?? false) {
+                scaffoldState!.openDrawer();
+              } else {
+                Navigator.maybePop(context);
+              }
+            },
+          ),
+        ),
         title: Text(t("Edit Profile", "පැතිකඩ වෙනස් කරන්න"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
