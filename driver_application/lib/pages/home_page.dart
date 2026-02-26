@@ -15,7 +15,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver_application/global/global_var.dart';
-import 'package:driver_application/methods/common_methods.dart';
 import '../widgets/side_menu.dart';
 
 class HomePage extends StatefulWidget {
@@ -361,7 +360,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        content: ScrollIfNeeded(
+        content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
