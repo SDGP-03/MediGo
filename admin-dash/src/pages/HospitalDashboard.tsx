@@ -307,7 +307,7 @@ export function HospitalDashboard() {
 
       {/* --- SECTION: MAP & FLEET OVERVIEW --- */}
       {/* Contains the interactive map and the sidebar with fleet statistics */}
-      <div className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
+      <div id="map-section" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
         <div className="p-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center pl-3">
             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></div>
@@ -901,7 +901,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
       { threshold: 0.5 }
     );
 
-    const sections = ['active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+    const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
     sections.forEach((id) => {
       const element = document.getElementById(id);
       if (element) observer.observe(element);
@@ -911,6 +911,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
   }, []);
 
   const navItems = [
+    { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-teal-500 to-teal-600', shadow: 'shadow-teal-500/50', count: 0 },
     { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
     { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
     { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
