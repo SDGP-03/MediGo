@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driver_application/authentication/login_screen.dart';
 import 'package:driver_application/authentication/signup_screen.dart';
+import 'package:driver_application/methods/common_methods.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StartScreen extends StatefulWidget {
@@ -100,12 +101,12 @@ class _StartScreenState extends State<StartScreen> {
       offset: const Offset(0, 44),
       itemBuilder: (context) => [
         PopupMenuItem(
-          value: "English",
-          child: buildMenuItem(value: "English", title: "English", code: "EN"),
-        ),
-        PopupMenuItem(
           value: "Sinhala",
           child: buildMenuItem(value: "Sinhala", title: "සිංහල", code: "SI"),
+        ),
+        PopupMenuItem(
+          value: "English",
+          child: buildMenuItem(value: "English", title: "English", code: "EN"),
         ),
       ],
       child: AnimatedContainer(
@@ -207,287 +208,279 @@ class _StartScreenState extends State<StartScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildLanguagePicker(),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    t("Driver App", "රියදුරු යෙදුම"),
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
+            child: ScrollIfNeeded(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              fillViewport: true,
+              child: Column(
+                children: [
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildLanguagePicker(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              t("Driver App", "රියදුරු යෙදුම"),
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 700),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, value, child) {
+                          final easedScale =
+                              0.94 +
+                              (0.06 * Curves.easeOutBack.transform(value));
+                          final easedOpacity =
+                              Curves.easeOutCubic.transform(value);
+                          return Transform.scale(
+                            scale: easedScale,
+                            child: Opacity(
+                              opacity: easedOpacity,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(38),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.96),
+                                const Color(0xFFFFE6E6),
                               ],
                             ),
-                            const SizedBox(height: 20),
-                            TweenAnimationBuilder<double>(
-                              duration: const Duration(milliseconds: 700),
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              builder: (context, value, child) {
-                                final easedScale =
-                                    0.94 +
-                                    (0.06 *
-                                        Curves.easeOutBack.transform(value));
-                                final easedOpacity = Curves.easeOutCubic
-                                    .transform(value);
-                                return Transform.scale(
-                                  scale: easedScale,
-                                  child: Opacity(
-                                    opacity: easedOpacity,
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                width: 190,
-                                height: 190,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(38),
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.96),
-                                      const Color(0xFFFFE6E6),
-                                    ],
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x24A12A2A),
-                                      blurRadius: 26,
-                                      offset: Offset(0, 14),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Semantics(
-                                    label: t('MediGo logo', 'MediGo ලාංඡනය'),
-                                    child: Image.asset(
-                                      "assets/logo/logo.png",
-                                      height: 120,
-                                    ),
-                                  ),
-                                ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x24A12A2A),
+                                blurRadius: 26,
+                                offset: Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Semantics(
+                              label: t('MediGo logo', 'MediGo ලාංඡනය'),
+                              child: Image.asset(
+                                "assets/logo/logo.png",
+                                height: 100,
                               ),
                             ),
-                            const SizedBox(height: 22),
-                            Text(
-                              t(
-                                "Fast, Reliable Ambulance Management",
-                                "ඉක්මන් සහ විශ්වාසදායක රථ ගිලන් කළමනාකරණය",
-                              ),
-                              textAlign: TextAlign.center,
-                              style: textTheme.titleLarge?.copyWith(
-                                color: const Color(0xFF3F4A4A),
-                                height: 1.2,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                              ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        t(
+                          "Fast, Reliable Ambulance Management",
+                          "ඉක්මන් සහ විශ්වාසදායක රථ ගිලන් කළමනාකරණය",
+                        ),
+                        textAlign: TextAlign.center,
+                        style: textTheme.titleLarge?.copyWith(
+                          color: const Color(0xFF3F4A4A),
+                          height: 1.2,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        t(
+                          "Real-time tracking, seamless coordination, and efficient patient care delivery",
+                          "සජීවී ලුහුබැඳීම, පහසු සම්බන්ධීකරණය සහ කාර්යක්ෂම රෝගී සේවාව",
+                        ),
+                        textAlign: TextAlign.center,
+                        style: textTheme.titleMedium?.copyWith(
+                          color: const Color(0xFF5E6767),
+                          height: 1.32,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _buildMetricChip(
+                            icon: Icons.speed_outlined,
+                            label: t(
+                              "Fast Dispatch",
+                              "ඉක්මන් යොමු කිරීම",
                             ),
-                            const SizedBox(height: 10),
-                            Text(
-                              t(
-                                "Real-time tracking, seamless coordination, and efficient patient care delivery",
-                                "සජීවී ලුහුබැඳීම, පහසු සම්බන්ධීකරණය සහ කාර්යක්ෂම රෝගී සේවාව",
-                              ),
-                              textAlign: TextAlign.center,
-                              style: textTheme.titleMedium?.copyWith(
-                                color: const Color(0xFF5E6767),
-                                height: 1.32,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: [
-                                _buildMetricChip(
-                                  icon: Icons.speed_outlined,
-                                  label: t(
-                                    "Fast Dispatch",
-                                    "ඉක්මන් යොමු කිරීම",
-                                  ),
-                                  color: const Color(0xFFC0392B),
-                                ),
-                                _buildMetricChip(
-                                  icon: Icons.location_pin,
-                                  label: t("Live Tracking", "සජීවී ලුහුබැඳීම"),
-                                  color: const Color(0xFFB03A2E),
-                                ),
-                                _buildMetricChip(
-                                  icon: Icons.verified_user_outlined,
-                                  label: t("Secure Access", "ආරක්ෂිත ප්‍රවේශය"),
-                                  color: const Color(0xFF9C2A22),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 18),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.95),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: const Color(0xFFF2D6D6),
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x14000000),
-                                    blurRadius: 16,
-                                    offset: Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  children: [
-                                    _FeatureRow(
-                                      icon: Icons.location_on_outlined,
-                                      text: t(
-                                        "Live driver & patient tracking",
-                                        "රියදුරු සහ රෝගී සජීවී ලුහුබැඳීම",
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _FeatureRow(
-                                      icon: Icons.schedule_outlined,
-                                      text: t(
-                                        "Faster dispatch & coordination",
-                                        "ඉක්මන් යොමු කිරීම සහ සම්බන්ධීකරණය",
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _FeatureRow(
-                                      icon: Icons.shield_outlined,
-                                      text: t(
-                                        "Secure driver access",
-                                        "ආරක්ෂිත රියදුරු ප්‍රවේශය",
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            color: const Color(0xFFC0392B),
+                          ),
+                          _buildMetricChip(
+                            icon: Icons.location_pin,
+                            label: t("Live Tracking", "සජීවී ලුහුබැඳීම"),
+                            color: const Color(0xFFB03A2E),
+                          ),
+                          _buildMetricChip(
+                            icon: Icons.verified_user_outlined,
+                            label: t("Secure Access", "ආරක්ෂිත ප්‍රවේශය"),
+                            color: const Color(0xFF9C2A22),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                  Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFF2D6D6),
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x14000000),
+                              blurRadius: 16,
+                              offset: Offset(0, 6),
                             ),
                           ],
                         ),
-                        Container(
-                          margin: const EdgeInsets.only(top: 20),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFF2D6D6)),
-                          ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(18),
                           child: Column(
                             children: [
-                              SizedBox(
-                                width: double.infinity,
-                                height: 52,
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red.shade700,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const SignupScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                    Icons.arrow_forward_rounded,
-                                    color: Colors.white,
-                                  ),
-                                  label: Text(
-                                    t("Get Started", "ආරම්භ කරමු"),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                              _FeatureRow(
+                                icon: Icons.location_on_outlined,
+                                text: t(
+                                  "Live driver & patient tracking",
+                                  "රියදුරු සහ රෝගී සජීවී ලුහුබැඳීම",
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 48,
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(
-                                      color: Colors.red.shade700,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const LoginScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Text(
-                                    t(
-                                      "I already have an account",
-                                      "මට ගිණුමක් තියෙනවා",
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
+                              const SizedBox(height: 10),
+                              _FeatureRow(
+                                icon: Icons.schedule_outlined,
+                                text: t(
+                                  "Faster dispatch & coordination",
+                                  "ඉක්මන් යොමු කිරීම සහ සම්බන්ධීකරණය",
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Text(
-                                "v1.0.0",
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey.shade600,
-                                  fontWeight: FontWeight.w600,
+                              const SizedBox(height: 10),
+                              _FeatureRow(
+                                icon: Icons.shield_outlined,
+                                text: t(
+                                  "Secure driver access",
+                                  "ආරක්ෂිත රියදුරු ප්‍රවේශය",
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFF2D6D6),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      16,
+                                    ),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const SignupScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: Colors.white,
+                                ),
+                                label: Text(
+                                  t("Get Started", "ආරම්භ කරමු"),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 40,
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: Colors.red.shade700,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      16,
+                                    ),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  t(
+                                    "I already have an account",
+                                    "මට ගිණුමක් තියෙනවා",
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],
