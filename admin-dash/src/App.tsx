@@ -15,6 +15,16 @@ import { Header } from './components/layout/Header';
 import { ForgotPassword } from './components/auth/ForgotPassword';
 import { SupportPage } from './components/auth/SupportPage';
 import { DriverProfiles } from './pages/DriverProfiles';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './components/ui/alert-dialog';
 
 
 // type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
@@ -30,6 +40,7 @@ export default function App() {
   //specifies the initially user can be null (either user object or null value)
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -46,15 +57,17 @@ export default function App() {
     // User state will be updated by onAuthStateChanged listener
   };
 
-  const handleLogout = async () => {
-    if (confirm('Are you sure you want to log out?')) {
-      try {
-        await signOut(auth);
-        // 2. since removing the useState and redirect is handled automatically by auth check 
-        // setCurrentView('dashboard');
-      } catch (error) {
-        console.error('Error signing out:', error);
-      }
+  const handleLogout = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setShowLogoutDialog(false);
     }
   };
 
@@ -138,6 +151,27 @@ export default function App() {
           {currentView === 'analytics' && <Analytics />} */}
         </div>
       </main>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will need to sign in again to access the dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+              onClick={confirmLogout}
+            >
+              Log Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
