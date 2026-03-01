@@ -25,6 +25,7 @@ export function TransferRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     // Patient Info
@@ -101,18 +102,33 @@ export function TransferRequest() {
   ];
 
   const validatePatientStep = () => {
-    if (!formData.patientName || !formData.patientId || !formData.patientAge || !formData.patientGender) {
-      alert('Please fill in all mandatory patient information fields.');
+    const errors: Record<string, string> = {};
+    if (!formData.patientName) errors.patientName = 'Patient Name is required';
+    if (!formData.patientId) errors.patientId = 'Patient ID is required';
+    if (!formData.patientAge) errors.patientAge = 'Age is required';
+    if (!formData.patientGender) errors.patientGender = 'Gender is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return false;
     }
+
+    setFormErrors({});
     return true;
   };
 
   const validateTransferStep = () => {
-    if (!formData.toHospital || !formData.priority || !formData.reason) {
-      alert('Please fill in all mandatory transfer details fields.');
+    const errors: Record<string, string> = {};
+    if (!formData.toHospital) errors.toHospital = 'Destination hospital is required';
+    if (!formData.priority) errors.priority = 'Priority level is required';
+    if (!formData.reason) errors.reason = 'Reason for transfer is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return false;
     }
+
+    setFormErrors({});
     return true;
   };
 
@@ -120,9 +136,11 @@ export function TransferRequest() {
     e.preventDefault();
 
     if (!selectedDriverId) {
-      alert('Please select a driver to assign this transfer request.');
+      setFormErrors({ selectedDriverId: 'Please select a driver to assign this transfer request.' });
       return;
     }
+
+    setFormErrors({});
 
     setIsSubmitting(true);
 
@@ -174,7 +192,7 @@ export function TransferRequest() {
         reason: formData.reason,
       });
 
-      alert('Transfer request sent to driver! They will receive a notification shortly.');
+      setFormErrors({ submitSuccess: 'Transfer request sent to driver! They will receive a notification shortly.' });
 
       // Reset form
       setStep('patient');
@@ -199,16 +217,54 @@ export function TransferRequest() {
         attendantGender: '',
       });
       setSelectedDriverId('');
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.submitSuccess;
+          return newErrors;
+        });
+      }, 5000);
+
     } catch (error) {
       console.error('Error submitting transfer request:', error);
-      alert('Failed to submit transfer request. Please try again.');
+      setFormErrors({ submitError: 'Failed to submit transfer request. Please try again.' });
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.submitError;
+          return newErrors;
+        });
+      }, 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto relative">
+      {/* Success Notification */}
+      {formErrors.submitSuccess && (
+        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3 px-6 py-4 bg-green-50 border border-green-200 text-green-700 rounded-lg shadow-lg">
+            <CheckCircle2 size={24} className="text-green-600" />
+            <p className="font-medium text-green-900">{formErrors.submitSuccess}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {formErrors.submitError && (
+        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3 px-6 py-4 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow-lg">
+            <XCircle size={24} className="text-red-600" />
+            <p className="font-medium text-red-900">{formErrors.submitError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Progress Steps */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
         <div className="flex items-center justify-between">
@@ -255,10 +311,15 @@ export function TransferRequest() {
                     type="text"
                     required
                     value={formData.patientName}
-                    onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientName: e.target.value });
+                      if (formErrors.patientName) setFormErrors({ ...formErrors, patientName: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientName ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                     placeholder="Full name"
                   />
+                  {formErrors.patientName && <p className="text-red-500 text-xs mt-1">{formErrors.patientName}</p>}
                 </div>
 
                 <div>
@@ -267,10 +328,15 @@ export function TransferRequest() {
                     type="text"
                     required
                     value={formData.patientId}
-                    onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientId: e.target.value });
+                      if (formErrors.patientId) setFormErrors({ ...formErrors, patientId: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                     placeholder="Hospital patient ID"
                   />
+                  {formErrors.patientId && <p className="text-red-500 text-xs mt-1">{formErrors.patientId}</p>}
                 </div>
 
                 <div>
@@ -279,10 +345,15 @@ export function TransferRequest() {
                     type="number"
                     required
                     value={formData.patientAge}
-                    onChange={(e) => setFormData({ ...formData, patientAge: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientAge: e.target.value });
+                      if (formErrors.patientAge) setFormErrors({ ...formErrors, patientAge: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientAge ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                     placeholder="Age in years"
                   />
+                  {formErrors.patientAge && <p className="text-red-500 text-xs mt-1">{formErrors.patientAge}</p>}
                 </div>
 
                 <div>
@@ -290,14 +361,19 @@ export function TransferRequest() {
                   <select
                     required
                     value={formData.patientGender}
-                    onChange={(e) => setFormData({ ...formData, patientGender: e.target.value, attendantGender: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientGender: e.target.value, attendantGender: e.target.value });
+                      if (formErrors.patientGender) setFormErrors({ ...formErrors, patientGender: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientGender ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                   >
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
+                  {formErrors.patientGender && <p className="text-red-500 text-xs mt-1">{formErrors.patientGender}</p>}
                 </div>
 
                 <div>
@@ -384,14 +460,19 @@ export function TransferRequest() {
                       <select
                         required
                         value={formData.toHospital}
-                        onChange={(e) => setFormData({ ...formData, toHospital: e.target.value })}
-                        className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                        onChange={(e) => {
+                          setFormData({ ...formData, toHospital: e.target.value });
+                          if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+                        }}
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                          }`}
                       >
                         <option value="">Select destination hospital</option>
                         {hospitals.map(hospital => (
                           <option key={hospital} value={hospital}>{hospital}</option>
                         ))}
                       </select>
+                      {formErrors.toHospital && <p className="text-red-500 text-xs mt-1">{formErrors.toHospital}</p>}
                     </div>
                   </div>
 
@@ -438,6 +519,7 @@ export function TransferRequest() {
                         </div>
                       </button>
                     </div>
+                    {formErrors.priority && <p className="text-red-500 text-xs mt-2">{formErrors.priority}</p>}
                   </div>
 
                   <div className="mb-6">
@@ -445,10 +527,15 @@ export function TransferRequest() {
                     <textarea
                       required
                       value={formData.reason}
-                      onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                      className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
+                      onChange={(e) => {
+                        setFormData({ ...formData, reason: e.target.value });
+                        if (formErrors.reason) setFormErrors({ ...formErrors, reason: '' });
+                      }}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground ${formErrors.reason ? 'border-red-500 ring-1 ring-500' : 'border-input'
+                        }`}
                       placeholder="Detailed reason for inter-hospital transfer..."
                     />
+                    {formErrors.reason && <p className="text-red-500 text-xs mt-1">{formErrors.reason}</p>}
                   </div>
 
                   <div className="mb-6">
@@ -632,19 +719,26 @@ export function TransferRequest() {
                             ⚠️ No drivers currently available. Please wait for a driver to come online.
                           </p>
                         ) : (
-                          <select
-                            required
-                            value={selectedDriverId}
-                            onChange={(e) => setSelectedDriverId(e.target.value)}
-                            className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground"
-                          >
-                            <option value="">Select a driver...</option>
-                            {availableDrivers.map(driver => (
-                              <option key={driver.id} value={driver.id}>
-                                {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
-                              </option>
-                            ))}
-                          </select>
+                          <>
+                            <select
+                              required
+                              value={selectedDriverId}
+                              onChange={(e) => {
+                                setSelectedDriverId(e.target.value);
+                                if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
+                              }}
+                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                                }`}
+                            >
+                              <option value="">Select a driver...</option>
+                              {availableDrivers.map(driver => (
+                                <option key={driver.id} value={driver.id}>
+                                  {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
+                                </option>
+                              ))}
+                            </select>
+                            {formErrors.selectedDriverId && <p className="text-red-500 text-xs mt-1">{formErrors.selectedDriverId}</p>}
+                          </>
                         )}
                         <p className="text-green-700 text-xs mt-2">
                           {availableDrivers.length} driver(s) currently online
