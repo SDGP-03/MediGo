@@ -1,11 +1,12 @@
-import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock, LogOut, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { User, Bell, Shield, Smartphone, Mail, Globe, Monitor, Eye, EyeOff, X, CheckCircle, AlertCircle, Lock, LogOut, Trash2, Camera } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import {
     EmailAuthProvider,
     reauthenticateWithCredential,
     updatePassword,
     signOut,
     deleteUser,
+    updateProfile,
 } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -58,7 +59,30 @@ export function Settings() {
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteToast, setDeleteToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+    // ── edit profile modal ────────────────────────────────────────────────
+    const [showEditProfile, setShowEditProfile] = useState(false);
+    const [profileForm, setProfileForm] = useState({ displayName: '', email: '' });
+    const [profileLoading, setProfileLoading] = useState(false);
+    const [profileToast, setProfileToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [currentUserData, setCurrentUserData] = useState({ displayName: '', email: '', photoURL: '' });
+
     const strength = getPasswordStrength(pwForm.newPw);
+
+    // ── fetch user profile data on mount ──────────────────────────────────
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (user) {
+            setCurrentUserData({
+                displayName: user.displayName || 'Admin User',
+                email: user.email || '',
+                photoURL: user.photoURL || '',
+            });
+            setProfileForm({
+                displayName: user.displayName || 'Admin User',
+                email: user.email || '',
+            });
+        }
+    }, []);
 
     const resetPasswordModal = () => {
         setPwForm({ current: '', newPw: '', confirm: '' });
@@ -181,6 +205,60 @@ export function Settings() {
         }
     };
 
+    const resetProfileModal = () => {
+        const user = auth.currentUser;
+        if (user) {
+            setProfileForm({
+                displayName: user.displayName || 'Admin User',
+                email: user.email || '',
+            });
+        }
+        setProfileToast(null);
+        setShowEditProfile(false);
+    };
+
+    const handleEditProfile = async () => {
+        if (!profileForm.displayName.trim()) {
+            setProfileToast({ type: 'error', message: 'Display name is required.' });
+            return;
+        }
+
+        const user = auth.currentUser;
+        if (!user) {
+            setProfileToast({ type: 'error', message: 'No authenticated user found.' });
+            return;
+        }
+
+        setProfileLoading(true);
+        setProfileToast(null);
+
+        try {
+            // Update display name in Firebase
+            if (profileForm.displayName !== user.displayName) {
+                await updateProfile(user, {
+                    displayName: profileForm.displayName,
+                });
+            }
+
+            // Update local state
+            setCurrentUserData(prev => ({
+                ...prev,
+                displayName: profileForm.displayName,
+            }));
+
+            setProfileLoading(false);
+            setProfileToast({ type: 'success', message: 'Profile updated successfully!' });
+            setTimeout(() => resetProfileModal(), 1800);
+        } catch (err: unknown) {
+            setProfileLoading(false);
+            let message = 'Failed to update profile. Please try again.';
+            if (err && typeof err === 'object' && 'message' in err) {
+                message = (err as { message: string }).message;
+            }
+            setProfileToast({ type: 'error', message });
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -206,18 +284,24 @@ export function Settings() {
                         <div className="relative group cursor-pointer">
                             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 p-[2px]">
                                 <div className="w-full h-full rounded-full bg-white dark:bg-gray-800 flex items-center justify-center overflow-hidden">
-                                    <User className="w-10 h-10 text-gray-400" />
+                                    {currentUserData.photoURL ? (
+                                        <img src={currentUserData.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-10 h-10 text-gray-400" />
+                                    )}
                                 </div>
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-white text-xs font-medium">Change</span>
+                                <Camera className="w-5 h-5 text-white" />
                             </div>
                         </div>
 
                         <div className="space-y-1">
-                            <h3 className="font-medium text-gray-900 dark:text-white">Admin User</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">admin@medigo.com</p>
-                            <button className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                            <h3 className="font-medium text-gray-900 dark:text-white">{currentUserData.displayName}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{currentUserData.email}</p>
+                            <button 
+                                onClick={() => setShowEditProfile(true)}
+                                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
                                 Edit Profile
                             </button>
                         </div>
@@ -461,6 +545,95 @@ export function Settings() {
                                             Updating...
                                         </>
                                     ) : 'Update Password'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Edit Profile Modal ─────────────────────────────────────── */}
+                {showEditProfile && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                        <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Profile</h3>
+                                </div>
+                                <button
+                                    onClick={resetProfileModal}
+                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 space-y-5">
+                                {/* Toast */}
+                                {profileToast && (
+                                    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${profileToast.type === 'success'
+                                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                                        }`}>
+                                        {profileToast.type === 'success'
+                                            ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                            : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+                                        {profileToast.message}
+                                    </div>
+                                )}
+
+                                {/* Display Name */}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={profileForm.displayName}
+                                        onChange={e => setProfileForm(p => ({ ...p, displayName: e.target.value }))}
+                                        placeholder="Enter your display name"
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                                    />
+                                </div>
+
+                                {/* Email (Read-only for now) */}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                                    <input
+                                        type="email"
+                                        value={profileForm.email}
+                                        disabled
+                                        placeholder="Your email"
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-60 outline-none"
+                                    />
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Email changes are not allowed. Contact support to change your email.</p>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex items-center gap-3 px-6 pb-6">
+                                <button
+                                    onClick={resetProfileModal}
+                                    className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleEditProfile}
+                                    disabled={profileLoading || !profileForm.displayName.trim()}
+                                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium transition-all shadow-md hover:shadow-blue-500/25 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {profileLoading ? (
+                                        <>
+                                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                            </svg>
+                                            Saving...
+                                        </>
+                                    ) : 'Save Changes'}
                                 </button>
                             </div>
                         </div>
