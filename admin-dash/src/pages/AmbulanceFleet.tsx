@@ -468,7 +468,7 @@ export function AmbulanceFleet() {
         {filteredAmbulances.map(ambulance => (
           <div
             key={ambulance.id}
-            className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900/50 group"
+            className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900/50 group flex flex-col h-full"
           >
             {/* Card header */}
             <div className="flex items-start justify-between mb-4">
@@ -558,7 +558,7 @@ export function AmbulanceFleet() {
             )}
 
             {/* Action buttons */}
-            <div className="pt-3 border-t border-border flex flex-col gap-2">
+            <div className="pt-3 border-t border-border flex flex-col gap-2 mt-auto">
               {ambulance.status === 'available' && (
                 <>
                   <button
