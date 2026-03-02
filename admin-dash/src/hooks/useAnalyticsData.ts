@@ -130,13 +130,13 @@ export function useAnalyticsData(): AnalyticsData {
         bgColor: bucket.color,
     }));
 
-    // 5. High demand areas — grouped by pickup hospital name
-    const pickupCounts: Record<string, number> = {};
+    // 5. Top transfer destinations — grouped by destination hospital name
+    const destTransferCounts: Record<string, number> = {};
     transfers.forEach(t => {
-        const area = t.pickup?.hospitalName || 'Unknown';
-        pickupCounts[area] = (pickupCounts[area] || 0) + 1;
+        const area = t.destination?.hospitalName || 'Unknown';
+        destTransferCounts[area] = (destTransferCounts[area] || 0) + 1;
     });
-    const demandAreasData = Object.entries(pickupCounts)
+    const demandAreasData = Object.entries(destTransferCounts)
         .map(([area, requests]) => ({ area, requests }))
         .sort((a, b) => b.requests - a.requests)
         .slice(0, 5); // top 5

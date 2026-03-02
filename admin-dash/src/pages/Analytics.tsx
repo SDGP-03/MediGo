@@ -213,10 +213,10 @@ export function Analytics() {
         </div>
       </div>
 
-      {/* High Demand Areas */}
+      {/* Top Transfer Destinations */}
       <div className="bg-card rounded-lg shadow-md p-6">
-        <h3 className="text-foreground mb-1">High Demand Pickup Hospitals</h3>
-        <p className="text-muted-foreground text-sm mb-4">Which hospitals create the most transfer requests</p>
+        <h3 className="text-foreground mb-1">Top Patient Transfer Destinations</h3>
+        <p className="text-muted-foreground text-sm mb-4">Hospitals receiving the most incoming patient transfers</p>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={demandAreasData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" />
@@ -224,14 +224,14 @@ export function Analytics() {
             <YAxis dataKey="area" type="category" width={160} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="requests" fill="#22c55e" name="Total Requests" />
+            <Bar dataKey="requests" fill="#22c55e" name="Transfers Received" />
           </BarChart>
         </ResponsiveContainer>
         {data.demandAreasData.length > 0 && (
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <p className="text-blue-800 dark:text-blue-200">
               <MapPin className="inline mr-2" size={16} />
-              <strong>{data.demandAreasData[0].area}</strong> has the highest number of outgoing transfers ({data.demandAreasData[0].requests} requests)
+              <strong>{data.demandAreasData[0].area}</strong> is the most frequent transfer destination ({data.demandAreasData[0].requests} transfers received)
             </p>
           </div>
         )}
