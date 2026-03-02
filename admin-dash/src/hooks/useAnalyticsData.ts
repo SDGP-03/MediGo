@@ -15,7 +15,7 @@ export interface AnalyticsData {
     incidentTypeData: { name: string; value: number; color: string }[];
     peakHoursData: { label: string; description: string; percent: number; color: string; textColor: string; bgColor: string }[];
     demandAreasData: { area: string; requests: number }[];
-    hospitalLoadData: { name: string; percent: number; color: string; borderColor: string }[];
+    hospitalLoadData: { name: string; count: number; percent: number; color: string; borderColor: string }[];
     // Response time trend — one data point per month for the last 6 months
     responseTimeTrend: { month: string; avgTime: number | null }[];
     // Overall average response time in minutes (null if no accepted requests yet)
@@ -141,18 +141,19 @@ export function useAnalyticsData(): AnalyticsData {
         .sort((a, b) => b.requests - a.requests)
         .slice(0, 5); // top 5
 
-    // 6. Hospital load — grouped by destination hospital
-    const destCounts: Record<string, number> = {};
+    // 6. Hospital load — grouped by PICKUP hospital (where patients come FROM)
+    const pickupCounts: Record<string, number> = {};
     transfers.forEach(t => {
-        const hospital = t.destination?.hospitalName || 'Unknown';
-        destCounts[hospital] = (destCounts[hospital] || 0) + 1;
+        const hospital = t.pickup?.hospitalName || 'Unknown';
+        pickupCounts[hospital] = (pickupCounts[hospital] || 0) + 1;
     });
-    const maxDest = Math.max(...Object.values(destCounts), 1);
+    const maxPickup = Math.max(...Object.values(pickupCounts), 1);
     const BORDER_COLORS = ['border-green-500', 'border-yellow-500', 'border-red-500', 'border-blue-500', 'border-purple-500'];
-    const hospitalLoadData = Object.entries(destCounts)
+    const hospitalLoadData = Object.entries(pickupCounts)
         .map(([name, count], i) => ({
             name,
-            percent: Math.round((count / maxDest) * 100),
+            count,
+            percent: Math.round((count / maxPickup) * 100),
             color: `bg-${['green', 'yellow', 'red', 'blue', 'purple'][i % 5]}-500`,
             borderColor: BORDER_COLORS[i % BORDER_COLORS.length],
         }))

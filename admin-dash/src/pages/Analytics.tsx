@@ -215,7 +215,7 @@ export function Analytics() {
 
       {/* Top Transfer Destinations */}
       <div className="bg-card rounded-lg shadow-md p-6">
-        <h3 className="text-foreground mb-1">Top Patient Transfer Destinations</h3>
+        <h3 className="text-foreground font-bold mb-1">Top Patient Transfer Destinations</h3>
         <p className="text-muted-foreground text-sm mb-4">Hospitals receiving the most incoming patient transfers</p>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={demandAreasData} layout="vertical">
@@ -237,17 +237,18 @@ export function Analytics() {
         )}
       </div>
 
-      {/* Hospital Load Distribution */}
+      {/* Top Sending Hospitals */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-        <h3 className="text-foreground font-bold mb-1">Hospital Load Distribution</h3>
-        <p className="text-sm text-muted-foreground mb-4">Which hospitals receive the most transfers (relative to highest)</p>
+        <h3 className="text-foreground font-bold mb-1">Top Patient-Sending Hospitals</h3>
+        <p className="text-sm text-muted-foreground mb-4">Hospitals that have initiated the most outgoing transfers — relative to the busiest</p>
         {hospitalLoadData.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No destination data yet. Once transfers are submitted, this will populate automatically.</p>
+          <p className="text-muted-foreground text-sm">No transfer data yet. Once transfers are submitted, this will populate automatically.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {hospitalLoadData.map((hospital, i) => (
               <div key={i} className={`border-l-4 ${hospital.borderColor} pl-4`}>
                 <p className="text-foreground font-semibold">{hospital.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{hospital.count} transfer{hospital.count !== 1 ? 's' : ''} sent</p>
                 <div className="mt-2 flex items-center">
                   <div className="flex-1 bg-secondary rounded-full h-2 mr-2">
                     <div
@@ -259,6 +260,14 @@ export function Analytics() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {hospitalLoadData.length > 0 && (
+          <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+            <p className="text-green-800 dark:text-green-200 text-sm">
+              <MapPin className="inline mr-2" size={15} />
+              <strong>{hospitalLoadData[0].name}</strong> has sent the most patients out for transfer ({hospitalLoadData[0].count} transfers)
+            </p>
           </div>
         )}
       </div>
