@@ -392,10 +392,7 @@ export function Settings() {
                             <span className="font-medium text-gray-900 dark:text-white">Change Password</span>
                             <span className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">→</span>
                         </button>
-                        <button className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between group">
-                            <span className="font-medium text-gray-900 dark:text-white">Two-Factor Authentication</span>
-                            <span className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">→</span>
-                        </button>
+                        {/* Two-Factor Authentication removed */}
                     </div>
                 </section>
 
