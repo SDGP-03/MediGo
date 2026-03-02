@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import '../authentication/login_screen.dart';
 import 'privacy_policy_page.dart';
 import 'faq_page.dart';
@@ -42,23 +42,28 @@ class _SettingsPageState extends State<SettingsPage> {
   String? userProfileImage;
 
   bool get _isSinhala => selectedLanguage == "Sinhala";
+  bool get _isTamil => selectedLanguage == "Tamil";
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   String _mapStyleLabel(String value) {
     switch (value) {
       case "standard":
-        return t("STANDARD", "සාමාන්‍ය");
+        return t("STANDARD", "සාමාන්‍ය", "சாதாரணம்");
       case "silver":
-        return t("SILVER", "සිල්වර්");
+        return t("SILVER", "සිල්වර්", "சில்வர்");
       case "retro":
-        return t("RETRO", "රෙට්‍රෝ");
+        return t("RETRO", "රෙට්‍රෝ", "ரெட்ரோ");
       case "dark":
-        return t("DARK", "අඳුරු");
+        return t("DARK", "අඳුරු", "இருள்");
       case "night":
-        return t("NIGHT", "රාත්‍රී");
+        return t("NIGHT", "රාත්‍රී", "இரவு");
       case "aubergine":
-        return t("AUBERGINE", "ඕබර්ජීන්");
+        return t("AUBERGINE", "ඕබර්ජීන්", "ஊபர்ஜீன்");
       default:
         return value.toUpperCase();
     }
@@ -186,6 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
             t(
               "Notification permission denied",
               "දැනුම්දීම් අවසරය ප්‍රතික්ෂේප වුණා",
+              "அறிவிப்பு அனுமதி மறுக்கப்பட்டது",
             ),
             isError: true,
           );
@@ -256,12 +262,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
       if (!mounted) return;
 
-      _showSnackBar(t("Cache cleared successfully", "කැෂේ සාර්ථකව ඉවත් කළා"));
+      _showSnackBar(
+        t(
+          "Cache cleared successfully",
+          "කැෂේ සාර්ථකව ඉවත් කළා",
+          "கேச் வெற்றிகரமாக நீக்கப்பட்டது",
+        ),
+      );
     } catch (e) {
       debugPrint('Error clearing cache: $e');
       if (mounted) {
         _showSnackBar(
-          t("Failed to clear cache", "කැෂේ ඉවත් කිරීමට බැරි වුණා"),
+          t("Failed to clear cache", "කැෂේ ඉවත් කිරීමට බැරි වුණා", "கேச் நீக்க முடியவில்லை"),
           isError: true,
         );
       }
@@ -283,7 +295,11 @@ class _SettingsPageState extends State<SettingsPage> {
       debugPrint('Error logging out: $e');
       if (mounted) {
         _showSnackBar(
-          t("Failed to logout", "ඉවත් වීමට බැරි වුණා"),
+          t(
+            "Failed to logout",
+            "ඉවත් වීමට බැරි වුණා",
+            "வெளியேற முடியவில்லை",
+          ),
           isError: true,
         );
       }
@@ -329,7 +345,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         title: Text(
-          t("Settings", "සැකසුම්"),
+          t("Settings", "සැකසුම්", "அமைப்புகள்"),
           style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.red.shade700,
@@ -346,24 +362,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Account Section
           _buildSectionCard(
-            title: t("Account", "ගිණුම"),
+            title: t("Account", "ගිණුම", "கணக்கு"),
             children: [
               _buildSettingsTile(
                 icon: Icons.person_outline,
                 iconColor: Colors.blue,
-                title: t("Edit Profile", "පැතිකඩ වෙනස් කරන්න"),
+                title: t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
                 icon: Icons.lock_outline,
                 iconColor: Colors.orange,
-                title: t("Change Password", "මුරපදය වෙනස් කරන්න"),
+                title: t("Change Password", "මුරපදය වෙනස් කරන්න", "கடவுச்சொல் மாற்று"),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
                 icon: Icons.history,
                 iconColor: Colors.purple,
-                title: t("Trip History", "ගමන් ඉතිහාසය"),
+                title: t("Trip History", "ගමන් ඉතිහාසය", "பயண வரலாறு"),
                 onTap: () => Navigator.pushNamed(context, '/history'),
               ),
             ],
@@ -373,13 +389,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Preferences Section
           _buildSectionCard(
-            title: t("Preferences", "අභිරුචි"),
+            title: t("Preferences", "අභිරුචි", "விருப்பங்கள்"),
             children: [
               _buildSwitchTile(
                 icon: Icons.notifications_outlined,
                 iconColor: Colors.red,
-                title: t("Notifications", "දැනුම්දීම්"),
-                subtitle: t("Receive trip alerts", "ගමන් දැනුම්දීම් ලබාගන්න"),
+                title: t("Notifications", "දැනුම්දීම්", "அறிவிப்புகள்"),
+                subtitle: t("Receive trip alerts", "ගමන් දැනුම්දීම් ලබාගන්න", "பயண அறிவிப்புகள் பெறுங்கள்"),
                 value: notificationsEnabled,
                 onChanged: (value) async {
                   setState(() => notificationsEnabled = value);
@@ -399,10 +415,11 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSwitchTile(
                 icon: Icons.volume_up_outlined,
                 iconColor: Colors.green,
-                title: t("Sound Effects", "ශබ්ද"),
+                title: t("Sound Effects", "ශබ්ද", "ஒலி அமைப்பு"),
                 subtitle: t(
                   "Play sounds for actions",
                   "ක්‍රියා සඳහා ශබ්ද දාන්න",
+                  "செயல்களுக்கு ஒலி இயக்கு",
                 ),
                 value: soundEffectsEnabled,
                 onChanged: (value) {
@@ -413,10 +430,11 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSwitchTile(
                 icon: Icons.vibration,
                 iconColor: Colors.indigo,
-                title: t("Vibration", "කම්පනය"),
+                title: t("Vibration", "කම්පනය", "அதிர்வு"),
                 subtitle: t(
                   "Vibrate on notifications",
                   "දැනුම්දීම්වලදී කම්පනය",
+                  "அறிவிப்பில் அதிர்வு",
                 ),
                 value: vibrationEnabled,
                 onChanged: (value) {
@@ -434,13 +452,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // App Information Section
           _buildSectionCard(
-            title: t("App Information", "යෙදුම් තොරතුරු"),
+            title: t("App Information", "යෙදුම් තොරතුරු", "செயலி தகவல்"),
             children: [
               _buildSettingsTile(
                 icon: Icons.info_outline,
                 iconColor: Colors.blue,
-                title: t("About App", "යෙදුම ගැන"),
-                subtitle: t("Version $appVersion", "සංස්කරණය $appVersion"),
+                title: t("About App", "යෙදුම ගැන", "செயலி பற்றி"),
+                subtitle: t("Version $appVersion", "සංස්කරණය $appVersion", "பதிப்பு $appVersion"),
                 onTap: () {
                   showAboutDialog(
                     context: context,
@@ -456,6 +474,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         t(
                           "MediGo Driver App for managing ambulance rides.",
                           "අම්බුලන්ස් ගමන් කළමනාකරණයට MediGo රියදුරු යෙදුම.",
+                          "ஆம்புலன்ஸ் பயணங்களை நிர்வகிக்க MediGo டிரைவர் செயலி.",
                         ),
                       ),
                     ],
@@ -465,18 +484,19 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.feedback_outlined,
                 iconColor: Colors.amber,
-                title: t("Send Feedback", "ප්‍රතිචාර යවන්න"),
+                title: t("Send Feedback", "ප්‍රතිචාර යවන්න", "கருத்தை அனுப்பு"),
                 subtitle: t(
                   "Tell us how we can improve",
                   "අපි හොඳ කරගන්න දේ කියන්න",
+                  "எப்படி மேம்படுத்தலாம் என்று சொல்லுங்கள்",
                 ),
                 onTap: () => Navigator.pushNamed(context, '/feedback'),
               ),
               _buildSettingsTile(
                 icon: Icons.support_agent,
                 iconColor: Colors.teal,
-                title: t("Contact Support", "සහාය අමතන්න"),
-                subtitle: t("Get help", "උදව් ලබාගන්න"),
+                title: t("Contact Support", "සහාය අමතන්න", "உதவியை தொடர்பு கொள்ளுங்கள்"),
+                subtitle: t("Get help", "උදව් ලබාගන්න", "உதவி பெறுங்கள்"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -490,7 +510,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.help_outline,
                 iconColor: Colors.indigo,
                 title: "FAQ",
-                subtitle: t("Frequently asked questions", "නිතර අහන ප්‍රශ්න"),
+                subtitle: t("Frequently asked questions", "නිතර අහන ප්‍රශ්න", "அடிக்கடி கேட்கப்படும் கேள்விகள்"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -501,7 +521,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 iconColor: Colors.grey,
-                title: t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය"),
+                title: t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය", "தனியுரிமைக் கொள்கை"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -514,24 +534,25 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.delete_outline,
                 iconColor: Colors.orange,
-                title: t("Clear Cache", "කැෂේ ඉවත් කරන්න"),
+                title: t("Clear Cache", "කැෂේ ඉවත් කරන්න", "கேச் நீக்கு"),
                 subtitle: cacheSize,
                 onTap: () {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: Text(t("Clear Cache", "කැෂේ ඉවත් කරන්න")),
+                      title: Text(t("Clear Cache", "කැෂේ ඉවත් කරන්න", "கேச் நீக்கு")),
                       content: Text(
                         t(
                           "This will remove $cacheSize of temporary files and cached images. "
                               "Your account data will not be affected.",
                           "$cacheSize තාවකාලික ගොනු සහ කැෂ් පින්තූර ඉවත් වේ. ඔබගේ ගිණුම් දත්ත වෙනස් වෙන්නේ නැහැ.",
+                          "$cacheSize தற்காலிக கோப்புகள் மற்றும் கேச் படங்கள் நீக்கப்படும். உங்கள் கணக்கு தரவு பாதிக்காது.",
                         ),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: Text(t("Cancel", "අවලංගු කරන්න")),
+                          child: Text(t("Cancel", "අවලංගු කරන්න", "ரத்து செய்")),
                         ),
                         TextButton(
                           onPressed: () {
@@ -539,7 +560,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             clearAppCache();
                           },
                           child: Text(
-                            t("Clear", "ඉවත් කරන්න"),
+                            t("Clear", "ඉවත් කරන්න", "நீக்கு"),
                             style: TextStyle(color: Colors.red),
                           ),
                         ),
@@ -566,24 +587,25 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             icon: const Icon(Icons.logout),
             label: Text(
-              t("Logout", "ඉවත් වන්න"),
+              t("Logout", "ඉවත් වන්න", "வெளியேறு"),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text(t('Logout', 'ඉවත් වීම')),
+                  title: Text(t('Logout', 'à¶‰à·€à¶­à·Š à·€à·“à¶¸', 'à®µà¯†à®³à®¿à®¯à¯‡à®±à¯à®¤à®²à¯')),
                   content: Text(
                     t(
                       'Are you sure you want to logout?',
-                      'ඔබට ඉවත් වෙන්න ඕනෙද?',
+                      'à¶”à¶¶à¶§ à¶‰à·€à¶­à·Š à·€à·™à¶±à·Šà¶± à¶•à¶±à·™à¶¯?',
+                      'நீங்கள் வெளியேற விரும்புகிறீர்களா?',
                     ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(t('Cancel', 'අවලංගු කරන්න')),
+                      child: Text(t('Cancel', 'à¶…à·€à¶½à¶‚à¶œà·” à¶šà¶»à¶±à·Šà¶±', 'à®°à®¤à¯à®¤à¯ à®šà¯†à®¯à¯')),
                     ),
                     TextButton(
                       onPressed: () {
@@ -591,7 +613,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         logout();
                       },
                       child: Text(
-                        t('Logout', 'ඉවත් වන්න'),
+                        t('Logout', 'à¶‰à·€à¶­à·Š à·€à¶±à·Šà¶±', 'à®µà¯†à®³à®¿à®¯à¯‡à®±à¯'),
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
@@ -788,7 +810,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: const Icon(Icons.map, color: Colors.cyan, size: 24),
       ),
       title: Text(
-        t("Map Style", "සිතියම් විලාසය"),
+        t("Map Style", "සිතියම් විලාසය", "வரைபட தோற்றம்"),
         style: TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
@@ -806,16 +828,17 @@ class _SettingsPageState extends State<SettingsPage> {
             t(
               "Map style changed to ${value.toUpperCase()}",
               "සිතියම් විලාසය ${_mapStyleLabel(value)} ලෙස වෙනස් වුණා",
+              "வரைபட தோற்றம் ${_mapStyleLabel(value)} ஆக மாற்றப்பட்டது",
             ),
           );
         },
-        items: const [
-          DropdownMenuItem(value: "standard", child: Text("Standard")),
-          DropdownMenuItem(value: "silver", child: Text("Silver")),
-          DropdownMenuItem(value: "retro", child: Text("Retro")),
-          DropdownMenuItem(value: "dark", child: Text("Dark")),
-          DropdownMenuItem(value: "night", child: Text("Night")),
-          DropdownMenuItem(value: "aubergine", child: Text("Aubergine")),
+        items: [
+          DropdownMenuItem(value: "standard", child: Text(t("Standard", "සාමාන්‍ය", "சாதாரணம்"))),
+          DropdownMenuItem(value: "silver", child: Text(t("Silver", "සිල්වර්", "சில்வர்"))),
+          DropdownMenuItem(value: "retro", child: Text(t("Retro", "රෙට්‍රෝ", "ரெட்ரோ"))),
+          DropdownMenuItem(value: "dark", child: Text(t("Dark", "අඳුරු", "இருள்"))),
+          DropdownMenuItem(value: "night", child: Text(t("Night", "රාත්‍රී", "இரவு"))),
+          DropdownMenuItem(value: "aubergine", child: Text(t("Aubergine", "ඕබර්ජීන්", "ஊபர்ஜீன்"))),
         ],
       ),
     );
@@ -834,7 +857,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: const Icon(Icons.language, color: Colors.deepPurple, size: 24),
       ),
       title: Text(
-        t("Language", "භාෂාව"),
+        t("Language", "භාෂාව", "மொழி"),
         style: TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
@@ -855,6 +878,8 @@ class _SettingsPageState extends State<SettingsPage> {
           _showSnackBar(
             value == "Sinhala"
                 ? "භාෂාව සිංහල ලෙස වෙනස් වුණා"
+                : value == "Tamil"
+                ? "மொழி தமிழ் ஆக மாற்றப்பட்டது"
                 : "Language changed to $value",
           );
         },
@@ -880,13 +905,13 @@ class _SettingsPageState extends State<SettingsPage> {
         child: const Icon(Icons.straighten, color: Colors.pink, size: 24),
       ),
       title: Text(
-        t("Distance Unit", "දුර ඒකකය"),
+        t("Distance Unit", "දුර ඒකකය", "தூர அலகு"),
         style: TextStyle(fontWeight: FontWeight.w500),
       ),
       subtitle: Text(
         distanceUnit == 'km'
-            ? t('Kilometers', 'කිලෝමීටර්')
-            : t('Miles', 'සැතපුම්'),
+            ? t('Kilometers', 'කිලෝමීටර්', 'கிலோமீட்டர்')
+            : t('Miles', 'සැතපුම්', 'மைல்கள்'),
         style: const TextStyle(fontSize: 12),
       ),
       trailing: DropdownButton<String>(
@@ -897,11 +922,14 @@ class _SettingsPageState extends State<SettingsPage> {
           setState(() => distanceUnit = value);
           savePreference('distanceUnit', value);
         },
-        items: const [
-          DropdownMenuItem(value: "km", child: Text("Kilometers")),
-          DropdownMenuItem(value: "mi", child: Text("Miles")),
+        items: [
+          DropdownMenuItem(value: "km", child: Text(t("Kilometers", "කිලෝමීටර්", "கிலோமீட்டர்"))),
+          DropdownMenuItem(value: "mi", child: Text(t("Miles", "සැතපුම්", "மைல்கள்"))),
         ],
       ),
     );
   }
 }
+
+
+
