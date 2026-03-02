@@ -1,6 +1,6 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Users, Clock, MapPin, Activity, Ambulance, Loader2 } from 'lucide-react';
+import { Users, Clock, MapPin, Activity, Ambulance, Loader2, TrendingDown } from 'lucide-react';
 import { useAnalyticsData } from '../hooks/useAnalyticsData';
 
 export function Analytics() {
@@ -35,8 +35,9 @@ export function Analytics() {
     },
     {
       label: 'Avg Response Time',
-      // This metric requires tracking completion timestamps; shown as static for now
-      value: 'N/A',
+      value: data.avgResponseTimeMinutes !== null
+        ? `${data.avgResponseTimeMinutes} min`
+        : 'No data yet',
       icon: Clock,
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
@@ -90,6 +91,73 @@ export function Analytics() {
             <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── Average Response Time Trend ─────────────────────────────────── */}
+      <div className="bg-card rounded-lg shadow-md p-6">
+        <div className="flex items-start justify-between mb-1">
+          <div>
+            <h3 className="text-foreground font-bold">Average Response Time Trend</h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Time from request creation to driver acceptance &mdash; grouped by month
+            </p>
+          </div>
+          {data.avgResponseTimeMinutes !== null && (
+            <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1.5 rounded-full text-sm font-semibold">
+              <TrendingDown size={15} />
+              Overall avg: {data.avgResponseTimeMinutes} min
+            </div>
+          )}
+        </div>
+
+        {/* If no months have data yet, show a friendly empty state */}
+        {data.responseTimeTrend.every(p => p.avgTime === null) ? (
+          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-3">
+            <Clock size={36} className="opacity-30" />
+            <p className="text-sm text-center max-w-xs">
+              No accepted transfers yet. Once a driver accepts a request, response times will appear here.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart
+                data={data.responseTimeTrend}
+                margin={{ top: 16, right: 16, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis
+                  label={{ value: 'Minutes', angle: -90, position: 'insideLeft', offset: 10 }}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  formatter={(value: number | null) =>
+                    value !== null ? [`${value} min`, 'Avg Response Time'] : ['No data', 'Avg Response Time']
+                  }
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="avgTime"
+                  stroke="#ef4444"
+                  strokeWidth={3}
+                  name="Avg Response Time"
+                  dot={{ r: 5, fill: '#ef4444' }}
+                  activeDot={{ r: 7 }}
+                  connectNulls={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+              <p className="text-orange-800 dark:text-orange-200 text-sm">
+                <Clock className="inline mr-2" size={15} />
+                Response time is measured from when the request is created to when the driver accepts it.
+                Months with no accepted transfers are shown as gaps in the line.
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Charts Grid */}

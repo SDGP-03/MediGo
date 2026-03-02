@@ -16,6 +16,10 @@ export interface AnalyticsData {
     peakHoursData: { label: string; description: string; percent: number; color: string; textColor: string; bgColor: string }[];
     demandAreasData: { area: string; requests: number }[];
     hospitalLoadData: { name: string; percent: number; color: string; borderColor: string }[];
+    // Response time trend — one data point per month for the last 6 months
+    responseTimeTrend: { month: string; avgTime: number | null }[];
+    // Overall average response time in minutes (null if no accepted requests yet)
+    avgResponseTimeMinutes: number | null;
 }
 
 // Maps priority/reason to a display-friendly incident type
@@ -155,6 +159,53 @@ export function useAnalyticsData(): AnalyticsData {
         .sort((a, b) => b.percent - a.percent)
         .slice(0, 5);
 
+    // 7. Average Response Time Trend — grouped by month (last 6 months)
+    //    Response time = acceptedAt - createdAt (in minutes)
+    //    Only counted for transfers that have BOTH timestamps
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Build the last-6-months labels (oldest → newest)
+    const responseTimeTrend: { month: string; avgTime: number | null }[] = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthLabel = MONTH_NAMES[d.getMonth()];
+
+        // Filter transfers accepted in that calendar month
+        const monthTransfers = transfers.filter(t => {
+            if (!t.createdAt || !t.acceptedAt) return false;
+            const created = new Date(t.createdAt);
+            return (
+                created.getMonth() === d.getMonth() &&
+                created.getFullYear() === d.getFullYear()
+            );
+        });
+
+        if (monthTransfers.length === 0) {
+            responseTimeTrend.push({ month: monthLabel, avgTime: null });
+        } else {
+            const totalMinutes = monthTransfers.reduce((sum, t) => {
+                const diffMs = t.acceptedAt - t.createdAt;
+                return sum + (diffMs > 0 ? diffMs / 60000 : 0); // convert ms → minutes
+            }, 0);
+            const avg = totalMinutes / monthTransfers.length;
+            responseTimeTrend.push({ month: monthLabel, avgTime: parseFloat(avg.toFixed(1)) });
+        }
+    }
+
+    // 8. Overall average response time (across all accepted transfers)
+    const acceptedTransfers = transfers.filter(
+        t => t.createdAt && t.acceptedAt && t.acceptedAt > t.createdAt
+    );
+    const avgResponseTimeMinutes = acceptedTransfers.length === 0
+        ? null
+        : parseFloat(
+            (
+                acceptedTransfers.reduce((sum, t) => sum + (t.acceptedAt - t.createdAt) / 60000, 0)
+                / acceptedTransfers.length
+            ).toFixed(1)
+        );
+
     return {
         isLoading,
         totalRequests,
@@ -164,5 +215,7 @@ export function useAnalyticsData(): AnalyticsData {
         peakHoursData,
         demandAreasData,
         hospitalLoadData,
+        responseTimeTrend,
+        avgResponseTimeMinutes,
     };
 }
