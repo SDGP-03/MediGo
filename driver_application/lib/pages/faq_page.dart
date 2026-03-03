@@ -1,4 +1,4 @@
-import 'package:driver_application/pages/contact_support_page.dart';
+﻿import 'package:driver_application/pages/contact_support_page.dart';
 import 'package:driver_application/widgets/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,9 +14,15 @@ class _FaqPageState extends State<FaqPage> {
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
   String selectedCategory = 'all';
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   final Map<String, List<Map<String, String>>> faqDataEnglish = {
     'getting_started': [
@@ -256,8 +262,58 @@ class _FaqPageState extends State<FaqPage> {
     ],
   };
 
+  final Map<String, List<Map<String, String>>> faqDataTamil = {
+    'getting_started': [
+      {
+        'question': 'MediGo Driver கணக்கு எப்படி உருவாக்குவது?',
+        'answer':
+            'MediGo Driver செயலியை பதிவிறக்கி "Sign Up" அழுத்தவும். தகவல்களை நிரப்பி, தேவையான ஆவணங்களை பதிவேற்றுங்கள்.',
+      },
+      {
+        'question': 'பதிவுக்கு என்ன ஆவணங்கள் வேண்டும்?',
+        'answer':
+            'செல்லுபடியாகும் ஓட்டுநர் உரிமம், வாகன பதிவு, காப்பீடு மற்றும் சுயவிவரப் படம் தேவை.',
+      },
+    ],
+    'using_app': [
+      {
+        'question': 'MediGoக்கு இடம் ஏன் வேண்டும்?',
+        'answer':
+            'வழிசெலுத்தல், பயண கண்காணிப்பு மற்றும் அருகிலுள்ள கோரிக்கைகளுக்காக இடத் தகவல் தேவை.',
+      },
+    ],
+    'settings': [
+      {
+        'question': 'சுயவிவரத்தை எப்படி மாற்றுவது?',
+        'answer':
+            'Settings -> Edit Profile சென்று உங்கள் தகவல்களை புதுப்பிக்கலாம்.',
+      },
+    ],
+    'privacy': [
+      {
+        'question': 'என் தனிப்பட்ட தரவு பாதுகாப்பானதா?',
+        'answer':
+            'ஆம். பாதுகாப்பான சேவைகள் மற்றும் குறியாக்க முறைகள் பயன்படுத்தப்படுகின்றன.',
+      },
+    ],
+    'payments': [
+      {
+        'question': 'கட்டணம் எப்படி கிடைக்கும்?',
+        'answer':
+            'பயணம் முடிந்த பின் கட்டணங்கள் செயலாக்கப்பட்டு உங்கள் கணக்கில் செலுத்தப்படும்.',
+      },
+    ],
+    'troubleshooting': [
+      {
+        'question': 'செயலி வேலை செய்யவில்லை என்றால் என்ன செய்வது?',
+        'answer':
+            'Settings -> Clear Cache செய்து, செயலியை மீண்டும் தொடங்குங்கள்.',
+      },
+    ],
+  };
+
   Map<String, List<Map<String, String>>> get faqData =>
-      _isSinhala ? faqDataSinhala : faqDataEnglish;
+      _isSinhala ? faqDataSinhala : _isTamil ? faqDataTamil : faqDataEnglish;
 
   @override
   void initState() {
@@ -269,7 +325,7 @@ class _FaqPageState extends State<FaqPage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -324,7 +380,7 @@ class _FaqPageState extends State<FaqPage> {
           ),
         ),
         title: Text(
-          t("FAQ", "නිතර අහන ප්‍රශ්න"),
+          t("FAQ", "නිතර අහන ප්‍රශ්න", "அடிக்கடி கேட்கப்படும் கேள்விகள்"),
           style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.red.shade700,
@@ -382,7 +438,7 @@ class _FaqPageState extends State<FaqPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  t("Frequently Asked Questions", "නිතර අහන ප්‍රශ්න"),
+                  t("Frequently Asked Questions", "නිතර අහන ප්‍රශ්න", "அடிக்கடி கேட்கப்படும் கேள்விகள்"),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -394,6 +450,7 @@ class _FaqPageState extends State<FaqPage> {
                   t(
                     "Find answers to common questions",
                     "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න",
+                    "பொதுவான கேள்விகளுக்கான பதில்களை காணுங்கள்",
                   ),
                   style: TextStyle(fontSize: 14, color: Colors.white70),
                 ),
@@ -411,7 +468,7 @@ class _FaqPageState extends State<FaqPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: t('Search FAQs...', 'ප්‍රශ්න සොයන්න...'),
+          hintText: t('Search FAQs...', 'ප්‍රශ්න සොයන්න...', 'கேள்விகளை தேடுங்கள்...'),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
@@ -441,33 +498,33 @@ class _FaqPageState extends State<FaqPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          _buildCategoryChip('all', t('All', 'සියලු'), Icons.apps),
+          _buildCategoryChip('all', t('All', 'සියලු', 'அனைத்து'), Icons.apps),
           _buildCategoryChip(
             'getting_started',
-            t('Getting Started', 'ආරම්භය'),
+            t('Getting Started', 'ආරම්භය', 'தொடக்கம்'),
             Icons.rocket_launch,
           ),
           _buildCategoryChip(
             'using_app',
-            t('Using App', 'යෙදුම භාවිතය'),
+            t('Using App', 'යෙදුම භාවිතය', 'செயலி பயன்பாடு'),
             Icons.directions_car,
           ),
           _buildCategoryChip(
             'settings',
-            t('Settings', 'සැකසුම්'),
+            t('Settings', 'සැකසුම්', 'அமைப்புகள்'),
             Icons.settings,
           ),
           _buildCategoryChip(
             'privacy',
-            t('Privacy', 'පෞද්ගලිකතාව'),
+            t('Privacy', 'පෞද්ගලිකතාව', 'தனியுரிமை'),
             Icons.security,
           ),
           _buildCategoryChip(
             'payments',
-            t('Payments', 'ගෙවීම්'),
+            t('Payments', 'ගෙවීම්', 'கட்டணங்கள்'),
             Icons.payments,
           ),
-          _buildCategoryChip('troubleshooting', t('Help', 'උදව්'), Icons.help),
+          _buildCategoryChip('troubleshooting', t('Help', 'උදව්', 'உதவி'), Icons.help),
         ],
       ),
     );
@@ -580,7 +637,7 @@ class _FaqPageState extends State<FaqPage> {
             Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
-              t('No FAQs found', 'ප්‍රශ්න හමු වුණේ නැහැ'),
+              t('No FAQs found', 'ප්‍රශ්න හමු වුණේ නැහැ', 'கேள்விகள் எதுவும் கிடைக்கவில்லை'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -629,7 +686,7 @@ class _FaqPageState extends State<FaqPage> {
           ),
           icon: const Icon(Icons.contact_support),
           label: Text(
-            t("Still Need Help? Contact Support", "තව උදව් ඕනේද? සහාය අමතන්න"),
+            t("Still Need Help? Contact Support", "තව උදව් ඕනේද? සහාය අමතන්න", "இன்னும் உதவி வேண்டுமா? ஆதரவை தொடர்பு கொள்ளுங்கள்"),
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () {
