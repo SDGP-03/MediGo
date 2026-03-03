@@ -28,7 +28,7 @@ interface AmbulanceUnit {
   nextServiceDue?: string;
   maintenanceNotes?: string;
   currentTransfer?: string;
-  etaMinutes?: number; // mutable for countdown
+  etaMinutes?: number;
   equipment: string[];
   hasDoctor: boolean;
   hasVentilator: boolean;
@@ -244,12 +244,7 @@ export function AmbulanceFleet() {
     const transfer = PENDING_TRANSFERS.find(t => t.id === selectedTransferId)!;
     setAmbulances(prev => prev.map(a =>
       a.id === assignAmbulance.id
-        ? {
-          ...a, status: 'in_service',
-          currentTransfer: selectedTransferId,
-          etaMinutes: 15,
-          location: `En route to ${transfer.to}`,
-        }
+        ? { ...a, status: 'in_service', currentTransfer: selectedTransferId, etaMinutes: 15, location: `En route to ${transfer.to}` }
         : a
     ));
     showToast(`${assignAmbulance.id} assigned to transfer ${selectedTransferId} ✓`);
@@ -279,12 +274,7 @@ export function AmbulanceFleet() {
   const handleCompleteMaintenance = (ambId: string) => {
     setAmbulances(prev => prev.map(a =>
       a.id === ambId
-        ? {
-          ...a, status: 'available',
-          location: 'City General Hospital',
-          lastService: new Date().toISOString().slice(0, 10),
-          maintenanceNotes: undefined,
-        }
+        ? { ...a, status: 'available', location: 'City General Hospital', lastService: new Date().toISOString().slice(0, 10), maintenanceNotes: undefined }
         : a
     ));
     showToast(`${ambId} maintenance complete — now available ✓`);
@@ -300,7 +290,7 @@ export function AmbulanceFleet() {
       return;
     }
     const newUnit: AmbulanceUnit = {
-      id: addForm.id.trim(),
+      id: addForm.id.trim().toUpperCase(),
       status: 'available',
       driver: addForm.driver,
       driverGender: addForm.driverGender,
@@ -333,7 +323,7 @@ export function AmbulanceFleet() {
     }));
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 relative">
@@ -486,7 +476,6 @@ export function AmbulanceFleet() {
                   </span>
                 </div>
               </div>
-              {/* Detail button */}
               <button
                 onClick={() => setDetailAmbulance(ambulance)}
                 className="text-muted-foreground hover:text-foreground transition-colors p-1 opacity-0 group-hover:opacity-100"
@@ -568,11 +557,7 @@ export function AmbulanceFleet() {
                     Assign to Transfer
                   </button>
                   <button
-                    onClick={() => {
-                      setMaintenanceAmbulance(ambulance);
-                      setMaintenanceDate('');
-                      setMaintenanceNotes('');
-                    }}
+                    onClick={() => { setMaintenanceAmbulance(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
                     className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     <Wrench size={14} /> Schedule Maintenance
@@ -588,11 +573,7 @@ export function AmbulanceFleet() {
                     Track Transfer {ambulance.currentTransfer}
                   </button>
                   <button
-                    onClick={() => {
-                      setMaintenanceAmbulance(ambulance);
-                      setMaintenanceDate('');
-                      setMaintenanceNotes('');
-                    }}
+                    onClick={() => { setMaintenanceAmbulance(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
                     className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2"
                   >
                     <Wrench size={14} /> Schedule Maintenance
@@ -633,9 +614,9 @@ export function AmbulanceFleet() {
         </span>
       </button>
 
-      {/* ═══════════════════════════════════════════════════════════════
+      {/* ═══════════════════════════════════════════════════════════
           DETAIL MODAL
-      ═══════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════ */}
       <Dialog open={!!detailAmbulance} onOpenChange={open => !open && setDetailAmbulance(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -646,15 +627,12 @@ export function AmbulanceFleet() {
           </DialogHeader>
           {detailAmbulance && (
             <div className="space-y-4 text-sm">
-              {/* Status */}
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Status</span>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(detailAmbulance.status)}`}>
                   {detailAmbulance.status.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
-
-              {/* Crew */}
               <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Driver</p>
@@ -667,8 +645,6 @@ export function AmbulanceFleet() {
                   <p className="text-xs text-muted-foreground">{detailAmbulance.attendantGender}</p>
                 </div>
               </div>
-
-              {/* Location & Transfer */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <MapPin size={14} className="text-gray-400 shrink-0" />
@@ -687,8 +663,6 @@ export function AmbulanceFleet() {
                   </div>
                 )}
               </div>
-
-              {/* Vehicle info */}
               <div className="grid grid-cols-3 gap-3">
                 {detailAmbulance.year && (
                   <div className="p-3 bg-muted/30 rounded-lg text-center">
@@ -712,8 +686,6 @@ export function AmbulanceFleet() {
                   </div>
                 )}
               </div>
-
-              {/* Service due */}
               {detailAmbulance.nextServiceDue && (
                 <div className={`p-3 rounded-lg flex items-center gap-2 ${new Date(detailAmbulance.nextServiceDue) < new Date() ? 'bg-red-50 dark:bg-red-900/20 border border-red-200' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200'}`}>
                   <AlertTriangle size={14} className={new Date(detailAmbulance.nextServiceDue) < new Date() ? 'text-red-600' : 'text-blue-600'} />
@@ -723,16 +695,12 @@ export function AmbulanceFleet() {
                   </span>
                 </div>
               )}
-
-              {/* Maintenance notes */}
               {detailAmbulance.maintenanceNotes && (
                 <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200">
                   <p className="text-xs text-orange-600 mb-1 font-medium">Maintenance Notes</p>
                   <p className="text-orange-700 text-sm">{detailAmbulance.maintenanceNotes}</p>
                 </div>
               )}
-
-              {/* Equipment */}
               {detailAmbulance.equipment.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Equipment</p>
@@ -743,8 +711,6 @@ export function AmbulanceFleet() {
                   </div>
                 </div>
               )}
-
-              {/* Special capabilities */}
               {(detailAmbulance.hasDoctor || detailAmbulance.hasVentilator) && (
                 <div className="flex gap-2">
                   {detailAmbulance.hasDoctor && (
@@ -766,10 +732,7 @@ export function AmbulanceFleet() {
             </button>
             {detailAmbulance?.status === 'available' && (
               <button
-                onClick={() => {
-                  setDetailAmbulance(null);
-                  setAssignAmbulance(detailAmbulance!);
-                }}
+                onClick={() => { setDetailAmbulance(null); setAssignAmbulance(detailAmbulance!); }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               >
                 Assign to Transfer
@@ -779,9 +742,9 @@ export function AmbulanceFleet() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
+      {/* ═══════════════════════════════════════════════════════════
           ASSIGN DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════ */}
       <Dialog open={!!assignAmbulance} onOpenChange={open => !open && setAssignAmbulance(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -829,9 +792,9 @@ export function AmbulanceFleet() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
+      {/* ═══════════════════════════════════════════════════════════
           MAINTENANCE DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════ */}
       <Dialog open={!!maintenanceAmbulance} onOpenChange={open => !open && setMaintenanceAmbulance(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -879,9 +842,9 @@ export function AmbulanceFleet() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════════
+      {/* ═══════════════════════════════════════════════════════════
           ADD AMBULANCE DIALOG
-      ═══════════════════════════════════════════════════════════════ */}
+      ═══════════════════════════════════════════════════════════ */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -891,7 +854,6 @@ export function AmbulanceFleet() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 text-sm">
-            {/* ID */}
             <div>
               <label className="block text-foreground mb-1.5">Ambulance ID *</label>
               <input
@@ -902,8 +864,6 @@ export function AmbulanceFleet() {
                 className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
               />
             </div>
-
-            {/* Driver */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Driver Name *</label>
@@ -927,8 +887,6 @@ export function AmbulanceFleet() {
                 </select>
               </div>
             </div>
-
-            {/* Attendant */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Attendant Name</label>
@@ -952,8 +910,6 @@ export function AmbulanceFleet() {
                 </select>
               </div>
             </div>
-
-            {/* Location & Year */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Base Location</label>
@@ -976,8 +932,6 @@ export function AmbulanceFleet() {
                 />
               </div>
             </div>
-
-            {/* Equipment */}
             <div>
               <label className="block text-foreground mb-2">Equipment</label>
               <div className="grid grid-cols-2 gap-2">
@@ -994,8 +948,6 @@ export function AmbulanceFleet() {
                 ))}
               </div>
             </div>
-
-            {/* Special capabilities */}
             <div className="space-y-2">
               <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent">
                 <input
