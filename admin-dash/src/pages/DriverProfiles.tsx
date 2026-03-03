@@ -125,6 +125,42 @@ function StatusBadge({ status }: { status: DriverStatus }) {
     );
 }
 
+// ─── Field component used by the register modal ─────────────────────────────────
+
+interface FieldProps {
+    label: string;
+    type?: string;
+    icon?: React.ReactNode;
+    value: string;
+    onChange: (val: string) => void;
+    error?: string;
+}
+
+function Field({
+    label,
+    type = 'text',
+    icon,
+    value,
+    onChange,
+    error,
+}: FieldProps) {
+    return (
+        <div>
+            <label className="block text-xs text-muted-foreground mb-1">{label}</label>
+            <div className="relative">
+                {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
+                <input
+                    type={type}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    className={`w-full ${icon ? 'pl-9' : 'pl-3'} pr-3 py-2.5 text-sm border rounded-lg bg-input-field-bg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 ${error ? 'border-red-500' : 'border-input'}`}
+                />
+            </div>
+            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        </div>
+    );
+}
+
 // ─── Register Driver Modal ────────────────────────────────────────────────────
 
 interface RegisterModalProps {
@@ -179,24 +215,6 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
         onClose();
     };
 
-    const Field = ({
-        label, fieldKey, type = 'text', icon
-    }: { label: string; fieldKey: string; type?: string; icon?: React.ReactNode }) => (
-        <div>
-            <label className="block text-xs text-muted-foreground mb-1">{label}</label>
-            <div className="relative">
-                {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
-                <input
-                    type={type}
-                    value={form[fieldKey as keyof typeof form]}
-                    onChange={e => set(fieldKey, e.target.value)}
-                    className={`w-full ${icon ? 'pl-9' : 'pl-3'} pr-3 py-2.5 text-sm border rounded-lg bg-input-field-bg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 ${errors[fieldKey] ? 'border-red-500' : 'border-input'}`}
-                />
-            </div>
-            {errors[fieldKey] && <p className="text-red-500 text-xs mt-1">{errors[fieldKey]}</p>}
-        </div>
-    );
-
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div
@@ -219,7 +237,13 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <h3 className="text-foreground text-sm font-medium">Personal Information</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <Field label="Full Name *" fieldKey="name" icon={<User size={14} />} />
+                            <Field
+                                label="Full Name *"
+                                icon={<User size={14} />}
+                                value={form.name}
+                                onChange={v => set('name', v)}
+                                error={errors.name}
+                            />
                             <div>
                                 <label className="block text-xs text-muted-foreground mb-1">Gender</label>
                                 <select
@@ -232,8 +256,22 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                                     <option>Other</option>
                                 </select>
                             </div>
-                            <Field label="Phone Number *" fieldKey="phone" type="tel" icon={<Phone size={14} />} />
-                            <Field label="Email Address *" fieldKey="email" type="email" icon={<Mail size={14} />} />
+                            <Field
+                                label="Phone Number *"
+                                type="tel"
+                                icon={<Phone size={14} />}
+                                value={form.phone}
+                                onChange={v => set('phone', v)}
+                                error={errors.phone}
+                            />
+                            <Field
+                                label="Email Address *"
+                                type="email"
+                                icon={<Mail size={14} />}
+                                value={form.email}
+                                onChange={v => set('email', v)}
+                                error={errors.email}
+                            />
                         </div>
                     </div>
                     <div>
@@ -242,9 +280,29 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <h3 className="text-foreground text-sm font-medium">License & Employment</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <Field label="License Number *" fieldKey="licenseNumber" icon={<CreditCard size={14} />} />
-                            <Field label="License Expiry *" fieldKey="licenseExpiry" type="date" icon={<Calendar size={14} />} />
-                            <Field label="Joining Date" fieldKey="joinDate" type="date" icon={<Calendar size={14} />} />
+                            <Field
+                                label="License Number *"
+                                icon={<CreditCard size={14} />}
+                                value={form.licenseNumber}
+                                onChange={v => set('licenseNumber', v)}
+                                error={errors.licenseNumber}
+                            />
+                            <Field
+                                label="License Expiry *"
+                                type="date"
+                                icon={<Calendar size={14} />}
+                                value={form.licenseExpiry}
+                                onChange={v => set('licenseExpiry', v)}
+                                error={errors.licenseExpiry}
+                            />
+                            <Field
+                                label="Joining Date"
+                                type="date"
+                                icon={<Calendar size={14} />}
+                                value={form.joinDate}
+                                onChange={v => set('joinDate', v)}
+                                error={errors.joinDate}
+                            />
                         </div>
                     </div>
                     <div>
@@ -253,9 +311,27 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <h3 className="text-foreground text-sm font-medium">Salary Configuration</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <Field label="Base Monthly Salary (₹) *" fieldKey="baseSalary" type="number" />
-                            <Field label="Overtime Rate/Hour (₹)" fieldKey="overtimeRate" type="number" />
-                            <Field label="Per Trip Bonus (₹)" fieldKey="tripsBonus" type="number" />
+                            <Field
+                                label="Base Monthly Salary (₹) *"
+                                type="number"
+                                value={form.baseSalary}
+                                onChange={v => set('baseSalary', v)}
+                                error={errors.baseSalary}
+                            />
+                            <Field
+                                label="Overtime Rate/Hour (₹)"
+                                type="number"
+                                value={form.overtimeRate}
+                                onChange={v => set('overtimeRate', v)}
+                                error={errors.overtimeRate}
+                            />
+                            <Field
+                                label="Per Trip Bonus (₹)"
+                                type="number"
+                                value={form.tripsBonus}
+                                onChange={v => set('tripsBonus', v)}
+                                error={errors.tripsBonus}
+                            />
                         </div>
                     </div>
                 </div>
