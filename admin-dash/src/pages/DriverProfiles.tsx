@@ -203,7 +203,6 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                 className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
-                {/* Modal Header */}
                 <div className="sticky top-0 bg-card z-10 flex items-center justify-between p-5 border-b border-border">
                     <div>
                         <h2 className="text-foreground font-semibold text-lg">Register New Driver</h2>
@@ -213,11 +212,7 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                         <X size={18} className="text-muted-foreground" />
                     </button>
                 </div>
-
-                {/* Modal Body */}
                 <div className="p-5 space-y-6">
-
-                    {/* Section 1: Personal */}
                     <div>
                         <div className="flex items-center gap-2 mb-3">
                             <User size={15} className="text-red-500" />
@@ -241,8 +236,6 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <Field label="Email Address *" fieldKey="email" type="email" icon={<Mail size={14} />} />
                         </div>
                     </div>
-
-                    {/* Section 2: License */}
                     <div>
                         <div className="flex items-center gap-2 mb-3">
                             <CreditCard size={15} className="text-red-500" />
@@ -254,8 +247,6 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <Field label="Joining Date" fieldKey="joinDate" type="date" icon={<Calendar size={14} />} />
                         </div>
                     </div>
-
-                    {/* Section 3: Salary */}
                     <div>
                         <div className="flex items-center gap-2 mb-3">
                             <TrendingUp size={15} className="text-red-500" />
@@ -267,10 +258,7 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                             <Field label="Per Trip Bonus (₹)" fieldKey="tripsBonus" type="number" />
                         </div>
                     </div>
-
                 </div>
-
-                {/* Modal Footer */}
                 <div className="flex gap-3 p-5 border-t border-border">
                     <button
                         onClick={onClose}
@@ -293,14 +281,8 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
 // ─── Delete Confirm Modal ────────────────────────────────────────────────────
 
 function DeleteConfirmModal({
-    driver,
-    onClose,
-    onConfirm,
-}: {
-    driver: Driver;
-    onClose: () => void;
-    onConfirm: () => void;
-}) {
+    driver, onClose, onConfirm,
+}: { driver: Driver; onClose: () => void; onConfirm: () => void; }) {
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
             <div
@@ -355,8 +337,6 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
 
     return (
         <div className="border-t border-border bg-accent/20 p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            {/* Col 1: Driver Info */}
             <div className="space-y-3">
                 <h4 className="text-foreground text-sm font-semibold mb-1">Driver Info</h4>
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -367,15 +347,9 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                     <Mail size={14} className="text-gray-400 flex-shrink-0" />
                     {driver.email}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                    Gender: <span className="text-foreground">{driver.gender}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                    Joined: <span className="text-foreground">{new Date(driver.joinDate).toLocaleDateString()}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                    License No: <span className="text-foreground font-mono text-xs">{driver.licenseNumber}</span>
-                </p>
+                <p className="text-sm text-muted-foreground">Gender: <span className="text-foreground">{driver.gender}</span></p>
+                <p className="text-sm text-muted-foreground">Joined: <span className="text-foreground">{new Date(driver.joinDate).toLocaleDateString()}</span></p>
+                <p className="text-sm text-muted-foreground">License No: <span className="text-foreground font-mono text-xs">{driver.licenseNumber}</span></p>
                 <p className="text-sm text-muted-foreground">
                     License Expiry:{' '}
                     <span className={licenseExpiringSoon ? 'text-red-500 font-medium' : 'text-foreground'}>
@@ -383,23 +357,16 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                         {licenseExpiringSoon && ' ⚠️ Expiring Soon'}
                     </span>
                 </p>
-
-                {/* Fuel Efficiency Bar */}
                 <div className="pt-1">
                     <div className="flex justify-between mb-1">
                         <span className="text-xs text-muted-foreground">Fuel Efficiency Score</span>
                         <span className="text-xs text-teal-600 font-medium">{driver.fuelEfficiencyScore}/100</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                            className="bg-teal-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${driver.fuelEfficiencyScore}%` }}
-                        />
+                        <div className="bg-teal-500 h-2 rounded-full transition-all duration-500" style={{ width: `${driver.fuelEfficiencyScore}%` }} />
                     </div>
                 </div>
             </div>
-
-            {/* Col 2: Attendance & Performance */}
             <div className="space-y-3">
                 <h4 className="text-foreground text-sm font-semibold mb-1">Attendance & Performance</h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -429,9 +396,7 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                 {driver.incidentReports > 0 ? (
                     <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 flex items-center gap-2">
                         <AlertTriangle size={15} className="text-red-500 flex-shrink-0" />
-                        <span className="text-sm text-red-600">
-                            {driver.incidentReports} incident report{driver.incidentReports > 1 ? 's' : ''} this month
-                        </span>
+                        <span className="text-sm text-red-600">{driver.incidentReports} incident report{driver.incidentReports > 1 ? 's' : ''} this month</span>
                     </div>
                 ) : (
                     <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 flex items-center gap-2">
@@ -439,8 +404,6 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                     </div>
                 )}
             </div>
-
-            {/* Col 3: Salary Breakdown */}
             <div>
                 <h4 className="text-foreground text-sm font-semibold mb-3">Salary Breakdown (This Month)</h4>
                 <div className="space-y-2 text-sm">
@@ -449,30 +412,18 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                         <span className="text-foreground font-medium">₹{driver.baseSalary.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-border/50">
-                        <span className="text-muted-foreground">
-                            Overtime ({driver.overtimeHours}h × ₹{driver.overtimeRate})
-                        </span>
-                        <span className="text-foreground font-medium">
-                            ₹{(driver.overtimeHours * driver.overtimeRate).toLocaleString()}
-                        </span>
+                        <span className="text-muted-foreground">Overtime ({driver.overtimeHours}h × ₹{driver.overtimeRate})</span>
+                        <span className="text-foreground font-medium">₹{(driver.overtimeHours * driver.overtimeRate).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-border/50">
-                        <span className="text-muted-foreground">
-                            Trip Bonus ({driver.totalTrips} trips × ₹{driver.tripsBonus})
-                        </span>
-                        <span className="text-foreground font-medium">
-                            ₹{(driver.totalTrips * driver.tripsBonus).toLocaleString()}
-                        </span>
+                        <span className="text-muted-foreground">Trip Bonus ({driver.totalTrips} trips × ₹{driver.tripsBonus})</span>
+                        <span className="text-foreground font-medium">₹{(driver.totalTrips * driver.tripsBonus).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-2 mt-1">
                         <span className="text-foreground font-semibold">Estimated Total</span>
-                        <span className="text-green-600 font-bold text-base">
-                            ₹{estimatedSalary.toLocaleString()}
-                        </span>
+                        <span className="text-green-600 font-bold text-base">₹{estimatedSalary.toLocaleString()}</span>
                     </div>
                 </div>
-
-                {/* Performance Score */}
                 <div className="mt-4 bg-card border border-border rounded-lg p-3">
                     <p className="text-xs text-muted-foreground mb-2">Overall Performance Score</p>
                     <div className="flex items-center gap-3">
@@ -484,7 +435,6 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                     </div>
                 </div>
             </div>
-
         </div>
     );
 }
@@ -532,9 +482,7 @@ export function DriverProfiles() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-foreground text-2xl font-bold">Driver Profiles</h1>
-                    <p className="text-muted-foreground text-sm">
-                        Manage drivers, view performance and calculate salaries
-                    </p>
+                    <p className="text-muted-foreground text-sm">Manage drivers, view performance and calculate salaries</p>
                 </div>
                 <button
                     onClick={() => setShowRegisterModal(true)}
@@ -557,7 +505,7 @@ export function DriverProfiles() {
                 </div>
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Avg Rating</p>
-                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating} </p>
+                    <p className="text-2xl font-bold text-yellow-600">{stats.avgRating}</p>
                 </div>
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5">
                     <p className="text-muted-foreground text-xs mb-1">Total Overtime Hrs</p>
@@ -582,9 +530,7 @@ export function DriverProfiles() {
                         <button
                             key={s}
                             onClick={() => setFilterStatus(s)}
-                            className={`px-4 py-2 rounded-lg border text-sm transition-colors ${filterStatus === s
-                                ? 'bg-red-600 text-white border-red-600'
-                                : 'bg-card text-foreground border-border hover:bg-accent'}`}
+                            className={`px-4 py-2 rounded-lg border text-sm transition-colors ${filterStatus === s ? 'bg-red-600 text-white border-red-600' : 'bg-card text-foreground border-border hover:bg-accent'}`}
                         >
                             {s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
                         </button>
@@ -595,14 +541,8 @@ export function DriverProfiles() {
             {/* ── Driver Cards ── */}
             <div className="space-y-3">
                 {filtered.map(driver => (
-                    <div
-                        key={driver.id}
-                        className="bg-card border border-border rounded-xl shadow-sm overflow-hidden"
-                    >
-                        {/* Card Summary Row */}
+                    <div key={driver.id} className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                         <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-
-                            {/* Avatar + Name */}
                             <div className="flex items-center gap-4 min-w-0">
                                 <div className="w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
                                     <User size={20} className="text-red-600" />
@@ -624,18 +564,12 @@ export function DriverProfiles() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Quick Stats */}
                             <div className="flex gap-5 flex-wrap md:flex-nowrap">
                                 {[
                                     { label: 'Trips', value: driver.totalTrips },
                                     { label: 'KM', value: driver.totalKm.toLocaleString() },
                                     { label: 'Overtime', value: `${driver.overtimeHours}h` },
-                                    {
-                                        label: 'Incidents',
-                                        value: driver.incidentReports,
-                                        color: driver.incidentReports > 0 ? 'text-red-500' : 'text-green-500',
-                                    },
+                                    { label: 'Incidents', value: driver.incidentReports, color: driver.incidentReports > 0 ? 'text-red-500' : 'text-green-500' },
                                 ].map(stat => (
                                     <div key={stat.label} className="text-center">
                                         <p className={`font-semibold ${stat.color ?? 'text-foreground'}`}>{stat.value}</p>
@@ -643,16 +577,12 @@ export function DriverProfiles() {
                                     </div>
                                 ))}
                             </div>
-
-                            {/* Actions */}
                             <div className="flex items-center gap-2 self-end md:self-auto flex-shrink-0">
                                 <button
                                     onClick={() => setExpandedId(expandedId === driver.id ? null : driver.id)}
                                     className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                                 >
-                                    {expandedId === driver.id
-                                        ? <><ChevronUp size={17} /> Hide</>
-                                        : <><ChevronDown size={17} /> Details</>}
+                                    {expandedId === driver.id ? <><ChevronUp size={17} />Hide</> : <><ChevronDown size={17} />Details</>}
                                 </button>
                                 <button
                                     onClick={() => setDeleteTarget(driver)}
@@ -663,12 +593,9 @@ export function DriverProfiles() {
                                 </button>
                             </div>
                         </div>
-
-                        {/* Expanded Panel */}
                         {expandedId === driver.id && <DriverDetailPanel driver={driver} />}
                     </div>
                 ))}
-
                 {filtered.length === 0 && (
                     <div className="bg-card border border-border rounded-xl p-12 text-center">
                         <User className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={48} />
@@ -704,7 +631,6 @@ export function DriverProfiles() {
                 <Ambulance size={24} />
                 <span className="hidden group-hover:block transition-all duration-300">New Request</span>
             </button>
-
         </div>
     );
 }
