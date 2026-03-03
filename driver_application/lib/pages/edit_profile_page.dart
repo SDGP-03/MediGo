@@ -50,9 +50,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -65,7 +71,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -114,7 +120,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } catch (e) {
       debugPrint('Error loading profile: $e');
       if (mounted) {
-        _showErrorSnackBar(t('Failed to load profile data', 'පැතිකඩ දත්ත පූරණයට බැරි වුණා'));
+        _showErrorSnackBar(t('Failed to load profile data', 'පැතිකඩ දත්ත පූරණයට බැරි වුණා', 'சுயவிவர தகவலை ஏற்ற முடியவில்லை'));
       }
     } finally {
       if (mounted) {
@@ -143,7 +149,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       debugPrint('Error picking image: $e');
-      _showErrorSnackBar(t('Failed to select image', 'පින්තූරය තෝරාගැනීමට බැරි වුණා'));
+      _showErrorSnackBar(t('Failed to select image', 'පින්තූරය තෝරාගැනීමට බැරි වුණා', 'படத்தை தேர்வு செய்ய முடியவில்லை'));
     }
   }
 
@@ -244,11 +250,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } on FirebaseAuthException catch (e) {
       // Re-throw with more context
       if (e.code == 'wrong-password') {
-        throw Exception(t('Current password is incorrect', 'වත්මන් මුරපදය වැරදියි'));
+        throw Exception(t('Current password is incorrect', 'වත්මන් මුරපදය වැරදියි', 'தற்போதைய கடவுச்சொல் தவறு'));
       } else if (e.code == 'weak-password') {
-        throw Exception(t('New password is too weak', 'නව මුරපදය දුර්වලයි'));
+        throw Exception(t('New password is too weak', 'නව මුරපදය දුර්වලයි', 'புதிய கடவுச்சொல் பலவீனம்'));
       } else if (e.code == 'requires-recent-login') {
-        throw Exception(t('Please log in again to change your password', 'මුරපදය වෙනස් කිරීමට නැවත පිවිසෙන්න'));
+        throw Exception(t('Please log in again to change your password', 'මුරපදය වෙනස් කිරීමට නැවත පිවිසෙන්න', 'கடவுச்சொல் மாற்ற மீண்டும் உள்நுழையவும்'));
       } else {
         throw Exception('Failed to change password: ${e.message}');
       }
@@ -306,7 +312,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (!mounted) return;
 
-      _showSuccessSnackBar(t("Profile updated successfully", "පැතිකඩ සාර්ථකව යාවත්කාලීන කළා"));
+      _showSuccessSnackBar(t("Profile updated successfully", "පැතිකඩ සාර්ථකව යාවත්කාලීන කළා", "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது"));
 
       // Clear password fields
       currentPasswordController.clear();
@@ -384,7 +390,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             },
           ),
         ),
-        title: Text(t("Edit Profile", "පැතිකඩ වෙනස් කරන්න"), style: const TextStyle(color: Colors.white)),
+        title: Text(t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"), style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -395,7 +401,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   CircularProgressIndicator(color: Colors.red.shade700),
                   const SizedBox(height: 12),
-                  Text(t("Loading profile...", "පැතිකඩ පූරණය වෙයි...")),
+                  Text(t("Loading profile...", "පැතිකඩ පූරණය වෙයි...", "சுயவிவரம் ஏற்றப்படுகிறது...")),
                 ],
               ),
             )
@@ -537,7 +543,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  t("Edit Profile", "පැතිකඩ වෙනස් කරන්න"),
+                  t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -546,7 +552,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 SizedBox(height: 5),
                 Text(
-                  t("Update your driver information", "ඔබගේ රියදුරු තොරතුරු යාවත්කාලීන කරන්න"),
+                  t("Update your driver information", "ඔබගේ රියදුරු තොරතුරු යාවත්කාලීන කරන්න", "உங்கள் டிரைவர் தகவலை புதுப்பிக்கவும்"),
                   style: TextStyle(color: Colors.white70),
                 ),
               ],
@@ -562,7 +568,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   buildInput(
                     controller: nameController,
-                    hint: t("Full Name", "සම්පූර්ණ නම"),
+                    hint: t("Full Name", "සම්පූර්ණ නම", "முழு பெயர்"),
                     icon: Icons.person_outline,
                     validator: Validators.validateName,
                   ),
@@ -571,7 +577,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildInput(
                     controller: emailController,
-                    hint: t("Email", "විද්‍යුත් තැපෑල"),
+                    hint: t("Email", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     validator: Validators.validateEmail,
@@ -582,7 +588,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildInput(
                     controller: phoneController,
-                    hint: t("Phone Number (e.g., 0771234567)", "දුරකථන අංකය (උදා: 0771234567)"),
+                    hint: t("Phone Number (e.g., 0771234567)", "දුරකථන අංකය (උදා: 0771234567)", "தொலைபேசி எண் (உ.தா.: 0771234567)"),
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     validator: Validators.validatePhone,
@@ -592,7 +598,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildInput(
                     controller: vehicleController,
-                    hint: t("Vehicle Number (e.g., ABC-1234)", "වාහන අංකය (උදා: ABC-1234)"),
+                    hint: t("Vehicle Number (e.g., ABC-1234)", "වාහන අංකය (උදා: ABC-1234)", "வாகன எண் (உ.தா.: ABC-1234)"),
                     icon: Icons.directions_car_outlined,
                     validator: Validators.validateVehicleNumber,
                   ),
@@ -605,7 +611,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      t("Change Password (Optional)", "මුරපදය වෙනස් කරන්න (විකල්ප)"),
+                      t("Change Password (Optional)", "මුරපදය වෙනස් කරන්න (විකල්ප)", "கடவுச்சொல் மாற்று (விருப்பம்)"),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -618,7 +624,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: currentPasswordController,
-                    hint: t("Current Password", "වත්මන් මුරපදය"),
+                    hint: t("Current Password", "වත්මන් මුරපදය", "தற்போதைய கடவுச்சொல்"),
                     icon: Icons.lock_outline,
                     obscureText: _obscureCurrentPassword,
                     onToggleVisibility: () {
@@ -636,7 +642,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: newPasswordController,
-                    hint: t("New Password (min 8 chars)", "නව මුරපදය (අකුරු 8ක් වත්)"),
+                    hint: t("New Password (min 8 chars)", "නව මුරපදය (අකුරු 8ක් වත්)", "புதிய கடவுச்சொல் (குறைந்தது 8 எழுத்து)"),
                     icon: Icons.lock_reset,
                     obscureText: _obscureNewPassword,
                     onToggleVisibility: () {
@@ -651,7 +657,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: confirmPasswordController,
-                    hint: t("Confirm New Password", "නව මුරපදය නැවත දාන්න"),
+                    hint: t("Confirm New Password", "නව මුරපදය නැවත දාන්න", "புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்"),
                     icon: Icons.lock,
                     obscureText: _obscureConfirmPassword,
                     onToggleVisibility: () {
@@ -691,7 +697,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             )
                           : Text(
-                              t("Save Changes", "වෙනස්කම් සුරකින්න"),
+                              t("Save Changes", "වෙනස්කම් සුරකින්න", "மாற்றங்களை சேமிக்கவும்"),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

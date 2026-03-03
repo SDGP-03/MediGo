@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,13 +17,19 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference feedbackRef = FirebaseDatabase.instance.ref().child(
-    "feedback",
+    'feedback',
   );
 
   bool isSending = false;
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -35,7 +41,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -62,7 +68,11 @@ class _FeedbackPageState extends State<FeedbackPage> {
 
     if (subject.isEmpty || message.isEmpty) {
       _showSnackBar(
-        t("Please fill all fields", "කරුණාකර සියලුම තොරතුරු පුරවන්න"),
+        t(
+          'Please fill all fields',
+          'කරුණාකර සියලුම තොරතුරු පුරවන්න',
+          'தயவுசெய்து எல்லா புலங்களையும் நிரப்புங்கள்',
+        ),
         isError: true,
       );
       return;
@@ -71,8 +81,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
     if (message.length < 10) {
       _showSnackBar(
         t(
-          "Message should be at least 10 characters",
-          "පණිවිඩය අකුරු 10ක් වත් තිබිය යුතුයි",
+          'Message should be at least 10 characters',
+          'පණිවිඩය අකුරු 10ක් වත් තිබිය යුතුය',
+          'செய்தி குறைந்தது 10 எழுத்துகள் இருக்க வேண்டும்',
         ),
         isError: true,
       );
@@ -86,15 +97,15 @@ class _FeedbackPageState extends State<FeedbackPage> {
     try {
       final uid = _auth.currentUser?.uid;
       if (uid == null) {
-        throw Exception("User not logged in");
+        throw Exception('User not logged in');
       }
 
       await feedbackRef.push().set({
-        "driverId": uid,
-        "subject": subject,
-        "message": message,
-        "timestamp": ServerValue.timestamp,
-        "status": "pending",
+        'driverId': uid,
+        'subject': subject,
+        'message': message,
+        'timestamp': ServerValue.timestamp,
+        'status': 'pending',
       });
 
       if (!mounted) return;
@@ -103,11 +114,19 @@ class _FeedbackPageState extends State<FeedbackPage> {
       messageController.clear();
 
       _showSnackBar(
-        t("Feedback sent successfully", "ප්‍රතිචාරය සාර්ථකව යැව්වා"),
+        t(
+          'Feedback sent successfully',
+          'ප්‍රතිචාරය සාර්ථකව යැව්වා',
+          'கருத்து வெற்றிகரமாக அனுப்பப்பட்டது',
+        ),
       );
     } catch (e) {
       _showSnackBar(
-        t("Failed to send feedback", "ප්‍රතිචාරය යැවීමට බැරි වුණා"),
+        t(
+          'Failed to send feedback',
+          'ප්‍රතිචාරය යැවීමට බැරි වුණා',
+          'கருத்தை அனுப்ப முடியவில்லை',
+        ),
         isError: true,
       );
     } finally {
@@ -139,8 +158,8 @@ class _FeedbackPageState extends State<FeedbackPage> {
           ),
         ),
         title: Text(
-          t("Feedback & Support", "ප්‍රතිචාර සහ සහාය"),
-          style: TextStyle(
+          t('Feedback & Support', 'ප්‍රතිචාර සහ සහාය', 'கருத்து மற்றும் உதவி'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -155,7 +174,6 @@ class _FeedbackPageState extends State<FeedbackPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Card with Icon
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -190,8 +208,12 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      t("We Value Your Feedback", "ඔබගේ ප්‍රතිචාර අපට වටිනවා"),
-                      style: TextStyle(
+                      t(
+                        'We Value Your Feedback',
+                        'ඔබගේ ප්‍රතිචාර අපට වටිනවා',
+                        'உங்கள் கருத்து எங்களுக்கு முக்கியம்',
+                      ),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -200,8 +222,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     const SizedBox(height: 8),
                     Text(
                       t(
-                        "Help us improve your experience",
-                        "ඔබගේ අත්දැකීම හොඳ කරගන්න අපට උදව් කරන්න",
+                        'Help us improve your experience',
+                        'ඔබගේ අත්දැකීම හොඳ කරගන්න අපට උදව් කරන්න',
+                        'உங்கள் அனுபவத்தை மேம்படுத்த எங்களுக்கு உதவுங்கள்',
                       ),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
@@ -211,10 +234,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Form Card
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -231,10 +251,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Subject Field
                     Text(
-                      t("Subject", "මාතෘකාව"),
-                      style: TextStyle(
+                      t('Subject', 'මාතෘකාව', 'தலைப்பு'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -247,16 +266,14 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       maxLength: 80,
                       decoration: InputDecoration(
                         hintText: t(
-                          "Brief summary of your feedback",
-                          "ඔබගේ ප්‍රතිචාරය කෙටියෙන්",
+                          'Brief summary of your feedback',
+                          'ඔබගේ ප්‍රතිචාරය කෙටියෙන්',
+                          'உங்கள் கருத்தின் சுருக்கம்',
                         ),
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Colors.grey.shade50,
-                        prefixIcon: Icon(
-                          Icons.title,
-                          color: Colors.red.shade400,
-                        ),
+                        prefixIcon: Icon(Icons.title, color: Colors.red.shade400),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -277,13 +294,10 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Message Field
                     Text(
-                      t("Message", "පණිවිඩය"),
-                      style: TextStyle(
+                      t('Message', 'පණිවිඩය', 'செய்தி'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -297,8 +311,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                       maxLength: 1000,
                       decoration: InputDecoration(
                         hintText: t(
-                          "Describe your issue or suggestion in detail...",
-                          "ඔබගේ ගැටලුව හෝ යෝජනාව විස්තරයෙන් ලියන්න...",
+                          'Describe your issue or suggestion in detail...',
+                          'ඔබගේ ගැටලුව හෝ යෝජනාව විස්තරයෙන් ලියන්න...',
+                          'உங்கள் பிரச்சினை அல்லது பரிந்துரையை விரிவாக எழுதுங்கள்...',
                         ),
                         hintStyle: TextStyle(color: Colors.grey.shade400),
                         filled: true,
@@ -323,10 +338,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 28),
-
-                    // Submit Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -353,11 +365,15 @@ class _FeedbackPageState extends State<FeedbackPage> {
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.send, size: 20),
-                                  SizedBox(width: 8),
+                                  const Icon(Icons.send, size: 20),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    t("Submit Feedback", "ප්‍රතිචාර යවන්න"),
-                                    style: TextStyle(
+                                    t(
+                                      'Submit Feedback',
+                                      'ප්‍රතිචාර යවන්න',
+                                      'கருத்தை அனுப்பு',
+                                    ),
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -369,10 +385,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 24),
-
-              // Info Card
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -391,8 +404,9 @@ class _FeedbackPageState extends State<FeedbackPage> {
                     Expanded(
                       child: Text(
                         t(
-                          "We typically respond within 24-48 hours",
-                          "සාමාන්‍යයෙන් පැය 24-48ක් ඇතුළත පිළිතුරු දෙනවා",
+                          'We typically respond within 24-48 hours',
+                          'සාමාන්‍යයෙන් පැය 24-48ක් ඇතුළත පිළිතුරු දෙනවා',
+                          'பொதுவாக 24-48 மணி நேரத்தில் பதில் தருகிறோம்',
                         ),
                         style: TextStyle(
                           color: Colors.blue.shade900,
