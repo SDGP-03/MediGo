@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Ambulance, MapPin, User, Clock, Search, TrendingUp,
   Plus, Wrench, CheckCircle, AlertTriangle, X, ChevronRight,
-  Thermometer, Activity, Shield, Zap,
+  Thermometer, Activity, Shield, Zap, Trash2,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
@@ -168,6 +168,9 @@ export function AmbulanceFleet() {
   const [maintenanceDate, setMaintenanceDate] = useState('');
   const [maintenanceNotes, setMaintenanceNotes] = useState('');
 
+  // ── Delete dialog ──
+  const [deleteAmbulance, setDeleteAmbulance] = useState<AmbulanceUnit | null>(null);
+
   // ── Add ambulance dialog ──
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -278,6 +281,13 @@ export function AmbulanceFleet() {
         : a
     ));
     showToast(`${ambId} maintenance complete — now available ✓`);
+  };
+
+  const handleDeleteAmbulance = () => {
+    if (!deleteAmbulance) return;
+    setAmbulances(prev => prev.filter(a => a.id !== deleteAmbulance.id));
+    showToast(`${deleteAmbulance.id} removed from fleet ✓`);
+    setDeleteAmbulance(null);
   };
 
   const handleAddAmbulance = () => {
@@ -562,6 +572,12 @@ export function AmbulanceFleet() {
                   >
                     <Wrench size={14} /> Schedule Maintenance
                   </button>
+                  <button
+                    onClick={() => setDeleteAmbulance(ambulance)}
+                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} /> Delete Ambulance
+                  </button>
                 </>
               )}
               {ambulance.status === 'in_service' && ambulance.currentTransfer && (
@@ -581,12 +597,20 @@ export function AmbulanceFleet() {
                 </>
               )}
               {ambulance.status === 'maintenance' && (
-                <button
-                  onClick={() => handleCompleteMaintenance(ambulance.id)}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={14} /> Mark Maintenance Complete
-                </button>
+                <>
+                  <button
+                    onClick={() => handleCompleteMaintenance(ambulance.id)}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle size={14} /> Mark Maintenance Complete
+                  </button>
+                  <button
+                    onClick={() => setDeleteAmbulance(ambulance)}
+                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} /> Delete Ambulance
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -837,6 +861,45 @@ export function AmbulanceFleet() {
               className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2"
             >
               <Wrench size={14} /> Schedule Maintenance
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════
+          DELETE AMBULANCE DIALOG
+      ═══════════════════════════════════════════════════════════ */}
+      <Dialog open={!!deleteAmbulance} onOpenChange={open => !open && setDeleteAmbulance(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle size={20} />
+              Delete Ambulance
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deleteAmbulance?.id}</strong> from the fleet? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
+            <p className="font-medium mb-1">Warning:</p>
+            <ul className="list-disc list-inside space-y-1 text-xs">
+              <li>Driver: {deleteAmbulance?.driver}</li>
+              <li>Status: {deleteAmbulance?.status.replace('_', ' ').toUpperCase()}</li>
+              <li>Location: {deleteAmbulance?.location}</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setDeleteAmbulance(null)}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDeleteAmbulance}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <Trash2 size={14} /> Delete
             </button>
           </DialogFooter>
         </DialogContent>
