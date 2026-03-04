@@ -243,6 +243,10 @@ export interface UseFleetDataReturn {
 
 export function useFleetData(): UseFleetDataReturn {
     const [uid, setUid] = useState<string | null>(null);
+    // authResolved stays false until onAuthStateChanged fires at least once.
+    // This prevents loading from becoming false before auth has responded,
+    // which caused the blank-page bug (uid starts null → effect set loading=false too early).
+    const [authResolved, setAuthResolved] = useState(false);
     const [ambulances, setAmbulances] = useState<AmbulanceUnit[]>([]);
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
@@ -253,14 +257,20 @@ export function useFleetData(): UseFleetDataReturn {
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, (user) => {
             setUid(user?.uid ?? null);
+            setAuthResolved(true); // auth has responded — now the data effect can run
         });
         return unsub;
     }, []);
 
     // ── Seed once then subscribe. Cleanup always runs — no orphaned listeners. ──
     useEffect(() => {
+        // Do nothing until Firebase auth has confirmed the user's state.
+        // Without this guard the effect fires immediately with uid=null and
+        // sets loading=false before auth resolves → blank page.
+        if (!authResolved) return;
+
         if (uid === null) {
-            // Still resolving auth or genuinely signed out
+            // Auth resolved but no user is signed in
             setLoading(false);
             return;
         }
@@ -315,13 +325,26 @@ export function useFleetData(): UseFleetDataReturn {
                     if (cancelled) return;
                 }
 
+                // Firebase stores JS arrays as plain objects {0:'a',1:'b',...}.
+                // This converts them back to real arrays so .map() doesn't crash.
+                const toArray = (val: unknown): string[] => {
+                    if (!val) return [];
+                    if (Array.isArray(val)) return val;
+                    return Object.values(val as Record<string, string>);
+                };
+
+                const normalizeAmb = (raw: Record<string, unknown>): AmbulanceUnit => ({
+                    ...(raw as unknown as AmbulanceUnit),
+                    equipment: toArray(raw.equipment),
+                });
+
                 // ── Real-time listeners (attached once per uid) ──
                 unsubAmb = onValue(
                     ambRef,
                     (snap) => {
                         setAmbulances(
                             snap.exists()
-                                ? Object.values(snap.val() as Record<string, AmbulanceUnit>)
+                                ? Object.values(snap.val() as Record<string, Record<string, unknown>>).map(normalizeAmb)
                                 : [],
                         );
                         setLoading(false);
@@ -365,7 +388,7 @@ export function useFleetData(): UseFleetDataReturn {
             unsubDrv?.();
             unsubTfr?.();
         };
-    }, [uid]);
+    }, [uid, authResolved]);
 
     // ── Ambulance CRUD ──
 

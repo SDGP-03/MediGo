@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Ambulance, MapPin, User, Clock, Search, TrendingUp,
-  Plus, Wrench, CheckCircle, AlertTriangle, X, ChevronRight,
-  Thermometer, Activity, Shield, Zap, Trash2,
+  Plus, Wrench, CheckCircle, AlertTriangle, ChevronRight,
+  Thermometer, Activity, Shield, Zap, Trash2, Loader2,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
@@ -11,38 +11,17 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '../components/ui/dialog';
+import { useFleetData } from '../hooks/useFleetData';
+import type { AmbulanceUnit } from '../hooks/useFleetData';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-type AmbulanceStatus = 'available' | 'in_service' | 'maintenance';
+const EQUIPMENT_OPTIONS = [
+  'Oxygen', 'Defibrillator', 'IV Fluids', 'Cardiac Monitor',
+  'Ventilator', 'Stretcher', 'Blood Pressure Monitor', 'Pulse Oximeter',
+];
 
-interface AmbulanceUnit {
-  id: string;
-  status: AmbulanceStatus;
-  driver: string;
-  driverGender: string;
-  attendant: string;
-  attendantGender: string;
-  location: string;
-  lastService?: string;
-  nextServiceDue?: string;
-  maintenanceNotes?: string;
-  currentTransfer?: string;
-  etaMinutes?: number;
-  equipment: string[];
-  hasDoctor: boolean;
-  hasVentilator: boolean;
-  mileage?: number;
-  year?: number;
-}
-
-interface PendingTransfer {
-  id: string;
-  patient: string;
-  from: string;
-  to: string;
-  priority: 'critical' | 'urgent' | 'standard';
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Toast {
   id: number;
@@ -50,85 +29,16 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
-// ─── Initial Data ─────────────────────────────────────────────────────────────
-
-const INITIAL_AMBULANCES: AmbulanceUnit[] = [
-  {
-    id: 'AMB-001', status: 'available',
-    driver: 'John Smith', driverGender: 'Male',
-    attendant: 'Tom Wilson', attendantGender: 'Male',
-    location: 'City General Hospital', lastService: '2025-11-15', nextServiceDue: '2026-02-15',
-    equipment: ['Oxygen', 'Defibrillator', 'IV Fluids'],
-    hasDoctor: false, hasVentilator: false, mileage: 42300, year: 2020,
-  },
-  {
-    id: 'AMB-002', status: 'in_service',
-    driver: 'Sarah Lee', driverGender: 'Female',
-    attendant: 'Maria Garcia', attendantGender: 'Female',
-    location: 'En route to Central Medical', currentTransfer: 'TR-2401', etaMinutes: 12,
-    equipment: ['Oxygen', 'Ventilator', 'Cardiac Monitor'],
-    hasDoctor: true, hasVentilator: true, mileage: 38100, year: 2021,
-  },
-  {
-    id: 'AMB-003', status: 'available',
-    driver: 'Mike Chen', driverGender: 'Male',
-    attendant: 'Lisa Brown', attendantGender: 'Female',
-    location: 'Divisional Hospital North', lastService: '2025-11-18', nextServiceDue: '2026-02-18',
-    equipment: ['Oxygen', 'Defibrillator', 'IV Fluids', 'Stretcher'],
-    hasDoctor: false, hasVentilator: false, mileage: 55700, year: 2019,
-  },
-  {
-    id: 'AMB-004', status: 'maintenance',
-    driver: 'David Kumar', driverGender: 'Male',
-    attendant: 'Not Assigned', attendantGender: 'N/A',
-    location: 'Service Center', lastService: '2025-11-20', nextServiceDue: '2026-02-20',
-    maintenanceNotes: 'Scheduled brake inspection & oil change',
-    equipment: [],
-    hasDoctor: false, hasVentilator: false, mileage: 61200, year: 2018,
-  },
-  {
-    id: 'AMB-005', status: 'available',
-    driver: 'Emily Davis', driverGender: 'Female',
-    attendant: 'Jessica Wong', attendantGender: 'Female',
-    location: 'City General Hospital', lastService: '2025-11-17', nextServiceDue: '2026-02-17',
-    equipment: ['Oxygen', 'Cardiac Monitor', 'IV Fluids'],
-    hasDoctor: false, hasVentilator: false, mileage: 29800, year: 2022,
-  },
-  {
-    id: 'AMB-006', status: 'in_service',
-    driver: 'Robert Taylor', driverGender: 'Male',
-    attendant: 'Mark Anderson', attendantGender: 'Male',
-    location: 'En route to Regional Base', currentTransfer: 'TR-2402', etaMinutes: 18,
-    equipment: ['Oxygen', 'Defibrillator', 'IV Fluids'],
-    hasDoctor: false, hasVentilator: false, mileage: 47500, year: 2020,
-  },
-  {
-    id: 'AMB-007', status: 'available',
-    driver: 'Jennifer White', driverGender: 'Female',
-    attendant: 'Anna Martinez', attendantGender: 'Female',
-    location: 'Central Medical Center', lastService: '2025-11-16', nextServiceDue: '2026-02-16',
-    equipment: ['Oxygen', 'Ventilator', 'Cardiac Monitor', 'Defibrillator'],
-    hasDoctor: true, hasVentilator: true, mileage: 33200, year: 2021,
-  },
-  {
-    id: 'AMB-008', status: 'available',
-    driver: 'Chris Johnson', driverGender: 'Male',
-    attendant: 'Paul Brown', attendantGender: 'Male',
-    location: 'City General Hospital', lastService: '2025-11-19', nextServiceDue: '2026-02-19',
-    equipment: ['Oxygen', 'IV Fluids', 'Stretcher'],
-    hasDoctor: false, hasVentilator: false, mileage: 51000, year: 2019,
-  },
-];
-
-const PENDING_TRANSFERS: PendingTransfer[] = [
-  { id: 'REQ-1024', patient: 'Robert Taylor', from: 'Divisional Hospital East', to: 'City General Hospital', priority: 'urgent' },
-  { id: 'REQ-1025', patient: 'Jennifer White', from: 'Rural Health Center', to: 'Central Medical Center', priority: 'standard' },
-  { id: 'REQ-1026', patient: 'Arjun Perera', from: 'Metro Hospital', to: 'Specialist Care Hospital', priority: 'critical' },
-];
-
-const EQUIPMENT_OPTIONS = ['Oxygen', 'Defibrillator', 'IV Fluids', 'Cardiac Monitor', 'Ventilator', 'Stretcher', 'Blood Pressure Monitor', 'Pulse Oximeter'];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Safety wrapper: Firebase can return arrays as {0:'a',1:'b'} objects.
+// This always gives back a real JS array regardless.
+const toArr = (val: unknown): string[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'object') return Object.values(val as Record<string, string>);
+  return [];
+};
 
 function formatEta(minutes: number): string {
   if (minutes <= 0) return 'Arrived';
@@ -143,36 +53,34 @@ function formatEta(minutes: number): string {
 export function AmbulanceFleet() {
   const navigate = useNavigate();
 
-  // ── Core state ──
-  const [ambulances, setAmbulances] = useState<AmbulanceUnit[]>(INITIAL_AMBULANCES);
-  const [filterStatus, setFilterStatus] = useState<'all' | AmbulanceStatus>('all');
+  // ── Firebase realtime hook ──
+  // On first load with empty DB it auto-seeds all 8 ambulances.
+  // All CRUD operations write directly to /hospitals/{uid}/ambulances/.
+  const {
+    ambulances,
+    pendingTransfers,
+    loading,
+    error,
+    addAmbulance,
+    deleteAmbulance,
+    assignAmbulanceToTransfer,
+    scheduleMaintenance,
+    completeMaintenance,
+  } = useFleetData();
+
+  // ── UI state ──
+  const [filterStatus, setFilterStatus] = useState<'all' | AmbulanceUnit['status']>('all');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // ── Toast ──
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  }, []);
-
-  // ── Detail modal ──
   const [detailAmbulance, setDetailAmbulance] = useState<AmbulanceUnit | null>(null);
-
-  // ── Assign dialog ──
-  const [assignAmbulance, setAssignAmbulance] = useState<AmbulanceUnit | null>(null);
+  const [assignTarget, setAssignTarget] = useState<AmbulanceUnit | null>(null);
   const [selectedTransferId, setSelectedTransferId] = useState('');
-
-  // ── Maintenance dialog ──
-  const [maintenanceAmbulance, setMaintenanceAmbulance] = useState<AmbulanceUnit | null>(null);
+  const [maintenanceTarget, setMaintenanceTarget] = useState<AmbulanceUnit | null>(null);
   const [maintenanceDate, setMaintenanceDate] = useState('');
   const [maintenanceNotes, setMaintenanceNotes] = useState('');
-
-  // ── Delete dialog ──
-  const [deleteAmbulance, setDeleteAmbulance] = useState<AmbulanceUnit | null>(null);
-
-  // ── Add ambulance dialog ──
+  const [deleteTarget, setDeleteTarget] = useState<AmbulanceUnit | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [addForm, setAddForm] = useState({
     id: '', driver: '', driverGender: 'Male',
     attendant: '', attendantGender: 'Male',
@@ -182,19 +90,14 @@ export function AmbulanceFleet() {
     year: new Date().getFullYear(),
   });
 
-  // ── Live ETA countdown ──
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAmbulances(prev => prev.map(a =>
-        a.status === 'in_service' && a.etaMinutes !== undefined && a.etaMinutes > 0
-          ? { ...a, etaMinutes: a.etaMinutes - 1 }
-          : a
-      ));
-    }, 60_000);
-    return () => clearInterval(interval);
+  // ── Toast helper ──
+  const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   }, []);
 
-  // ── Derived data ──
+  // ── Derived stats ──
   const stats = {
     total: ambulances.length,
     available: ambulances.filter(a => a.status === 'available').length,
@@ -205,15 +108,14 @@ export function AmbulanceFleet() {
   const filteredAmbulances = ambulances.filter(amb => {
     const matchesStatus = filterStatus === 'all' || amb.status === filterStatus;
     const q = searchTerm.toLowerCase();
-    const matchesSearch = !q ||
+    return matchesStatus && (!q ||
       amb.id.toLowerCase().includes(q) ||
       amb.driver.toLowerCase().includes(q) ||
       amb.location.toLowerCase().includes(q) ||
-      (amb.currentTransfer ?? '').toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+      (amb.currentTransfer ?? '').toLowerCase().includes(q));
   });
 
-  // ── Chart data ──
+  // ── Static chart data ──
   const fuelData = [
     { month: 'Jan', value: 26 }, { month: 'Feb', value: 25 }, { month: 'Mar', value: 27 },
     { month: 'Apr', value: 26 }, { month: 'May', value: 28 }, { month: 'Jun', value: 27 },
@@ -225,82 +127,89 @@ export function AmbulanceFleet() {
     { day: 'Sun', value: 408 },
   ];
 
-  // ── Status styling ──
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'available': return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
-      case 'in_service': return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
-      case 'maintenance': return 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800';
-      default: return 'bg-secondary text-secondary-foreground border-border';
+  // ── Styling helpers ──
+  const getStatusColor = (s: string) => {
+    if (s === 'available') return 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800';
+    if (s === 'in_service') return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800';
+    if (s === 'maintenance') return 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800';
+    return 'bg-secondary text-secondary-foreground border-border';
+  };
+  const getPriorityColor = (p: string) =>
+    p === 'critical' ? 'bg-red-600 text-white' : p === 'urgent' ? 'bg-orange-500 text-white' : 'bg-green-600 text-white';
+
+  // ── Firebase actions ──
+
+  const handleAssignConfirm = async () => {
+    if (!assignTarget || !selectedTransferId) return;
+    const transfer = pendingTransfers.find(t => t.id === selectedTransferId);
+    if (!transfer) return;
+    setActionLoading(true);
+    try {
+      await assignAmbulanceToTransfer(assignTarget.id, transfer);
+      showToast(`${assignTarget.id} assigned to transfer ${selectedTransferId} ✓`);
+      setAssignTarget(null);
+      setSelectedTransferId('');
+    } catch {
+      showToast('Failed to assign ambulance.', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const getPriorityColor = (p: string) => {
-    if (p === 'critical') return 'bg-red-600 text-white';
-    if (p === 'urgent') return 'bg-orange-500 text-white';
-    return 'bg-green-600 text-white';
+  const handleScheduleMaintenance = async () => {
+    if (!maintenanceTarget) return;
+    setActionLoading(true);
+    try {
+      await scheduleMaintenance(maintenanceTarget.id, maintenanceDate, maintenanceNotes);
+      showToast(`${maintenanceTarget.id} scheduled for maintenance ✓`);
+      setMaintenanceTarget(null);
+      setMaintenanceDate('');
+      setMaintenanceNotes('');
+    } catch {
+      showToast('Failed to schedule maintenance.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // ── Actions ──
-  const handleAssignConfirm = () => {
-    if (!assignAmbulance || !selectedTransferId) return;
-    const transfer = PENDING_TRANSFERS.find(t => t.id === selectedTransferId)!;
-    setAmbulances(prev => prev.map(a =>
-      a.id === assignAmbulance.id
-        ? { ...a, status: 'in_service', currentTransfer: selectedTransferId, etaMinutes: 15, location: `En route to ${transfer.to}` }
-        : a
-    ));
-    showToast(`${assignAmbulance.id} assigned to transfer ${selectedTransferId} ✓`);
-    setAssignAmbulance(null);
-    setSelectedTransferId('');
+  const handleCompleteMaintenance = async (ambId: string) => {
+    setActionLoading(true);
+    try {
+      await completeMaintenance(ambId);
+      showToast(`${ambId} maintenance complete — now available ✓`);
+    } catch {
+      showToast('Failed to complete maintenance.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleScheduleMaintenance = () => {
-    if (!maintenanceAmbulance) return;
-    setAmbulances(prev => prev.map(a =>
-      a.id === maintenanceAmbulance.id
-        ? {
-          ...a, status: 'maintenance',
-          location: 'Service Center',
-          currentTransfer: undefined, etaMinutes: undefined,
-          nextServiceDue: maintenanceDate || a.nextServiceDue,
-          maintenanceNotes: maintenanceNotes || a.maintenanceNotes,
-        }
-        : a
-    ));
-    showToast(`${maintenanceAmbulance.id} scheduled for maintenance ✓`);
-    setMaintenanceAmbulance(null);
-    setMaintenanceDate('');
-    setMaintenanceNotes('');
+  const handleDeleteAmbulance = async () => {
+    if (!deleteTarget) return;
+    setActionLoading(true);
+    try {
+      await deleteAmbulance(deleteTarget.id);
+      showToast(`${deleteTarget.id} removed from fleet ✓`);
+      setDeleteTarget(null);
+    } catch {
+      showToast('Failed to delete ambulance.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleCompleteMaintenance = (ambId: string) => {
-    setAmbulances(prev => prev.map(a =>
-      a.id === ambId
-        ? { ...a, status: 'available', location: 'City General Hospital', lastService: new Date().toISOString().slice(0, 10), maintenanceNotes: undefined }
-        : a
-    ));
-    showToast(`${ambId} maintenance complete — now available ✓`);
-  };
-
-  const handleDeleteAmbulance = () => {
-    if (!deleteAmbulance) return;
-    setAmbulances(prev => prev.filter(a => a.id !== deleteAmbulance.id));
-    showToast(`${deleteAmbulance.id} removed from fleet ✓`);
-    setDeleteAmbulance(null);
-  };
-
-  const handleAddAmbulance = () => {
+  const handleAddAmbulance = async () => {
     if (!addForm.id.trim() || !addForm.driver.trim()) {
       showToast('Ambulance ID and driver name are required.', 'error');
       return;
     }
-    if (ambulances.some(a => a.id === addForm.id.trim())) {
-      showToast(`ID ${addForm.id} already exists.`, 'error');
+    const newId = addForm.id.trim().toUpperCase();
+    if (ambulances.some(a => a.id === newId)) {
+      showToast(`ID ${newId} already exists.`, 'error');
       return;
     }
     const newUnit: AmbulanceUnit = {
-      id: addForm.id.trim().toUpperCase(),
+      id: newId,
       status: 'available',
       driver: addForm.driver,
       driverGender: addForm.driverGender,
@@ -314,36 +223,69 @@ export function AmbulanceFleet() {
       year: addForm.year,
       mileage: 0,
     };
-    setAmbulances(prev => [...prev, newUnit]);
-    showToast(`${newUnit.id} added to the fleet ✓`);
-    setShowAddModal(false);
-    setAddForm({
-      id: '', driver: '', driverGender: 'Male', attendant: '', attendantGender: 'Male',
-      location: 'City General Hospital', equipment: [], hasDoctor: false, hasVentilator: false,
-      year: new Date().getFullYear(),
-    });
+    setActionLoading(true);
+    try {
+      await addAmbulance(newUnit);
+      showToast(`${newUnit.id} added to the fleet ✓`);
+      setShowAddModal(false);
+      setAddForm({
+        id: '', driver: '', driverGender: 'Male', attendant: '', attendantGender: 'Male',
+        location: 'City General Hospital', equipment: [], hasDoctor: false, hasVentilator: false,
+        year: new Date().getFullYear(),
+      });
+    } catch {
+      showToast('Failed to add ambulance. Please try again.', 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const toggleEquipmentInAddForm = (item: string) => {
+  const toggleEquipment = (item: string) =>
     setAddForm(f => ({
       ...f,
       equipment: f.equipment.includes(item)
         ? f.equipment.filter(e => e !== item)
         : [...f.equipment, item],
     }));
-  };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Loading / Error states ───────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-full">
+          <Loader2 size={40} className="text-red-600 animate-spin" />
+        </div>
+        <p className="text-foreground font-semibold text-lg">Loading fleet data…</p>
+        <p className="text-muted-foreground text-sm">Connecting to Firebase Realtime Database</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="p-5 bg-red-50 dark:bg-red-900/20 rounded-full">
+          <AlertTriangle size={40} className="text-red-600" />
+        </div>
+        <p className="text-foreground font-semibold text-lg">Failed to load fleet data</p>
+        <p className="text-muted-foreground text-sm max-w-sm text-center">{error}</p>
+      </div>
+    );
+  }
+
+  // ─── Main Render ──────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 relative">
 
-      {/* ── Toast container ── */}
+      {/* ── Toast notifications ── */}
       <div className="fixed bottom-24 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`pointer-events-auto px-4 py-3 rounded-lg shadow-lg text-white text-sm flex items-center gap-2 animate-in slide-in-from-right-4 fade-in duration-300 ${t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`}
+            className={`pointer-events-auto px-4 py-3 rounded-lg shadow-lg text-white text-sm flex items-center gap-2 animate-in slide-in-from-right-4 fade-in duration-300 ${t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+              }`}
           >
             {t.type === 'success' && <CheckCircle size={16} />}
             {t.type === 'error' && <AlertTriangle size={16} />}
@@ -362,12 +304,11 @@ export function AmbulanceFleet() {
           onClick={() => setShowAddModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
         >
-          <Plus size={18} />
-          Add Ambulance
+          <Plus size={18} /> Add Ambulance
         </button>
       </div>
 
-      {/* ── Statistics ── */}
+      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Fleet', value: stats.total, color: 'text-foreground', bg: 'bg-card border-border' },
@@ -384,16 +325,13 @@ export function AmbulanceFleet() {
 
       {/* ── Charts ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Fuel Efficiency */}
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-foreground font-semibold">Fuel Efficiency</h4>
               <p className="text-muted-foreground text-sm">Avg liters / 100 km</p>
             </div>
-            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium">
-              <TrendingUp size={14} /> +12%
-            </span>
+            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +12%</span>
           </div>
           <div className="text-3xl font-bold text-foreground mb-4">28L</div>
           <ResponsiveContainer width="100%" height={110}>
@@ -404,17 +342,13 @@ export function AmbulanceFleet() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Distance */}
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-foreground font-semibold">Distance Travelled</h4>
               <p className="text-muted-foreground text-sm">Kilometers per day</p>
             </div>
-            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium">
-              <TrendingUp size={14} /> +8%
-            </span>
+            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +8%</span>
           </div>
           <div className="text-3xl font-bold text-foreground mb-4">408km</div>
           <ResponsiveContainer width="100%" height={110}>
@@ -443,18 +377,10 @@ export function AmbulanceFleet() {
           <div className="flex gap-2 flex-wrap">
             {(['all', 'available', 'in_service', 'maintenance'] as const).map(f => {
               const labels: Record<string, string> = { all: 'All', available: 'Available', in_service: 'In Service', maintenance: 'Maintenance' };
-              const active: Record<string, string> = {
-                all: 'bg-red-600 text-white border-red-600',
-                available: 'bg-green-600 text-white border-green-600',
-                in_service: 'bg-blue-600 text-white border-blue-600',
-                maintenance: 'bg-orange-600 text-white border-orange-600',
-              };
+              const active: Record<string, string> = { all: 'bg-red-600 text-white border-red-600', available: 'bg-green-600 text-white border-green-600', in_service: 'bg-blue-600 text-white border-blue-600', maintenance: 'bg-orange-600 text-white border-orange-600' };
               return (
-                <button
-                  key={f}
-                  onClick={() => setFilterStatus(f)}
-                  className={`px-4 py-2.5 rounded-lg border transition-colors text-sm ${filterStatus === f ? active[f] : 'bg-card text-foreground border-border hover:bg-accent'}`}
-                >
+                <button key={f} onClick={() => setFilterStatus(f)}
+                  className={`px-4 py-2.5 rounded-lg border transition-colors text-sm ${filterStatus === f ? active[f] : 'bg-card text-foreground border-border hover:bg-accent'}`}>
                   {labels[f]}
                 </button>
               );
@@ -466,18 +392,14 @@ export function AmbulanceFleet() {
       {/* ── Ambulance Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {filteredAmbulances.map(ambulance => (
-          <div
-            key={ambulance.id}
+          <div key={ambulance.id}
             className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900/50 group flex flex-col h-full"
           >
-            {/* Card header */}
+            {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-lg ${ambulance.status === 'available' ? 'bg-green-50 dark:bg-green-900/20' : ambulance.status === 'in_service' ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
-                  <Ambulance
-                    size={22}
-                    className={ambulance.status === 'available' ? 'text-green-600' : ambulance.status === 'in_service' ? 'text-blue-600' : 'text-orange-600'}
-                  />
+                  <Ambulance size={22} className={ambulance.status === 'available' ? 'text-green-600' : ambulance.status === 'in_service' ? 'text-blue-600' : 'text-orange-600'} />
                 </div>
                 <div>
                   <h3 className="text-foreground font-semibold">{ambulance.id}</h3>
@@ -486,16 +408,13 @@ export function AmbulanceFleet() {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => setDetailAmbulance(ambulance)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 opacity-0 group-hover:opacity-100"
-                title="View details"
-              >
+              <button onClick={() => setDetailAmbulance(ambulance)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1 opacity-0 group-hover:opacity-100" title="View details">
                 <ChevronRight size={18} />
               </button>
             </div>
 
-            {/* Info rows */}
+            {/* Info */}
             <div className="space-y-2 mb-4 text-sm">
               <div className="flex items-center gap-2">
                 <User size={14} className="text-gray-400 shrink-0" />
@@ -513,9 +432,7 @@ export function AmbulanceFleet() {
                 <div className="flex items-center gap-2">
                   <Clock size={14} className="text-blue-400 shrink-0" />
                   <span className="text-blue-600 font-medium">ETA: {formatEta(ambulance.etaMinutes)}</span>
-                  {ambulance.currentTransfer && (
-                    <span className="text-muted-foreground">— {ambulance.currentTransfer}</span>
-                  )}
+                  {ambulance.currentTransfer && <span className="text-muted-foreground">— {ambulance.currentTransfer}</span>}
                 </div>
               )}
               {ambulance.status === 'maintenance' && ambulance.maintenanceNotes && (
@@ -526,15 +443,13 @@ export function AmbulanceFleet() {
               )}
             </div>
 
-            {/* Equipment */}
-            {ambulance.equipment.length > 0 && (
+            {/* Equipment — card */}
+            {toArr(ambulance.equipment).length > 0 && (
               <div className="mb-4">
                 <p className="text-muted-foreground text-xs mb-1.5">Equipment</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {ambulance.equipment.map(item => (
-                    <span key={item} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs">
-                      {item}
-                    </span>
+                  {toArr(ambulance.equipment).map(item => (
+                    <span key={item} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs">{item}</span>
                   ))}
                 </div>
               </div>
@@ -543,71 +458,50 @@ export function AmbulanceFleet() {
             {/* Badges */}
             {(ambulance.hasDoctor || ambulance.hasVentilator) && (
               <div className="flex gap-2 mb-4">
-                {ambulance.hasDoctor && (
-                  <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">
-                    Doctor On Board
-                  </span>
-                )}
-                {ambulance.hasVentilator && (
-                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">
-                    Ventilator
-                  </span>
-                )}
+                {ambulance.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">Doctor On Board</span>}
+                {ambulance.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">Ventilator</span>}
               </div>
             )}
 
-            {/* Action buttons */}
+            {/* Actions */}
             <div className="pt-3 border-t border-border flex flex-col gap-2 mt-auto">
               {ambulance.status === 'available' && (
                 <>
-                  <button
-                    onClick={() => { setAssignAmbulance(ambulance); setSelectedTransferId(''); }}
-                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                  >
+                  <button onClick={() => { setAssignTarget(ambulance); setSelectedTransferId(''); }}
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
                     Assign to Transfer
                   </button>
-                  <button
-                    onClick={() => { setMaintenanceAmbulance(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
-                    className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => { setMaintenanceTarget(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
+                    className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2">
                     <Wrench size={14} /> Schedule Maintenance
                   </button>
-                  <button
-                    onClick={() => setDeleteAmbulance(ambulance)}
-                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => setDeleteTarget(ambulance)}
+                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2">
                     <Trash2 size={14} /> Delete Ambulance
                   </button>
                 </>
               )}
               {ambulance.status === 'in_service' && ambulance.currentTransfer && (
                 <>
-                  <button
-                    onClick={() => navigate('/')}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  >
+                  <button onClick={() => navigate('/')}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
                     Track Transfer {ambulance.currentTransfer}
                   </button>
-                  <button
-                    onClick={() => { setMaintenanceAmbulance(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
-                    className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => { setMaintenanceTarget(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
+                    className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2">
                     <Wrench size={14} /> Schedule Maintenance
                   </button>
                 </>
               )}
               {ambulance.status === 'maintenance' && (
                 <>
-                  <button
-                    onClick={() => handleCompleteMaintenance(ambulance.id)}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle size={14} /> Mark Maintenance Complete
+                  <button onClick={() => handleCompleteMaintenance(ambulance.id)} disabled={actionLoading}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60">
+                    {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                    Mark Maintenance Complete
                   </button>
-                  <button
-                    onClick={() => setDeleteAmbulance(ambulance)}
-                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => setDeleteTarget(ambulance)}
+                    className="w-full px-4 py-2 bg-card border border-border text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm flex items-center justify-center gap-2">
                     <Trash2 size={14} /> Delete Ambulance
                   </button>
                 </>
@@ -626,27 +520,22 @@ export function AmbulanceFleet() {
         </div>
       )}
 
-      {/* ── FAB ── */}
-      <button
-        onClick={() => navigate('/transfer')}
+      {/* FAB */}
+      <button onClick={() => navigate('/transfer')}
         className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
-        title="New Transfer Request"
-      >
+        title="New Transfer Request">
         <Ambulance size={22} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm">
-          New Request
-        </span>
+        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm">New Request</span>
       </button>
 
-      {/* ═══════════════════════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════════
           DETAIL MODAL
-      ═══════════════════════════════════════════════════════════ */}
+      ══════════════════════════════════════════════════════════ */}
       <Dialog open={!!detailAmbulance} onOpenChange={open => !open && setDetailAmbulance(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ambulance size={20} className="text-red-600" />
-              {detailAmbulance?.id} — Details
+              <Ambulance size={20} className="text-red-600" /> {detailAmbulance?.id} — Details
             </DialogTitle>
           </DialogHeader>
           {detailAmbulance && (
@@ -725,11 +614,11 @@ export function AmbulanceFleet() {
                   <p className="text-orange-700 text-sm">{detailAmbulance.maintenanceNotes}</p>
                 </div>
               )}
-              {detailAmbulance.equipment.length > 0 && (
+              {toArr(detailAmbulance.equipment).length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Equipment</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {detailAmbulance.equipment.map(e => (
+                    {toArr(detailAmbulance.equipment).map(e => (
                       <span key={e} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs">{e}</span>
                     ))}
                   </div>
@@ -737,28 +626,17 @@ export function AmbulanceFleet() {
               )}
               {(detailAmbulance.hasDoctor || detailAmbulance.hasVentilator) && (
                 <div className="flex gap-2">
-                  {detailAmbulance.hasDoctor && (
-                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">Doctor On Board</span>
-                  )}
-                  {detailAmbulance.hasVentilator && (
-                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">Ventilator</span>
-                  )}
+                  {detailAmbulance.hasDoctor && <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">Doctor On Board</span>}
+                  {detailAmbulance.hasVentilator && <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">Ventilator</span>}
                 </div>
               )}
             </div>
           )}
           <DialogFooter>
-            <button
-              onClick={() => setDetailAmbulance(null)}
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm"
-            >
-              Close
-            </button>
+            <button onClick={() => setDetailAmbulance(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm">Close</button>
             {detailAmbulance?.status === 'available' && (
-              <button
-                onClick={() => { setDetailAmbulance(null); setAssignAmbulance(detailAmbulance!); }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-              >
+              <button onClick={() => { setDetailAmbulance(null); setAssignTarget(detailAmbulance!); }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
                 Assign to Transfer
               </button>
             )}
@@ -766,35 +644,27 @@ export function AmbulanceFleet() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════════
           ASSIGN DIALOG
-      ═══════════════════════════════════════════════════════════ */}
-      <Dialog open={!!assignAmbulance} onOpenChange={open => !open && setAssignAmbulance(null)}>
+      ══════════════════════════════════════════════════════════ */}
+      <Dialog open={!!assignTarget} onOpenChange={open => !open && setAssignTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Assign {assignAmbulance?.id} to Transfer</DialogTitle>
+            <DialogTitle>Assign {assignTarget?.id} to Transfer</DialogTitle>
             <DialogDescription>Select a pending transfer request to assign this ambulance.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            {PENDING_TRANSFERS.map(t => (
-              <label
-                key={t.id}
-                className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedTransferId === t.id ? 'border-red-600 bg-red-50 dark:bg-red-900/10' : 'border-border hover:border-red-300'}`}
-              >
-                <input
-                  type="radio"
-                  name="transfer"
-                  value={t.id}
-                  checked={selectedTransferId === t.id}
-                  onChange={() => setSelectedTransferId(t.id)}
-                  className="mt-0.5"
-                />
+            {pendingTransfers.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-6">No pending transfers at the moment.</p>
+            ) : pendingTransfers.map(t => (
+              <label key={t.id}
+                className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedTransferId === t.id ? 'border-red-600 bg-red-50 dark:bg-red-900/10' : 'border-border hover:border-red-300'}`}>
+                <input type="radio" name="transfer" value={t.id} checked={selectedTransferId === t.id}
+                  onChange={() => setSelectedTransferId(t.id)} className="mt-0.5" />
                 <div className="flex-1 text-sm">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium text-foreground">{t.patient}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${getPriorityColor(t.priority)}`}>
-                      {t.priority.toUpperCase()}
-                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${getPriorityColor(t.priority)}`}>{t.priority.toUpperCase()}</span>
                   </div>
                   <p className="text-muted-foreground text-xs">{t.id} · {t.from} → {t.to}</p>
                 </div>
@@ -802,197 +672,143 @@ export function AmbulanceFleet() {
             ))}
           </div>
           <DialogFooter>
-            <button onClick={() => setAssignAmbulance(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">
-              Cancel
-            </button>
-            <button
-              onClick={handleAssignConfirm}
-              disabled={!selectedTransferId}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${selectedTransferId ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-            >
+            <button onClick={() => setAssignTarget(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={handleAssignConfirm} disabled={!selectedTransferId || actionLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${selectedTransferId && !actionLoading ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+              {actionLoading && <Loader2 size={14} className="animate-spin" />}
               Confirm Assignment
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════════
           MAINTENANCE DIALOG
-      ═══════════════════════════════════════════════════════════ */}
-      <Dialog open={!!maintenanceAmbulance} onOpenChange={open => !open && setMaintenanceAmbulance(null)}>
+      ══════════════════════════════════════════════════════════ */}
+      <Dialog open={!!maintenanceTarget} onOpenChange={open => !open && setMaintenanceTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wrench size={18} className="text-orange-500" />
-              Schedule Maintenance — {maintenanceAmbulance?.id}
+              <Wrench size={18} className="text-orange-500" /> Schedule Maintenance — {maintenanceTarget?.id}
             </DialogTitle>
-            <DialogDescription>
-              This will immediately set the ambulance status to Maintenance.
-            </DialogDescription>
+            <DialogDescription>This will immediately set the ambulance status to Maintenance.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <label className="block text-sm text-foreground mb-1.5">Expected Return Date</label>
-              <input
-                type="date"
-                value={maintenanceDate}
-                onChange={e => setMaintenanceDate(e.target.value)}
+              <input type="date" value={maintenanceDate} onChange={e => setMaintenanceDate(e.target.value)}
                 min={new Date().toISOString().slice(0, 10)}
-                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-input-field-bg text-foreground text-sm"
-              />
+                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-input-field-bg text-foreground text-sm" />
             </div>
             <div>
               <label className="block text-sm text-foreground mb-1.5">Maintenance Notes</label>
-              <textarea
-                value={maintenanceNotes}
-                onChange={e => setMaintenanceNotes(e.target.value)}
-                rows={3}
+              <textarea value={maintenanceNotes} onChange={e => setMaintenanceNotes(e.target.value)} rows={3}
                 placeholder="e.g., Oil change, brake inspection, tyre rotation..."
-                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-input-field-bg text-foreground text-sm resize-none"
-              />
+                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-input-field-bg text-foreground text-sm resize-none" />
             </div>
           </div>
           <DialogFooter>
-            <button onClick={() => setMaintenanceAmbulance(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">
-              Cancel
-            </button>
-            <button
-              onClick={handleScheduleMaintenance}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2"
-            >
-              <Wrench size={14} /> Schedule Maintenance
+            <button onClick={() => setMaintenanceTarget(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={handleScheduleMaintenance} disabled={actionLoading}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-60">
+              {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Wrench size={14} />}
+              Schedule Maintenance
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════
-          DELETE AMBULANCE DIALOG
-      ═══════════════════════════════════════════════════════════ */}
-      <Dialog open={!!deleteAmbulance} onOpenChange={open => !open && setDeleteAmbulance(null)}>
+      {/* ══════════════════════════════════════════════════════════
+          DELETE DIALOG
+      ══════════════════════════════════════════════════════════ */}
+      <Dialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle size={20} />
-              Delete Ambulance
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{deleteAmbulance?.id}</strong> from the fleet? This action cannot be undone.
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-red-600"><AlertTriangle size={20} /> Delete Ambulance</DialogTitle>
+            <DialogDescription>Are you sure you want to delete <strong>{deleteTarget?.id}</strong> from the fleet? This cannot be undone.</DialogDescription>
           </DialogHeader>
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
             <p className="font-medium mb-1">Warning:</p>
             <ul className="list-disc list-inside space-y-1 text-xs">
-              <li>Driver: {deleteAmbulance?.driver}</li>
-              <li>Status: {deleteAmbulance?.status.replace('_', ' ').toUpperCase()}</li>
-              <li>Location: {deleteAmbulance?.location}</li>
+              <li>Driver: {deleteTarget?.driver}</li>
+              <li>Status: {deleteTarget?.status.replace('_', ' ').toUpperCase()}</li>
+              <li>Location: {deleteTarget?.location}</li>
             </ul>
           </div>
           <DialogFooter>
-            <button
-              onClick={() => setDeleteAmbulance(null)}
-              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDeleteAmbulance}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2"
-            >
-              <Trash2 size={14} /> Delete
+            <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={handleDeleteAmbulance} disabled={actionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-60">
+              {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              Delete
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ═══════════════════════════════════════════════════════════
+      {/* ══════════════════════════════════════════════════════════
           ADD AMBULANCE DIALOG
-      ═══════════════════════════════════════════════════════════ */}
+      ══════════════════════════════════════════════════════════ */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus size={18} className="text-red-600" />
-              Add New Ambulance
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Plus size={18} className="text-red-600" /> Add New Ambulance</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 text-sm">
             <div>
               <label className="block text-foreground mb-1.5">Ambulance ID *</label>
-              <input
-                type="text"
-                value={addForm.id}
+              <input type="text" value={addForm.id}
                 onChange={e => setAddForm(f => ({ ...f, id: e.target.value.toUpperCase() }))}
                 placeholder="e.g., AMB-009"
-                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-              />
+                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Driver Name *</label>
-                <input
-                  type="text"
-                  value={addForm.driver}
+                <input type="text" value={addForm.driver}
                   onChange={e => setAddForm(f => ({ ...f, driver: e.target.value }))}
                   placeholder="Full name"
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                />
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
               </div>
               <div>
                 <label className="block text-foreground mb-1.5">Driver Gender</label>
-                <select
-                  value={addForm.driverGender}
+                <select value={addForm.driverGender}
                   onChange={e => setAddForm(f => ({ ...f, driverGender: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                >
-                  <option>Male</option>
-                  <option>Female</option>
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
+                  <option>Male</option><option>Female</option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Attendant Name</label>
-                <input
-                  type="text"
-                  value={addForm.attendant}
+                <input type="text" value={addForm.attendant}
                   onChange={e => setAddForm(f => ({ ...f, attendant: e.target.value }))}
                   placeholder="Full name"
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                />
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
               </div>
               <div>
                 <label className="block text-foreground mb-1.5">Attendant Gender</label>
-                <select
-                  value={addForm.attendantGender}
+                <select value={addForm.attendantGender}
                   onChange={e => setAddForm(f => ({ ...f, attendantGender: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                >
-                  <option>Male</option>
-                  <option>Female</option>
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
+                  <option>Male</option><option>Female</option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Base Location</label>
-                <input
-                  type="text"
-                  value={addForm.location}
+                <input type="text" value={addForm.location}
                   onChange={e => setAddForm(f => ({ ...f, location: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                />
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
               </div>
               <div>
                 <label className="block text-foreground mb-1.5">Vehicle Year</label>
-                <input
-                  type="number"
-                  value={addForm.year}
+                <input type="number" value={addForm.year}
                   onChange={e => setAddForm(f => ({ ...f, year: parseInt(e.target.value) || f.year }))}
-                  min={2000}
-                  max={new Date().getFullYear()}
-                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                />
+                  min={2000} max={new Date().getFullYear()}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
               </div>
             </div>
             <div>
@@ -1000,12 +816,8 @@ export function AmbulanceFleet() {
               <div className="grid grid-cols-2 gap-2">
                 {EQUIPMENT_OPTIONS.map(item => (
                   <label key={item} className="flex items-center gap-2 p-2 border border-border rounded-lg cursor-pointer hover:bg-accent text-xs">
-                    <input
-                      type="checkbox"
-                      checked={addForm.equipment.includes(item)}
-                      onChange={() => toggleEquipmentInAddForm(item)}
-                      className="w-3.5 h-3.5 text-red-600"
-                    />
+                    <input type="checkbox" checked={addForm.equipment.includes(item)}
+                      onChange={() => toggleEquipment(item)} className="w-3.5 h-3.5 text-red-600" />
                     {item}
                   </label>
                 ))}
@@ -1013,24 +825,16 @@ export function AmbulanceFleet() {
             </div>
             <div className="space-y-2">
               <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent">
-                <input
-                  type="checkbox"
-                  checked={addForm.hasDoctor}
-                  onChange={e => setAddForm(f => ({ ...f, hasDoctor: e.target.checked }))}
-                  className="w-4 h-4 text-red-600"
-                />
+                <input type="checkbox" checked={addForm.hasDoctor}
+                  onChange={e => setAddForm(f => ({ ...f, hasDoctor: e.target.checked }))} className="w-4 h-4 text-red-600" />
                 <div>
                   <p className="text-foreground font-medium">Doctor On Board</p>
                   <p className="text-muted-foreground text-xs">Unit carries an attending physician</p>
                 </div>
               </label>
               <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent">
-                <input
-                  type="checkbox"
-                  checked={addForm.hasVentilator}
-                  onChange={e => setAddForm(f => ({ ...f, hasVentilator: e.target.checked }))}
-                  className="w-4 h-4 text-red-600"
-                />
+                <input type="checkbox" checked={addForm.hasVentilator}
+                  onChange={e => setAddForm(f => ({ ...f, hasVentilator: e.target.checked }))} className="w-4 h-4 text-red-600" />
                 <div>
                   <p className="text-foreground font-medium">Ventilator Support</p>
                   <p className="text-muted-foreground text-xs">Unit equipped with mechanical ventilator</p>
@@ -1039,14 +843,11 @@ export function AmbulanceFleet() {
             </div>
           </div>
           <DialogFooter>
-            <button onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">
-              Cancel
-            </button>
-            <button
-              onClick={handleAddAmbulance}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2"
-            >
-              <Plus size={14} /> Add to Fleet
+            <button onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={handleAddAmbulance} disabled={actionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-60">
+              {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Add to Fleet
             </button>
           </DialogFooter>
         </DialogContent>
