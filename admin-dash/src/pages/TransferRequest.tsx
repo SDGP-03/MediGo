@@ -5,12 +5,8 @@ import { ref, push, set, onValue, off } from 'firebase/database';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
 const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
-  'City General Hospital': { lat: 6.9271, lng: 79.8612, address: 'Colombo 07, Sri Lanka' },
-  'Central Medical Center': { lat: 6.9344, lng: 79.8428, address: 'Union Place, Colombo' },
-  'Specialist Care Hospital': { lat: 6.9167, lng: 79.8778, address: 'Narahenpita, Colombo' },
-  'Regional Base Hospital': { lat: 6.9147, lng: 79.9727, address: 'Homagama' },
-  'Teaching Hospital East': { lat: 6.9108, lng: 79.8541, address: 'Wellawatte, Colombo' },
-  'Metro Hospital': { lat: 6.8867, lng: 79.8593, address: 'Dehiwala' },
+  'General Hospital O P D': { lat: 6.918955913694652, lng: 79.86611697073118, address: 'WV98+HC9, EW Perera Mawatha, Colombo 01000, Sri Lanka' },
+  'Lady Ridgeway Hospital for Children (LRH)': { lat: 6.918381526890345, lng: 79.8759550393045, address: 'Dr Danister De Silva Mawatha, Colombo 00800, Sri Lanka' },
 };
 
 interface AvailableDriver {
@@ -37,7 +33,7 @@ export function TransferRequest() {
     allergies: '',
 
     // Transfer Info
-    fromHospital: 'Colombo General Hospital',
+    fromHospital: 'General Hospital O P D',
     toHospital: '',
     reason: '',
     priority: 'standard',
@@ -85,8 +81,8 @@ export function TransferRequest() {
   }, []);
 
   const hospitals = [
-    'Central Medical Center',
-    'Specialist Care Hospital',
+    'General Hospital O P D',
+    'Lady Ridgeway Hospital for Children (LRH)',
     'Regional Base Hospital',
     'Teaching Hospital East',
     'Metro Hospital',
@@ -203,7 +199,7 @@ export function TransferRequest() {
         patientId: '',
         bloodGroup: '',
         allergies: '',
-        fromHospital: 'City General Hospital',
+        fromHospital: 'General Hospital O P D',
         toHospital: '',
         reason: '',
         priority: 'standard',
