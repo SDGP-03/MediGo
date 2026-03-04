@@ -37,7 +37,7 @@ interface Driver {
 
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 
-const initialDrivers: Driver[] = [
+export const initialDrivers: Driver[] = [
     {
         id: 'DRV-001', name: 'John Smith', gender: 'Male',
         phone: '+91 98765 43210', email: 'john.smith@medigo.com',
