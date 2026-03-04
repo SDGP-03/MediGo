@@ -30,14 +30,14 @@ export function TransferRequest() {
   const [formData, setFormData] = useState({
     // Patient Info
     patientName: '',
-    patientAge: '',
+    patientAge: '0',
     patientGender: '',
     patientId: '',
     bloodGroup: '',
     allergies: '',
 
     // Transfer Info
-    fromHospital: 'City General Hospital',
+    fromHospital: 'Colombo General Hospital',
     toHospital: '',
     reason: '',
     priority: 'standard',
@@ -531,7 +531,7 @@ export function TransferRequest() {
                         setFormData({ ...formData, reason: e.target.value });
                         if (formErrors.reason) setFormErrors({ ...formErrors, reason: '' });
                       }}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground ${formErrors.reason ? 'border-red-500 ring-1 ring-500' : 'border-input'
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground ${formErrors.reason ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
                         }`}
                       placeholder="Detailed reason for inter-hospital transfer..."
                     />
