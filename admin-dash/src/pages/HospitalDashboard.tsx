@@ -4,6 +4,8 @@ import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List,
 import { Switch } from "../components/ui/switch";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
+import { database } from "../firebase";
+import { ref, onValue, off } from "firebase/database";
 
 
 export function HospitalDashboard() {
@@ -27,6 +29,71 @@ export function HospitalDashboard() {
 
   // Live driver data from Firebase
   const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+
+  const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
+  const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const requestsRef = ref(database, 'transfer_requests');
+    const handleData = (snapshot: any) => {
+      const data = snapshot.val();
+      if (!data) {
+        setDbPendingRequests([]);
+        setDbActiveTransfers([]);
+        return;
+      }
+
+      const formatTimeAgo = (timestamp: number) => {
+        if (!timestamp) return 'Just now';
+        const mins = Math.floor((Date.now() - timestamp) / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins} mins ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours} hours ago`;
+        return `${Math.floor(hours / 24)} days ago`;
+      };
+
+      const pending: any[] = [];
+      const active: any[] = [];
+
+      Object.entries(data).forEach(([key, value]: [string, any]) => {
+        const item = {
+          id: key.substring(Math.max(0, key.length - 8)).toUpperCase(),
+          realId: key,
+          patient: value.patient?.name || 'Unknown',
+          age: value.patient?.age || 'N/A',
+          gender: value.patient?.gender || 'N/A',
+          from: value.pickup?.hospitalName || 'Unknown',
+          to: value.destination?.hospitalName || 'Unknown',
+          priority: value.priority || 'standard',
+          requestedBy: 'System',
+          time: formatTimeAgo(value.createdAt),
+
+          ambulance: value.ambulanceId || 'Pending',
+          driver: value.driverId || 'Unknown',
+          attendant: value.attendant || 'N/A',
+          status: value.status || 'pending',
+          eta: value.eta || 'Evaluating...',
+          distance: value.distance || '0',
+        };
+
+        if (value.status === 'pending') {
+          pending.push(item);
+        } else if (value.status && value.status !== 'completed' && value.status !== 'cancelled') {
+          active.push(item);
+        }
+      });
+
+      pending.reverse();
+      active.reverse();
+
+      setDbPendingRequests(pending);
+      setDbActiveTransfers(active);
+    };
+
+    onValue(requestsRef, handleData);
+    return () => off(requestsRef);
+  }, []);
 
   // --- DATA: INCOMING EMERGENCIES ---
   const incomingRequests = [
@@ -195,78 +262,9 @@ export function HospitalDashboard() {
     total: liveDriverCount > 0 ? liveDriverCount : ambulances.length,
   };
 
-  const activeTransfers = [
-    {
-      id: "TR-2401",
-      patient: "Sarah Johnson",
-      age: 45,
-      gender: "Female",
-      from: "City General Hospital",
-      to: "Central Medical Center",
-      ambulance: "AMB-003",
-      driver: "Mike Chen",
-      attendant: "Lisa Brown (F)",
-      status: "in_transit",
-      eta: "12 mins",
-      distance: 8.5,
-      priority: "urgent",
-    },
-    {
-      id: "TR-2402",
-      patient: "David Miller",
-      age: 62,
-      gender: "Male",
-      from: "Divisional Hospital North",
-      to: "City General Hospital",
-      ambulance: "AMB-007",
-      driver: "John Smith",
-      attendant: "Tom Wilson (M)",
-      status: "patient_loaded",
-      eta: "18 mins",
-      distance: 12.3,
-      priority: "critical",
-    },
-    {
-      id: "TR-2403",
-      patient: "Emma Davis",
-      age: 28,
-      gender: "Female",
-      from: "City General Hospital",
-      to: "Specialist Care Hospital",
-      ambulance: "AMB-011",
-      driver: "Sarah Lee",
-      attendant: "Maria Garcia (F)",
-      status: "dispatched",
-      eta: "25 mins",
-      distance: 15.7,
-      priority: "standard",
-    },
-  ];
+  const activeTransfers = dbActiveTransfers.length > 0 ? dbActiveTransfers : [];
 
-  const pendingRequests = [
-    {
-      id: "REQ-1024",
-      patient: "Robert Taylor",
-      age: 55,
-      gender: "Male",
-      from: "Divisional Hospital East",
-      to: "City General Hospital",
-      priority: "urgent",
-      requestedBy: "Dr. Anderson",
-      time: "5 mins ago",
-    },
-    {
-      id: "REQ-1025",
-      patient: "Jennifer White",
-      age: 38,
-      gender: "Female",
-      from: "Rural Health Center",
-      to: "Central Medical Center",
-      priority: "standard",
-      requestedBy: "Dr. Martinez",
-      time: "12 mins ago",
-    },
-  ];
+  const pendingRequests = dbPendingRequests.length > 0 ? dbPendingRequests : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
