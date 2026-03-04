@@ -18,9 +18,15 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -32,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -56,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         t(
           "Please write valid email.",
           "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+          "சரியான மின்னஞ்சலை உள்ளிடுங்கள்.",
         ),
         context,
       );
@@ -64,6 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
         t(
           "Your password must be atleast 6 or more characters.",
           "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
+          "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.",
         ),
         context,
       );
@@ -80,6 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
         messageText: t(
           "Signing in, please wait...",
           "පිවිසෙමින්... කරුණාකර රැඳී සිටින්න",
+          "உள்நுழைகிறது... தயவு செய்து காத்திருக்கவும்",
         ),
       ),
     );
@@ -108,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
           t(
             "No user data found. Please contact support.",
             "පරිශීලක දත්ත හමු වුණේ නැහැ. සහාය අමතන්න.",
+            "பயனர் தகவல் இல்லை. உதவியை தொடர்பு கொள்ளுங்கள்.",
           ),
           context,
         );
@@ -122,6 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
           t(
             "Your account is blocked. Please contact support.",
             "ඔබේ ගිණුම අවහිර කර ඇත. සහාය අමතන්න.",
+            "உங்கள் கணக்கு தடை செய்யப்பட்டுள்ளது. உதவியை தொடர்பு கொள்ளுங்கள்.",
           ),
           context,
         );
@@ -140,6 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
       String errorMessage = t(
         "Something went wrong. Please try again.",
         "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+        "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
       );
 
       switch (e.code) {
@@ -147,6 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = t(
             "Please enter a valid email address.",
             "වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+            "சரியான மின்னஞ்சல் முகவரியை உள்ளிடுங்கள்.",
           );
           break;
 
@@ -154,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = t(
             "No account found with this email.",
             "මේ විද්‍යුත් තැපෑලට ගිණුමක් හමු වුණේ නැහැ.",
+            "இந்த மின்னஞ்சலுக்கு கணக்கு இல்லை.",
           );
           break;
 
@@ -161,6 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = t(
             "Incorrect password. Please try again.",
             "මුරපදය වැරදියි. නැවත උත්සාහ කරන්න.",
+            "கடவுச்சொல் தவறு. மீண்டும் முயற்சிக்கவும்.",
           );
           break;
 
@@ -168,6 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = t(
             "Network error. Please check your internet connection.",
             "ජාල දෝෂයක්. ඔබේ අන්තර්ජාල සබැඳිය පරීක්ෂා කරන්න.",
+            "நெட்வொர்க் பிழை. உங்கள் இணைய இணைப்பை சரிபார்க்கவும்.",
           );
           break;
       }
@@ -180,6 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
           t(
             "Something went wrong. Please try again.",
             "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+            "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
           ),
           context,
         );
@@ -219,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: Center(
                 child: Semantics(
-                  label: t('MediGo logo', 'MediGo ලාංඡනය'),
+                  label: t('MediGo logo', 'MediGo ලාංඡනය', 'MediGo லோகோ'),
                   child: Image.asset("assets/logo/logo.png", height: 100),
                 ),
               ),
@@ -257,7 +274,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          t("Welcome Back", "නැවත සාදරයෙන් පිළිගනිමු"),
+                          t(
+                            "Welcome Back",
+                            "නැවත සාදරයෙන් පිළිගනිමු",
+                            "மீண்டும் வரவேற்கிறோம்",
+                          ),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 22,
@@ -269,6 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           t(
                             "Sign in to continue as driver",
                             "රියදුරෙකු ලෙස ඉදිරියට යාමට පිවිසෙන්න",
+                            "டிரைவராக தொடர உள்நுழையவும்",
                           ),
                           style: TextStyle(color: Colors.white70),
                         ),
@@ -282,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          t("Email Address", "විද්‍යුත් තැපෑල"),
+                          t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
 
@@ -305,7 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
 
                         Text(
-                          t("Password", "මුරපදය"),
+                          t("Password", "මුරපදය", "கடவுச்சொல்"),
                           style: TextStyle(fontWeight: FontWeight.w500),
                         ),
 
@@ -319,6 +341,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: t(
                               "Enter your password",
                               "ඔබගේ මුරපදය ඇතුල් කරන්න",
+                              "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
                             ),
                             prefixIcon: const Icon(Icons.lock_outline),
                             border: const OutlineInputBorder(
@@ -347,7 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
 
                             child: Text(
-                              t("Sign In", "පිවිසෙන්න"),
+                              t("Sign In", "පිවිසෙන්න", "உள்நுழை"),
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.white,
@@ -371,6 +394,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         t(
                           "Don't have an Account? Register Here",
                           "ගිණුමක් නැද්ද? මෙතනින් ලියාපදිංචි වන්න",
+                          "கணக்கு இல்லையா? இங்கே பதிவு செய்யுங்கள்",
                         ),
                         style: const TextStyle(color: Colors.grey),
                       ),

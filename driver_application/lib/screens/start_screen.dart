@@ -12,9 +12,15 @@ class StartScreen extends StatefulWidget {
 }
 
 class _StartScreenState extends State<StartScreen> {
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -26,7 +32,7 @@ class _StartScreenState extends State<StartScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -35,12 +41,12 @@ class _StartScreenState extends State<StartScreen> {
     await prefs.setString('language', language);
     if (!mounted) return;
     setState(() {
-      _isSinhala = language == 'Sinhala';
+      _language = language;
     });
   }
 
   Widget _buildLanguagePicker() {
-    final selectedValue = _isSinhala ? "Sinhala" : "English";
+    final selectedValue = _language;
 
     Widget buildMenuItem({
       required String value,
@@ -93,7 +99,7 @@ class _StartScreenState extends State<StartScreen> {
     }
 
     return PopupMenuButton<String>(
-      tooltip: t("Select language", "භාෂාව තෝරන්න"),
+      tooltip: t("Select language", "භාෂාව තෝරන්න", "மொழியை தேர்வு செய்யவும்"),
       onSelected: _setLanguage,
       color: Colors.white,
       elevation: 12,
@@ -107,6 +113,10 @@ class _StartScreenState extends State<StartScreen> {
         PopupMenuItem(
           value: "English",
           child: buildMenuItem(value: "English", title: "English", code: "EN"),
+        ),
+        PopupMenuItem(
+          value: "Tamil",
+          child: buildMenuItem(value: "Tamil", title: "தமிழ்", code: "TA"),
         ),
       ],
       child: AnimatedContainer(
@@ -140,7 +150,11 @@ class _StartScreenState extends State<StartScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                _isSinhala ? "SI" : "EN",
+                _isSinhala
+                    ? "SI"
+                    : _isTamil
+                    ? "TA"
+                    : "EN",
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -150,7 +164,7 @@ class _StartScreenState extends State<StartScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              t("Language", "භාෂාව"),
+              t("Language", "භාෂාව", "மொழி"),
               style: TextStyle(
                 color: const Color(0xFF3F4A4A),
                 fontWeight: FontWeight.w700,
@@ -229,7 +243,7 @@ class _StartScreenState extends State<StartScreen> {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              t("Driver App", "රියදුරු යෙදුම"),
+                              t("Driver App", "රියදුරු යෙදුම", "டிரைவர் ஆப்"),
                               style: TextStyle(
                                 color: Colors.red.shade700,
                                 fontSize: 12,
@@ -278,7 +292,11 @@ class _StartScreenState extends State<StartScreen> {
                           ),
                           child: Center(
                             child: Semantics(
-                              label: t('MediGo logo', 'MediGo ලාංඡනය'),
+                              label: t(
+                                'MediGo logo',
+                                'MediGo ලාංඡනය',
+                                'MediGo லோகோ',
+                              ),
                               child: Image.asset(
                                 "assets/logo/logo.png",
                                 height: 100,
@@ -292,6 +310,7 @@ class _StartScreenState extends State<StartScreen> {
                         t(
                           "Fast, Reliable Ambulance Management",
                           "ඉක්මන් සහ විශ්වාසදායක ගිලන් රථ කළමනාකරණය",
+                          "வேகமான, நம்பகமான ஆம்புலன்ஸ் மேலாண்மை",
                         ),
                         textAlign: TextAlign.center,
                         style: textTheme.titleLarge?.copyWith(
@@ -306,6 +325,7 @@ class _StartScreenState extends State<StartScreen> {
                         t(
                           "Real-time tracking, seamless coordination, and efficient patient care delivery",
                           "සජීවී ලුහුබැඳීම, පහසු සම්බන්ධීකරණය සහ කාර්යක්ෂම රෝගී සේවාව",
+                          "நேரடி கண்காணிப்பு, எளிய ஒருங்கிணைப்பு, திறமையான நோயாளர் சேவை",
                         ),
                         textAlign: TextAlign.center,
                         style: textTheme.titleMedium?.copyWith(
@@ -321,17 +341,29 @@ class _StartScreenState extends State<StartScreen> {
                         children: [
                           _buildMetricChip(
                             icon: Icons.speed_outlined,
-                            label: t("Fast Dispatch", "ඉක්මන් යොමු කිරීම"),
+                            label: t(
+                              "Fast Dispatch",
+                              "ඉක්මන් යොමු කිරීම",
+                              "வேகமான அனுப்புதல்",
+                            ),
                             color: const Color(0xFFC0392B),
                           ),
                           _buildMetricChip(
                             icon: Icons.location_pin,
-                            label: t("Live Tracking", "සජීවී ලුහුබැඳීම"),
+                            label: t(
+                              "Live Tracking",
+                              "සජීවී ලුහුබැඳීම",
+                              "நேரடி கண்காணிப்பு",
+                            ),
                             color: const Color(0xFFB03A2E),
                           ),
                           _buildMetricChip(
                             icon: Icons.verified_user_outlined,
-                            label: t("Secure Access", "ආරක්ෂිත ප්‍රවේශය"),
+                            label: t(
+                              "Secure Access",
+                              "ආරක්ෂිත ප්‍රවේශය",
+                              "பாதுகாப்பான அணுகல்",
+                            ),
                             color: const Color(0xFF9C2A22),
                           ),
                         ],
@@ -363,6 +395,7 @@ class _StartScreenState extends State<StartScreen> {
                                 text: t(
                                   "Live driver & patient tracking",
                                   "රියදුරු සහ රෝගී සජීවී ලුහුබැඳීම",
+                                  "டிரைவர் & நோயாளர் நேரடி கண்காணிப்பு",
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -371,6 +404,7 @@ class _StartScreenState extends State<StartScreen> {
                                 text: t(
                                   "Faster dispatch & coordination",
                                   "ඉක්මන් යොමු කිරීම සහ සම්බන්ධීකරණය",
+                                  "வேகமான அனுப்புதல் & ஒருங்கிணைப்பு",
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -379,6 +413,7 @@ class _StartScreenState extends State<StartScreen> {
                                 text: t(
                                   "Secure driver access",
                                   "ආරක්ෂිත රියදුරු ප්‍රවේශය",
+                                  "பாதுகாப்பான டிரைவர் அணுகல்",
                                 ),
                               ),
                             ],
@@ -418,7 +453,7 @@ class _StartScreenState extends State<StartScreen> {
                                   color: Colors.white,
                                 ),
                                 label: Text(
-                                  t("Get Started", "ආරම්භ කරමු"),
+                                  t("Get Started", "ආරම්භ කරමු", "தொடங்கலாம்"),
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -450,6 +485,7 @@ class _StartScreenState extends State<StartScreen> {
                                   t(
                                     "I already have an account",
                                     "මට ගිණුමක් තියෙනවා",
+                                    "எனக்கு ஏற்கனவே கணக்கு உள்ளது",
                                   ),
                                   style: TextStyle(
                                     fontSize: 14,

@@ -19,11 +19,17 @@ class SideMenu extends StatefulWidget {
 class _SideMenuState extends State<SideMenu> {
   String? profileImageUrl;
   String userName = 'Driver';
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
   StreamSubscription<DatabaseEvent>? _driverSubscription;
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -36,7 +42,7 @@ class _SideMenuState extends State<SideMenu> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -199,19 +205,23 @@ class _SideMenuState extends State<SideMenu> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(t('Logout', 'ඉවත් වන්න')),
+        title: Text(t('Logout', 'ඉවත් වන්න', 'வெளியேறு')),
         content: Text(
-          t('Do you really want to logout?', 'ඔබට ඇත්තටම ඉවත් වීමට අවශ්‍යද?'),
+          t(
+            'Do you really want to logout?',
+            'ඔබට ඇත්තටම ඉවත් වීමට අවශ්‍යද?',
+            'உண்மையில் வெளியேற வேண்டுமா?',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(t('Cancel', 'අවලංගු')),
+            child: Text(t('Cancel', 'අවලංගු', 'ரத்து')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(
-              t('Logout', 'ඉවත් වන්න'),
+              t('Logout', 'ඉවත් වන්න', 'வெளியேறு'),
               style: const TextStyle(color: Colors.red),
             ),
           ),
@@ -244,7 +254,7 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.home_outlined,
-            title: t('Home', 'මුල් පිටුව'),
+            title: t('Home', 'මුල් පිටුව', 'முகப்பு'),
             selected: currentRoute == '/home',
             onTap: () {
               Navigator.of(
@@ -256,14 +266,14 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.person_outline,
-            title: t('Edit Profile', 'පැතිකඩ සංස්කරණය'),
+            title: t('Edit Profile', 'පැතිකඩ සංස්කරණය', 'சுயவிவரம் திருத்து'),
             selected: currentRoute == '/edit-profile',
             onTap: () => _openNamedRoute('/edit-profile'),
           ),
 
           _buildMenuTile(
             icon: Icons.history,
-            title: t('History', 'ඉතිහාසය'),
+            title: t('History', 'ඉතිහාසය', 'வரலாறு'),
             selected: currentRoute == '/history',
             onTap: () => _openNamedRoute('/history'),
           ),
@@ -272,28 +282,36 @@ class _SideMenuState extends State<SideMenu> {
 
           _buildMenuTile(
             icon: Icons.support_agent_outlined,
-            title: t('Contact Support', 'සහාය අමතන්න'),
+            title: t('Contact Support', 'සහාය අමතන්න', 'உதவி தொடர்பு'),
             selected: currentRoute == '/contact-support',
             onTap: _openContactSupport,
           ),
 
           _buildMenuTile(
             icon: Icons.feedback_outlined,
-            title: t('Feedback / Complaints', 'ප්‍රතිචාර / පැමිණිලි'),
+            title: t(
+              'Feedback / Complaints',
+              'ප්‍රතිචාර / පැමිණිලි',
+              'கருத்து / புகார்கள்',
+            ),
             selected: currentRoute == '/feedback',
             onTap: () => _openNamedRoute('/feedback'),
           ),
 
           _buildMenuTile(
             icon: Icons.help_outline,
-            title: t('FAQ', 'නිතර අසන ප්‍රශ්න'),
+            title: t('FAQ', 'නිතර අසන ප්‍රශ්න', 'அடிக்கடி கேள்விகள்'),
             selected: currentRoute == '/faq',
             onTap: () => _openNamedRoute('/faq'),
           ),
 
           _buildMenuTile(
             icon: Icons.privacy_tip_outlined,
-            title: t('Privacy Policy', 'පෞද්ගලිකත්ව ප්‍රතිපත්තිය'),
+            title: t(
+              'Privacy Policy',
+              'පෞද්ගලිකත්ව ප්‍රතිපත්තිය',
+              'தனியுரிமைக் கொள்கை',
+            ),
             selected: currentRoute == '/privacy-policy',
             onTap: () => _openNamedRoute('/privacy-policy'),
           ),
@@ -303,7 +321,7 @@ class _SideMenuState extends State<SideMenu> {
           /// SETTINGS MENU
           _buildMenuTile(
             icon: Icons.settings_outlined,
-            title: t('Settings', 'සැකසුම්'),
+            title: t('Settings', 'සැකසුම්', 'அமைப்புகள்'),
             selected: currentRoute == '/settings',
             onTap: () async {
               Navigator.of(context).pop(); // close drawer
@@ -338,7 +356,7 @@ class _SideMenuState extends State<SideMenu> {
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: Text(
-                t('Logout', 'ඉවත් වන්න'),
+                t('Logout', 'ඉවත් වන්න', 'வெளியேறு'),
                 style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,

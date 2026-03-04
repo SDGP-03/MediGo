@@ -30,11 +30,17 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   File? selectedImage;
   final ImagePicker _picker = ImagePicker();
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
   CommonMethods cMethods = CommonMethods();
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -46,7 +52,7 @@ class _SignupScreenState extends State<SignupScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -102,6 +108,7 @@ class _SignupScreenState extends State<SignupScreen> {
         t(
           "Your name must be atleast 4 or more characters.",
           "නම අකුරු 4කට වැඩි විය යුතුයි.",
+          "பெயர் குறைந்தது 4 எழுத்துகள் இருக்க வேண்டும்.",
         ),
         context,
       );
@@ -110,6 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
         t(
           "Your phone number must be atleast 10 or more characters.",
           "දුරකථන අංකය අංක 10ක් විය යුතුයි.",
+          "தொலைபேசி எண் குறைந்தது 10 இலக்கங்கள் இருக்க வேண்டும்.",
         ),
         context,
       );
@@ -118,6 +126,7 @@ class _SignupScreenState extends State<SignupScreen> {
         t(
           "Please write valid email.",
           "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+          "சரியான மின்னஞ்சலை உள்ளிடுங்கள்.",
         ),
         context,
       );
@@ -126,13 +135,18 @@ class _SignupScreenState extends State<SignupScreen> {
         t(
           "Your password must be atleast 6 or more characters.",
           "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
+          "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.",
         ),
         context,
       );
     } else if (confirmPasswordTextEditingController.text.trim() !=
         passwordTextEditingController.text.trim()) {
       cMethods.displaySnackBar(
-        t("Passwords do not match.", "මුරපද දෙක එකිනෙකට නොගැලපේ."),
+        t(
+          "Passwords do not match.",
+          "මුරපද දෙක එකිනෙකට නොගැලපේ.",
+          "கடவுச்சொற்கள் பொருந்தவில்லை.",
+        ),
         context,
       );
     } else {
@@ -148,6 +162,7 @@ class _SignupScreenState extends State<SignupScreen> {
         messageText: t(
           "Registering, please wait...",
           "ලියාපදිංචි වෙමින්... කරුණාකර රැඳී සිටින්න",
+          "பதிவாகிறது... தயவு செய்து காத்திருக்கவும்",
         ),
       ),
     );
@@ -196,6 +211,7 @@ class _SignupScreenState extends State<SignupScreen> {
       String errorMessage = t(
         "Something went wrong. Please try again.",
         "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+        "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
       );
 
       switch (e.code) {
@@ -203,6 +219,7 @@ class _SignupScreenState extends State<SignupScreen> {
           errorMessage = t(
             "Please enter a valid email address.",
             "වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
+            "சரியான மின்னஞ்சல் முகவரியை உள்ளிடுங்கள்.",
           );
           break;
 
@@ -210,6 +227,7 @@ class _SignupScreenState extends State<SignupScreen> {
           errorMessage = t(
             "This email is already registered.",
             "මෙම විද්‍යුත් තැපෑල දැනටමත් ලියාපදිංචි කර ඇත.",
+            "இந்த மின்னஞ்சல் ஏற்கனவே பதிவு செய்யப்பட்டு உள்ளது.",
           );
           break;
 
@@ -217,6 +235,7 @@ class _SignupScreenState extends State<SignupScreen> {
           errorMessage = t(
             "Password is too weak. Use at least 6 characters.",
             "මුරපදය දුර්වලයි. අවමයෙන් අකුරු 6ක් භාවිතා කරන්න.",
+            "கடவுச்சொல் பலவீனமாக உள்ளது. குறைந்தது 6 எழுத்துகள் பயன்படுத்தவும்.",
           );
           break;
 
@@ -224,6 +243,7 @@ class _SignupScreenState extends State<SignupScreen> {
           errorMessage = t(
             "Network error. Please check your internet connection.",
             "ජාල දෝෂයක්. ඔබේ අන්තර්ජාල සබැඳිය පරීක්ෂා කරන්න.",
+            "நெட்வொர்க் பிழை. உங்கள் இணைய இணைப்பை சரிபார்க்கவும்.",
           );
           break;
       }
@@ -236,6 +256,7 @@ class _SignupScreenState extends State<SignupScreen> {
           t(
             "Something went wrong. Please try again.",
             "දෝෂයක් වුණා. නැවත උත්සාහ කරන්න.",
+            "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
           ),
           context,
         );
@@ -328,7 +349,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            t("Welcome", "සාදරයෙන් පිළිගනිමු"),
+                            t("Welcome", "සාදරයෙන් පිළිගනිමු", "வரவேற்கிறோம்"),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -340,6 +361,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             t(
                               "Create a new user account",
                               "නව රියදුරු ගිණුමක් සාදන්න",
+                              "புதிய டிரைவர் கணக்கை உருவாக்குங்கள்",
                             ),
                             style: TextStyle(color: Colors.white70),
                           ),
@@ -353,7 +375,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            t("Username", "පරිශීලක නම"),
+                            t("Username", "පරිශීලක නම", "பெயர்"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -366,6 +388,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: t(
                                 "Enter your user name",
                                 "ඔබගේ නම ඇතුල් කරන්න",
+                                "உங்கள் பெயரை உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(Icons.person_outline),
                               border: const OutlineInputBorder(
@@ -379,7 +402,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            t("Phone Number", "දුරකථන අංකය"),
+                            t("Phone Number", "දුරකථන අංකය", "தொலைபேசி எண்"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -392,6 +415,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: t(
                                 "Enter your phone number",
                                 "ඔබගේ දුරකථන අංකය ඇතුල් කරන්න",
+                                "உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(Icons.phone_outlined),
                               border: const OutlineInputBorder(
@@ -405,7 +429,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            t("Vehicle Number", "වාහන අංකය"),
+                            t("Vehicle Number", "වාහන අංකය", "வாகன எண்"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -418,6 +442,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: t(
                                 "Enter your vehicle number",
                                 "ඔබගේ වාහන අංකය ඇතුල් කරන්න",
+                                "உங்கள் வாகன எண்ணை உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(
                                 Icons.directions_car_outlined,
@@ -433,7 +458,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            t("Email Address", "විද්‍යුත් තැපෑල"),
+                            t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -456,7 +481,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            t("Password", "මුරපදය"),
+                            t("Password", "මුරපදය", "கடவுச்சொல்"),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -470,6 +495,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: t(
                                 "Enter your password",
                                 "ඔබගේ මුරපදය ඇතුල් කරන්න",
+                                "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(Icons.lock_outline),
                               border: const OutlineInputBorder(
@@ -483,7 +509,11 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(height: 16),
 
                           Text(
-                            t("Confirm Password", "මුරපදය තහවුරු කරන්න"),
+                            t(
+                              "Confirm Password",
+                              "මුරපදය තහවුරු කරන්න",
+                              "கடவுச்சொல்லை உறுதி செய்யவும்",
+                            ),
                             style: TextStyle(fontWeight: FontWeight.w500),
                           ),
 
@@ -497,6 +527,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               hintText: t(
                                 "Re-enter your password",
                                 "මුරපදය නැවත ඇතුල් කරන්න",
+                                "கடவுச்சொல்லை மீண்டும் உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(Icons.lock_outline),
                               border: const OutlineInputBorder(
@@ -525,7 +556,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               },
 
                               child: Text(
-                                t("Sign Up", "ලියාපදිංචි වන්න"),
+                                t("Sign Up", "ලියාපදිංචි වන්න", "பதிவு செய்யவும்"),
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.white,
@@ -549,6 +580,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           t(
                             "Already have an Account? Login Here",
                             "දැනටමත් ගිණුමක් තියෙනවාද? මෙතනින් පිවිසෙන්න",
+                            "ஏற்கனவே கணக்கு உள்ளதா? இங்கே உள்நுழையவும்",
                           ),
                           style: const TextStyle(color: Colors.grey),
                         ),

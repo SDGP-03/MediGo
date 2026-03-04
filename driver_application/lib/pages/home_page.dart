@@ -40,12 +40,18 @@ class _HomePageState extends State<HomePage> {
   Set<Polyline> polylines = {};
 
   bool _isOnline = true;
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
   // Firebase reference for driver location tracking
   DatabaseReference? _driverLocationRef;
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -59,7 +65,7 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -106,7 +112,7 @@ class _HomePageState extends State<HomePage> {
               icon: BitmapDescriptor.defaultMarkerWithHue(
                 BitmapDescriptor.hueRed,
               ),
-              infoWindow: InfoWindow(title: t("You", "ඔබ")),
+              infoWindow: InfoWindow(title: t("You", "ඔබ", "நீங்கள்")),
             );
 
             setState(() {
@@ -237,7 +243,11 @@ class _HomePageState extends State<HomePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              t('Location permission not granted', 'ස්ථාන අවසරය ලබා දී නැහැ'),
+              t(
+                'Location permission not granted',
+                'ස්ථාන අවසරය ලබා දී නැහැ',
+                'இட அனுமதி வழங்கப்படவில்லை',
+              ),
             ),
           ),
         );
@@ -260,7 +270,11 @@ class _HomePageState extends State<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            t('Unable to get current location', 'වත්මන් ස්ථානය ලබාගත නොහැක'),
+            t(
+              'Unable to get current location',
+              'වත්මන් ස්ථානය ලබාගත නොහැක',
+              'தற்போதைய இடத்தை பெற முடியவில்லை',
+            ),
           ),
         ),
       );
@@ -355,6 +369,7 @@ class _HomePageState extends State<HomePage> {
               t(
                 'New ${assignment.priority.toUpperCase()} Transfer',
                 'නව ${assignment.priority.toUpperCase()} මාරු කිරීම',
+                'புதிய ${assignment.priority.toUpperCase()} மாற்றம்',
               ),
               style: const TextStyle(fontSize: 18),
             ),
@@ -366,32 +381,44 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${t("Patient", "රෝගියා")}: ${assignment.patientName}',
+                '${t("Patient", "රෝගියා", "நோயாளர்")}: ${assignment.patientName}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               if (assignment.patientAge != null)
-                Text('${t("Age", "වයස")}: ${assignment.patientAge}'),
+                Text('${t("Age", "වයස", "வயது")}: ${assignment.patientAge}'),
               if (assignment.patientGender != null)
                 Text(
-                  '${t("Gender", "ස්ත්‍රී/පුරුෂ")}: ${assignment.patientGender}',
+                  '${t("Gender", "ස්ත්‍රී/පුරුෂ", "பாலினம்")}: ${assignment.patientGender}',
                 ),
               const Divider(),
-              Text('${t("From", "සිට")}: ${assignment.pickupName}'),
-              Text('${t("To", "දක්වා")}: ${assignment.dropName}'),
+              Text('${t("From", "සිට", "இருந்து")}: ${assignment.pickupName}'),
+              Text('${t("To", "දක්වා", "வரை")}: ${assignment.dropName}'),
               const Divider(),
               if (assignment.requiresDoctor)
                 Text(
-                  t('⚕️ Doctor Required', '⚕️ වෛද්‍යවරයෙක් අවශ්‍යයි'),
+                  t(
+                    '⚕️ Doctor Required',
+                    '⚕️ වෛද්‍යවරයෙක් අවශ්‍යයි',
+                    '⚕️ மருத்துவர் தேவை',
+                  ),
                   style: TextStyle(color: Colors.red),
                 ),
               if (assignment.requiresVentilator)
                 Text(
-                  t('🫁 Ventilator Required', '🫁 වෙන්ටිලේටරයක් අවශ්‍යයි'),
+                  t(
+                    '🫁 Ventilator Required',
+                    '🫁 වෙන්ටිලේටරයක් අවශ්‍යයි',
+                    '🫁 வென்டிலேட்டர் தேவை',
+                  ),
                   style: TextStyle(color: Colors.orange),
                 ),
               if (assignment.requiresOxygen)
                 Text(
-                  t('💨 Oxygen Required', '💨 ඔක්සිජන් අවශ්‍යයි'),
+                  t(
+                    '💨 Oxygen Required',
+                    '💨 ඔක්සිජන් අවශ්‍යයි',
+                    '💨 ஆக்ஸிஜன் தேவை',
+                  ),
                   style: TextStyle(color: Colors.blue),
                 ),
             ],
@@ -404,7 +431,7 @@ class _HomePageState extends State<HomePage> {
               _rejectAssignment(assignment.requestId);
             },
             child: Text(
-              t('REJECT', 'ප්‍රතික්ෂේප'),
+              t('REJECT', 'ප්‍රතික්ෂේප', 'நிராகரி'),
               style: const TextStyle(color: Colors.grey),
             ),
           ),
@@ -414,7 +441,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(ctx);
               _acceptAssignment(assignment);
             },
-            child: Text(t('ACCEPT', 'පිළිගන්න')),
+            child: Text(t('ACCEPT', 'පිළිගන්න', 'ஏற்று')),
           ),
         ],
       ),
@@ -666,7 +693,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    _isOnline ? t('Online', 'සබැඳි') : t('Offline', 'නොසබැඳි'),
+                    _isOnline
+                        ? t('Online', 'සබැඳි', 'ஆன்லைன்')
+                        : t('Offline', 'නොසබැඳි', 'ஆஃப்லைன்'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -738,7 +767,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                t("Live Map", "සජීවී සිතියම"),
+                                t("Live Map", "සජීවී සිතියම", "நேரடி வரைபடம்"),
                                 style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -753,7 +782,7 @@ class _HomePageState extends State<HomePage> {
                         top: 12,
                         right: 12,
                         child: PopupMenuButton<MapType>(
-                          tooltip: t('Map type', 'සිතියම් වර්ගය'),
+                          tooltip: t('Map type', 'සිතියම් වර්ගය', 'வரைபட வகை'),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -765,20 +794,22 @@ class _HomePageState extends State<HomePage> {
                           itemBuilder: (context) => [
                             PopupMenuItem(
                               value: MapType.normal,
-                              child: Text(t('Default', 'සාමාන්‍ය')),
+                              child: Text(
+                                t('Default', 'සාමාන්‍ය', 'இயல்புநிலை'),
+                              ),
                             ),
                             PopupMenuItem(
                               value: MapType.satellite,
-                              child: Text(t('Satellite', 'චන්ද්‍රිකා')),
+                              child: Text(t('Satellite', 'චන්ද්‍රිකා', 'சாடலைட்')),
                             ),
                             PopupMenuItem(
                               value: MapType.terrain,
-                              child: Text(t('Terrain', 'භූමි')),
+                              child: Text(t('Terrain', 'භූමි', 'பரப்பு')),
                             ),
                           ],
                           child: _mapControlButton(
                             icon: Icons.layers_outlined,
-                            tooltip: t('Map type', 'සිතියම් වර්ගය'),
+                            tooltip: t('Map type', 'සිතියම් වර්ගය', 'வரைபட வகை'),
                           ),
                         ),
                       ),
@@ -787,7 +818,11 @@ class _HomePageState extends State<HomePage> {
                         right: 12,
                         child: _mapControlButton(
                           icon: Icons.my_location,
-                          tooltip: t('Current location', 'වත්මන් ස්ථානය'),
+                          tooltip: t(
+                            'Current location',
+                            'වත්මන් ස්ථානය',
+                            'தற்போதைய இடம்',
+                          ),
                           onTap: _goToCurrentLocation,
                         ),
                       ),
@@ -842,6 +877,7 @@ class _HomePageState extends State<HomePage> {
                             t(
                               "Report Ambulance Issues",
                               "ගිලන් රථ ගැටලු වාර්තා කරන්න",
+                              "ஆம்புலன்ஸ் பிரச்சனைகள் தெரிவிக்கவும்",
                             ),
                             style: TextStyle(
                               fontSize: 18,
@@ -856,6 +892,7 @@ class _HomePageState extends State<HomePage> {
                       t(
                         "Report service, maintenance, breakdown, or other problems before your next assignment.",
                         "ඊළඟ කාර්යයට පෙර සේවා, නඩත්තු, බිඳවැටීම් හෝ වෙනත් ගැටලු වාර්තා කරන්න.",
+                        "அடுத்த பணிக்கு முன் சேவை, பராமரிப்பு, கோளாறு அல்லது பிற பிரச்சனைகளை தெரிவிக்கவும்.",
                       ),
                       style: TextStyle(color: Colors.black54),
                     ),
@@ -864,9 +901,9 @@ class _HomePageState extends State<HomePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _miniTag(t("Service", "සේවාව")),
-                        _miniTag(t("Maintenance", "නඩත්තු")),
-                        _miniTag(t("Breakdown", "බිඳවැටීම")),
+                        _miniTag(t("Service", "සේවාව", "சேவை")),
+                        _miniTag(t("Maintenance", "නඩත්තු", "பராமரிப்பு")),
+                        _miniTag(t("Breakdown", "බිඳවැටීම", "கோளாறு")),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -881,7 +918,11 @@ class _HomePageState extends State<HomePage> {
                           color: Colors.white,
                         ),
                         label: Text(
-                          t("Report Issue", "ගැටළුව වාර්තා කරන්න"),
+                          t(
+                            "Report Issue",
+                            "ගැටළුව වාර්තා කරන්න",
+                            "பிரச்சனை தெரிவிக்கவும்",
+                          ),
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,
@@ -939,7 +980,11 @@ class _HomePageState extends State<HomePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  t("Current Assignment", "දැනට ලැබුණු කාර්යය"),
+                                  t(
+                                    "Current Assignment",
+                                    "දැනට ලැබුණු කාර්යය",
+                                    "தற்போதைய பணி",
+                                  ),
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 20,
@@ -948,7 +993,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "${t("Trip ID", "ගමන් අංකය")}: ${currentAssignment!.requestId}",
+                                  "${t("Trip ID", "ගමන් අංකය", "பயண ID")}: ${currentAssignment!.requestId}",
                                   style: const TextStyle(
                                     color: Color.fromARGB(255, 223, 223, 223),
                                     fontSize: 16,
@@ -971,6 +1016,7 @@ class _HomePageState extends State<HomePage> {
                             title: t(
                               "Pick Up From",
                               "රැගෙන යාම ආරම්භ වන ස්ථානය",
+                              "எடுக்க வேண்டிய இடம்",
                             ),
                             name: currentAssignment!.pickupName,
                             address: currentAssignment!.pickupAddress,
@@ -978,7 +1024,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 18),
                           _locationTile(
-                            title: t("Destination", "ගමනාන්තය"),
+                            title: t("Destination", "ගමනාන්තය", "இலக்கு"),
                             name: currentAssignment!.dropName,
                             address: currentAssignment!.dropAddress,
                             icon: Icons.location_on,
@@ -998,7 +1044,11 @@ class _HomePageState extends State<HomePage> {
                             color: Colors.white,
                           ),
                           label: Text(
-                            t("Start Navigation", "නාවිකරණය ආරම්භ කරන්න"),
+                            t(
+                              "Start Navigation",
+                              "නාවිකරණය ආරම්භ කරන්න",
+                              "வழிகாட்டலை தொடங்கு",
+                            ),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white,
@@ -1058,7 +1108,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Text(
-              t("Report Issue Type", "ගැටලුවේ වර්ගය"),
+              t("Report Issue Type", "ගැටලුවේ වර්ගය", "பிரச்சனை வகை"),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -1066,6 +1116,7 @@ class _HomePageState extends State<HomePage> {
               t(
                 "Choose the issue you want to report.",
                 "ඔබට වාර්තා කිරීමට අවශ්‍ය ගැටලුව තෝරන්න.",
+                "தெரிவிக்க வேண்டிய பிரச்சனையை தேர்வு செய்யவும்.",
               ),
               style: TextStyle(color: Colors.black54),
             ),
@@ -1073,30 +1124,39 @@ class _HomePageState extends State<HomePage> {
             _sheetActionTile(
               icon: Icons.miscellaneous_services,
               color: Colors.blue,
-              title: t("Service", "සේවාව"),
-              onTap: () => _showIssueDetailsDialog(ctx, t("Service", "සේවාව")),
+              title: t("Service", "සේවාව", "சேவை"),
+              onTap: () => _showIssueDetailsDialog(
+                ctx,
+                t("Service", "සේවාව", "சேவை"),
+              ),
             ),
             _sheetActionTile(
               icon: Icons.build_circle,
               color: Colors.orange,
-              title: t("Maintenance", "නඩත්තු"),
+              title: t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
               onTap: () =>
-                  _showIssueDetailsDialog(ctx, t("Maintenance", "නඩත්තු")),
+                  _showIssueDetailsDialog(
+                    ctx,
+                    t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
+                  ),
             ),
             _sheetActionTile(
               icon: Icons.car_repair,
               color: Colors.red,
-              title: t("Breakdown", "බිඳවැටීම"),
+              title: t("Breakdown", "බිඳවැටීම", "கோளாறு"),
               onTap: () =>
-                  _showIssueDetailsDialog(ctx, t("Breakdown", "බිඳවැටීම")),
+                  _showIssueDetailsDialog(
+                    ctx,
+                    t("Breakdown", "බිඳවැටීම", "கோளாறு"),
+                  ),
             ),
             _sheetActionTile(
               icon: Icons.error_outline,
               color: Colors.grey,
-              title: t("Other Problems", "වෙනත් ගැටලු"),
+              title: t("Other Problems", "වෙනත් ගැටලු", "மற்ற பிரச்சனைகள்"),
               onTap: () => _showIssueDetailsDialog(
                 ctx,
-                t("Other Problems", "වෙනත් ගැටලු"),
+                t("Other Problems", "වෙනත් ගැටලු", "மற்ற பிரச்சனைகள்"),
               ),
             ),
           ],
@@ -1113,7 +1173,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text("$issueType ${t("Issue", "ගැටළුව")}"),
+        title: Text("$issueType ${t("Issue", "ගැටළුව", "பிரச்சனை")}"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1122,6 +1182,7 @@ class _HomePageState extends State<HomePage> {
               t(
                 "Add extra details if needed (optional).",
                 "අමතර විස්තර අවශ්‍ය නම් එක් කරන්න (විකල්ප).",
+                "தேவைப்பட்டால் கூடுதல் விவரம் சேர்க்கலாம் (விருப்பம்).",
               ),
               style: TextStyle(color: Colors.black54),
             ),
@@ -1133,6 +1194,7 @@ class _HomePageState extends State<HomePage> {
                 hintText: t(
                   "Describe the problem...",
                   "ගැටලුව විස්තර කරන්න...",
+                  "பிரச்சனையை விளக்கவும்...",
                 ),
                 filled: true,
                 fillColor: const Color(0xFFF9FAFC),
@@ -1150,7 +1212,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(t("Cancel", "අවලංගු")),
+            child: Text(t("Cancel", "අවලංගු", "ரத்து")),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1158,7 +1220,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.pop(dialogContext);
               _submitIssue(issueType, details);
             },
-            child: Text(t("Submit", "යවන්න")),
+            child: Text(t("Submit", "යවන්න", "அனுப்பு")),
           ),
         ],
       ),
@@ -1174,10 +1236,12 @@ class _HomePageState extends State<HomePage> {
               ? t(
                   "$issueType report sent with extra details.",
                   "$issueType වාර්තාව අමතර විස්තර සමඟ යවන ලදී.",
+                  "$issueType அறிக்கை கூடுதல் விவரங்களுடன் அனுப்பப்பட்டது.",
                 )
               : t(
                   "$issueType report sent successfully.",
                   "$issueType වාර්තාව සාර්ථකව යවන ලදී.",
+                  "$issueType அறிக்கை வெற்றிகரமாக அனுப்பப்பட்டது.",
                 ),
         ),
       ),
@@ -1213,17 +1277,22 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Text(
-              t("Select Navigation Method", "නාවිකරණ ක්‍රමය තෝරන්න"),
+              t(
+                "Select Navigation Method",
+                "නාවිකරණ ක්‍රමය තෝරන්න",
+                "வழிகாட்டு முறையை தேர்வு செய்யவும்",
+              ),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _sheetActionTile(
               icon: Icons.map,
               color: Colors.blue,
-              title: t("Google Maps", "Google Maps"),
+              title: t("Google Maps", "Google Maps", "Google Maps"),
               subtitle: t(
                 "Use external Google Maps app",
                 "බාහිර Google Maps යෙදුම භාවිතා කරන්න",
+                "வெளி Google Maps ஆப்பை பயன்படுத்தவும்",
               ),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -1242,6 +1311,7 @@ class _HomePageState extends State<HomePage> {
                         t(
                           'Could not open Google Maps',
                           'Google Maps විවෘත කළ නොහැක',
+                          'Google Maps திறக்க முடியவில்லை',
                         ),
                       ),
                     ),
@@ -1252,10 +1322,15 @@ class _HomePageState extends State<HomePage> {
             _sheetActionTile(
               icon: Icons.navigation,
               color: Colors.red,
-              title: t("MediGo Navigation", "MediGo නාවිකරණය"),
+              title: t(
+                "MediGo Navigation",
+                "MediGo නාවිකරණය",
+                "MediGo வழிகாட்டல்",
+              ),
               subtitle: t(
                 "Stay inside the MediGo app",
                 "MediGo යෙදුම තුළම සිටින්න",
+                "MediGo ஆப்பில் உள்ளேயே இருங்கள்",
               ),
               onTap: () {
                 Navigator.pop(ctx);
@@ -1278,14 +1353,14 @@ class _HomePageState extends State<HomePage> {
 
   Widget _priorityBadge(String priority) {
     Color bgColor = const Color(0xFF2E7D32);
-    String label = t("Standard", "සාමාන්‍ය");
+    String label = t("Standard", "සාමාන්‍ය", "சாதாரண");
 
     if (priority == "critical") {
       bgColor = const Color(0xFFC62828);
-      label = t("Critical", "අති ආපදා");
+      label = t("Critical", "අති ආපදා", "மிக அவசரம்");
     } else if (priority == "urgent") {
       bgColor = const Color(0xFFF57C00);
-      label = t("Urgent", "හදිසි");
+      label = t("Urgent", "හදිසි", "அவசரம்");
     }
 
     return Container(
