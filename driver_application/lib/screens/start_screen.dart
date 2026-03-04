@@ -247,14 +247,12 @@ class _StartScreenState extends State<StartScreen> {
                           final easedScale =
                               0.94 +
                               (0.06 * Curves.easeOutBack.transform(value));
-                          final easedOpacity =
-                              Curves.easeOutCubic.transform(value);
+                          final easedOpacity = Curves.easeOutCubic.transform(
+                            value,
+                          );
                           return Transform.scale(
                             scale: easedScale,
-                            child: Opacity(
-                              opacity: easedOpacity,
-                              child: child,
-                            ),
+                            child: Opacity(opacity: easedOpacity, child: child),
                           );
                         },
                         child: Container(
@@ -293,7 +291,7 @@ class _StartScreenState extends State<StartScreen> {
                       Text(
                         t(
                           "Fast, Reliable Ambulance Management",
-                          "ඉක්මන් සහ විශ්වාසදායක රථ ගිලන් කළමනාකරණය",
+                          "ඉක්මන් සහ විශ්වාසදායක ගිලන් රථ කළමනාකරණය",
                         ),
                         textAlign: TextAlign.center,
                         style: textTheme.titleLarge?.copyWith(
@@ -323,10 +321,7 @@ class _StartScreenState extends State<StartScreen> {
                         children: [
                           _buildMetricChip(
                             icon: Icons.speed_outlined,
-                            label: t(
-                              "Fast Dispatch",
-                              "ඉක්මන් යොමු කිරීම",
-                            ),
+                            label: t("Fast Dispatch", "ඉක්මන් යොමු කිරීම"),
                             color: const Color(0xFFC0392B),
                           ),
                           _buildMetricChip(
@@ -350,9 +345,7 @@ class _StartScreenState extends State<StartScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: const Color(0xFFF2D6D6),
-                          ),
+                          border: Border.all(color: const Color(0xFFF2D6D6)),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x14000000),
@@ -398,9 +391,7 @@ class _StartScreenState extends State<StartScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFFF2D6D6),
-                          ),
+                          border: Border.all(color: const Color(0xFFF2D6D6)),
                         ),
                         child: Column(
                           children: [
@@ -411,9 +402,7 @@ class _StartScreenState extends State<StartScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red.shade700,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      16,
-                                    ),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                                 onPressed: () {
@@ -444,13 +433,9 @@ class _StartScreenState extends State<StartScreen> {
                               height: 40,
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: Colors.red.shade700,
-                                  ),
+                                  side: BorderSide(color: Colors.red.shade700),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      16,
-                                    ),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                                 onPressed: () {
