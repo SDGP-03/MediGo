@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:driver_application/widgets/side_menu.dart';
@@ -11,9 +11,15 @@ class ContactSupportPage extends StatefulWidget {
 }
 
 class _ContactSupportPageState extends State<ContactSupportPage> {
-  bool _isSinhala = false;
+  String _language = 'English';
+  bool get _isSinhala => _language == 'Sinhala';
+  bool get _isTamil => _language == 'Tamil';
 
-  String t(String en, String si) => _isSinhala ? si : en;
+  String t(String en, String si, [String? ta]) {
+    if (_isSinhala) return si;
+    if (_isTamil) return ta ?? en;
+    return en;
+  }
 
   @override
   void initState() {
@@ -25,7 +31,7 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _isSinhala = prefs.getString('language') == 'Sinhala';
+      _language = prefs.getString('language') ?? 'English';
     });
   }
 
@@ -39,7 +45,11 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              t("Could not open this link", "මෙම ලින්ක් එක විවෘත කළේ නැහැ"),
+              t(
+                'Could not open this link',
+                'මෙම ලින්ක් එක විවෘත කළේ නැහැ',
+                'இந்த இணைப்பை திறக்க முடியவில்லை',
+              ),
             ),
           ),
         );
@@ -49,7 +59,11 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            t("Failed to open support option", "සහාය විකල්පය විවෘත කළේ නැහැ"),
+            t(
+              'Failed to open support option',
+              'සහාය විකල්පය විවෘත කළේ නැහැ',
+              'உதவி விருப்பத்தை திறக்க முடியவில்லை',
+            ),
           ),
         ),
       );
@@ -75,7 +89,7 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
           ),
         ),
         title: Text(
-          t("Contact Support", "සහාය අමතන්න"),
+          t('Contact Support', 'සහාය අමතන්න', 'உதவியை தொடர்பு கொள்ளுங்கள்'),
           style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.red.shade700,
@@ -93,38 +107,42 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
               context: context,
               icon: Icons.email_outlined,
               iconColor: Colors.blue,
-              title: t("Email Support", "ඊමේල් සහාය"),
-              subtitle: "support@medigo.com",
+              title: t('Email Support', 'ඊමේල් සහාය', 'மின்னஞ்சல் உதவி'),
+              subtitle: 'support@medigo.com',
               description: t(
-                "Get a response within 24 hours",
-                "පැය 24ක් ඇතුළත පිළිතුරක් ලැබේ",
+                'Get a response within 24 hours',
+                'පැය 24ක් ඇතුළත පිළිතුරක් ලැබේ',
+                '24 மணி நேரத்திற்குள் பதில் கிடைக்கும்',
               ),
-              onTap: () => _launchURL(context, "mailto:support@medigo.com"),
+              onTap: () => _launchURL(context, 'mailto:support@medigo.com'),
             ),
             _buildContactMethod(
               context: context,
               icon: Icons.phone_outlined,
               iconColor: Colors.green,
-              title: t("Phone Support", "දුරකථන සහාය"),
-              subtitle: "+94 11 234 5678",
+              title: t('Phone Support', 'දුරකථන සහාය', 'தொலைபேசி உதவி'),
+              subtitle: '+94 11 234 5678',
               description: t(
-                "Available Mon-Fri, 9 AM - 6 PM",
-                "සඳුදා-සිකුරාදා, පෙ.ව. 9 - ප.ව. 6",
+                'Available Mon-Fri, 9 AM - 6 PM',
+                'සඳුදා-සිකුරාදා, පෙ.ව. 9 - ප.ව. 6',
+                'திங்கள் முதல் வெள்ளி வரை, காலை 9 - மாலை 6',
               ),
-              onTap: () => _launchURL(context, "tel:+94112345678"),
+              onTap: () => _launchURL(context, 'tel:+94112345678'),
             ),
             _buildContactMethod(
               context: context,
               icon: Icons.chat_outlined,
               iconColor: Colors.purple,
-              title: t("Live Chat", "සජීවී කතාබහ"),
+              title: t('Live Chat', 'සජීවී කතාබහ', 'நேரலை அரட்டை'),
               subtitle: t(
-                "Chat with our support team",
-                "අපේ සහාය කණ්ඩායම සමඟ කතා කරන්න",
+                'Chat with our support team',
+                'අපේ සහාය කණ්ඩායම සමඟ කතා කරන්න',
+                'எங்கள் உதவி குழுவுடன் உரையாடுங்கள்',
               ),
               description: t(
-                "Average response time: 5 minutes",
-                "සාමාන්‍ය පිළිතුරු කාලය: මිනිත්තු 5",
+                'Average response time: 5 minutes',
+                'සාමාන්‍ය පිළිතුරු කාලය: මිනිත්තු 5',
+                'சராசரி பதில் நேரம்: 5 நிமிடங்கள்',
               ),
               onTap: () {
                 _showComingSoonDialog(context);
@@ -134,14 +152,16 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
               context: context,
               icon: Icons.help_outline,
               iconColor: Colors.orange,
-              title: "FAQ",
+              title: 'FAQ',
               subtitle: t(
-                "Find answers to common questions",
-                "සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න",
+                'Find answers to common questions',
+                'සාමාන්‍ය ප්‍රශ්න වලට පිළිතුරු බලන්න',
+                'பொதுவான கேள்விகளுக்கான பதில்களை காணுங்கள்',
               ),
               description: t(
-                "Quick solutions to common issues",
-                "සාමාන්‍ය ගැටලු වලට ඉක්මන් පිළිතුරු",
+                'Quick solutions to common issues',
+                'සාමාන්‍ය ගැටලු වලට ඉක්මන් පිළිතුරු',
+                'பொதுவான சிக்கல்களுக்கு விரைவான தீர்வுகள்',
               ),
               onTap: () => Navigator.pushNamed(context, '/faq'),
             ),
@@ -176,7 +196,7 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  t("We're Here to Help", "අපි උදව් කිරීමට මෙහි සිටිමු"),
+                  t('We\'re Here to Help', 'අපි උදව් කිරීමට මෙහි සිටිමු', 'உதவ நாங்கள் இருக்கிறோம்'),
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -189,8 +209,9 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
           const SizedBox(height: 12),
           Text(
             t(
-              "Our support team is ready to assist you with any questions or issues you may have.",
-              "ඔබට ඇති ඕනෑම ප්‍රශ්නයකට හෝ ගැටලුවකට අපේ සහාය කණ්ඩායම සූදානම්.",
+              'Our support team is ready to assist you with any questions or issues you may have.',
+              'ඔබට ඇති ඕනෑම ප්‍රශ්නයක්ට හෝ ගැටලුවක්ට අපේ සහාය කණ්ඩායම සූදානම්.',
+              'உங்களிடம் உள்ள கேள்விகள் அல்லது பிரச்சினைகளுக்கு எங்கள் உதவி குழு தயார்.',
             ),
             style: const TextStyle(
               fontSize: 14,
@@ -294,7 +315,7 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                t("Quick Tips", "ඉක්මන් උපදෙස්"),
+                t('Quick Tips', 'ඉක්මන් උපදෙස්', 'விரைவு குறிப்புகள்'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -306,26 +327,30 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
           const SizedBox(height: 12),
           _buildTipItem(
             t(
-              "Check FAQ first for instant answers",
-              "ඉක්මන් පිළිතුරු සඳහා මුලින් FAQ බලන්න",
+              'Check FAQ first for instant answers',
+              'ඉක්මන් පිළිතුරු සඳහා මුලින් FAQ බලන්න',
+              'உடனடி பதில்களுக்கு முதலில் FAQ பார்க்கவும்',
             ),
           ),
           _buildTipItem(
             t(
-              "Include your driver ID when contacting support",
-              "සහාය අමතන විට ඔබගේ රියදුරු ID දාන්න",
+              'Include your driver ID when contacting support',
+              'සහාය අමතන විට ඔබගේ රියදුරු ID දාන්න',
+              'உதவியை தொடர்புகொள்ளும் போது உங்கள் டிரைவர் ID-ஐ சேர்க்கவும்',
             ),
           ),
           _buildTipItem(
             t(
-              "Provide screenshots for technical issues",
-              "තාක්ෂණික ගැටලු සඳහා තිර රූප එවන්න",
+              'Provide screenshots for technical issues',
+              'තාක්ෂණික ගැටලු සඳහා තිර රූප එවන්න',
+              'தொழில்நுட்ப பிரச்சினைகளுக்கு ஸ்கிரீன்‌ஷாட் சேர்க்கவும்',
             ),
           ),
           _buildTipItem(
             t(
-              "Be specific about the problem you're facing",
-              "ඔබට ඇති ගැටලුව පැහැදිලිව කියන්න",
+              'Be specific about the problem you\'re facing',
+              'ඔබට ඇති ගැටලුව පැහැදිලිව කියන්න',
+              'நீங்கள் சந்திக்கும் பிரச்சினையை தெளிவாக எழுதுங்கள்',
             ),
           ),
         ],
@@ -360,19 +385,20 @@ class _ContactSupportPageState extends State<ContactSupportPage> {
           children: [
             const Icon(Icons.info_outline, color: Colors.blue),
             const SizedBox(width: 8),
-            Text(t("Coming Soon", "ඉදිරියේදී")),
+            Text(t('Coming Soon', 'ඉදිරියේදී', 'விரைவில் வருகிறது')),
           ],
         ),
         content: Text(
           t(
-            "Live chat support will be available in a future update. For now, please use email or phone support.",
-            "සජීවී කතාබහ සහාය ඉදිරි යාවත්කාලීනයක එයි. දැනට ඊමේල් හෝ දුරකථන සහාය භාවිතා කරන්න.",
+            'Live chat support will be available in a future update. For now, please use email or phone support.',
+            'සජීවී කතාබහ සහාය ඉදිරි යාවත්කාලීනයක එයි. දැනට ඊමේල් හෝ දුරකථන සහාය භාවිතා කරන්න.',
+            'நேரலை அரட்டை உதவி அடுத்த புதுப்பிப்பில் வரும். தற்போது மின்னஞ்சல் அல்லது தொலைபேசி உதவியை பயன்படுத்தவும்.',
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(t("OK", "හරි")),
+            child: Text(t('OK', 'හරි', 'சரி')),
           ),
         ],
       ),
