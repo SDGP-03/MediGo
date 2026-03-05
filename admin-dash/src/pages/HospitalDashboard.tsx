@@ -347,7 +347,7 @@ export function HospitalDashboard() {
             )}
 
             {mapView === "list" && (
-              <div className="h-162m overflow-y-auto">
+              <div className="h-[650px] overflow-y-auto">
                 <div className="divide-y divide-border">
                   {ambulances.map((amb) => (
                     <div
@@ -387,7 +387,7 @@ export function HospitalDashboard() {
           </div>
 
           {/* Fleet Overview Sidebar — Map Key */}
-          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group/sidebar">
+          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 shadow-xl overflow-hidden group/sidebar">
             {/* Simple glow effect */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-blue-500/20 transition-all duration-700" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-purple-500/20 transition-all duration-700" />
@@ -791,9 +791,7 @@ export function HospitalDashboard() {
                 </div>
 
                 <div className="mt-3 flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                    Prepare Room
-                  </button>
+
                   <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                     View Details
                   </button>
@@ -888,24 +886,38 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
 
   // Track active section on scroll
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
+    const handleScroll = () => {
+      const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+
+      let current = '';
+      for (const id of sections) {
+        const element = document.getElementById(id);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          // Element is considered in view if its top is above the middle of viewport
+          // and its bottom is below 100px from the top.
+          if (rect.top <= window.innerHeight / 2 && rect.bottom >= 100) {
+            current = id;
           }
-        });
-      },
-      { threshold: 0.5 }
-    );
+        }
+      }
 
-    const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
-    sections.forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    });
+      // If user scrolled to the absolute bottom of the page
+      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight - 10) {
+        current = sections[sections.length - 1];
+      }
 
-    return () => observer.disconnect();
+      if (current) setActiveSection(current);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Initial check after a short delay to ensure rendering is complete
+    const timeoutId = setTimeout(handleScroll, 100);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const navItems = [
@@ -918,7 +930,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
 
   return (
     <div className="fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col gap-3">
-      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
+      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl px-2 py-3 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
         {navItems.map((item) => {
           const isActive = activeSection === item.id;
           return (

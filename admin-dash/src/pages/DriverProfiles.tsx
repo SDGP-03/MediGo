@@ -312,21 +312,21 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <Field
-                                label="Base Monthly Salary (₹) *"
+                                label="Base Monthly Salary (LKR) *"
                                 type="number"
                                 value={form.baseSalary}
                                 onChange={v => set('baseSalary', v)}
                                 error={errors.baseSalary}
                             />
                             <Field
-                                label="Overtime Rate/Hour (₹)"
+                                label="Overtime Rate/Hour "
                                 type="number"
                                 value={form.overtimeRate}
                                 onChange={v => set('overtimeRate', v)}
                                 error={errors.overtimeRate}
                             />
                             <Field
-                                label="Per Trip Bonus (₹)"
+                                label="Per Trip Bonus (LKR)"
                                 type="number"
                                 value={form.tripsBonus}
                                 onChange={v => set('tripsBonus', v)}

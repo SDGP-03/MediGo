@@ -103,7 +103,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                     {/* Desktop Nav — Liquid Glass Tabs */}
                     <nav
                         ref={navRef}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center p-1 rounded-2xl"
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:flex items-center p-1 rounded-2xl"
                         style={{
                             background: 'var(--header-nav-bg)',
                             backdropFilter: 'blur(16px)',
@@ -147,7 +147,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                                 }}
                             >
                                 <item.icon size={16} />
-                                <span className="hidden lg:inline">{item.label}</span>
+                                <span className="hidden xl:inline">{item.label}</span>
                             </button>
                         ))}
                     </nav>
@@ -159,7 +159,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
-                                className='hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:bg-white/20 outline-none cursor-pointer'
+                                className='hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:bg-white/20 outline-none cursor-pointer'
                                 style={{
                                     background: 'var(--header-nav-bg)',
                                     backdropFilter: 'blur(8px)',
@@ -244,7 +244,7 @@ export function Header({ user, onLogout }: HeaderProps) {
                 </div>
 
                 {/* Mobile Nav — Liquid Glass */}
-                <div className="md:hidden mt-4 overflow-x-auto pb-2">
+                <div className="lg:hidden mt-4 overflow-x-auto pb-2">
                     <nav className="flex items-center gap-2">
                         {navItems.map((item) => (
                             <button
