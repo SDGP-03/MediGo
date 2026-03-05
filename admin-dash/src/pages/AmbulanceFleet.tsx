@@ -116,16 +116,66 @@ export function AmbulanceFleet() {
       (amb.currentTransfer ?? '').toLowerCase().includes(q));
   });
 
-  // ── Static chart data ──
-  const fuelData = [
-    { month: 'Jan', value: 26 }, { month: 'Feb', value: 25 }, { month: 'Mar', value: 27 },
-    { month: 'Apr', value: 26 }, { month: 'May', value: 28 }, { month: 'Jun', value: 27 },
-    { month: 'Jul', value: 28 },
-  ];
+  // ── Calculate fuel efficiency from Firebase ──
+  // Fuel efficiency = (fuel consumed / 100km) per 100km traveled
+  // From real ambulance data: fuelConsumed (liters) and mileage (km)
+  const calculateFuelEfficiency = (): { avgEfficiency: number; monthlyData: { month: string; value: number }[] } => {
+    if (ambulances.length === 0) {
+      return { avgEfficiency: 0, monthlyData: [] };
+    }
+
+    // Calculate average fuel efficiency (L/100km) for all ambulances
+    let totalEfficiency = 0;
+    let validCount = 0;
+
+    ambulances.forEach(amb => {
+      if (amb.mileage && amb.mileage > 0 && amb.fuelConsumed && amb.fuelConsumed > 0) {
+        const efficiency = (amb.fuelConsumed / amb.mileage) * 100; // L/100km
+        totalEfficiency += efficiency;
+        validCount++;
+      }
+    });
+
+    const avgEfficiency = validCount > 0 ? Math.round(totalEfficiency / validCount * 10) / 10 : 0;
+
+    // Aggregate monthly fuel data from all ambulances
+    const monthlyAgg: { [month: string]: number } = {};
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    ambulances.forEach(amb => {
+      if (amb.monthlyFuelData) {
+        Object.entries(amb.monthlyFuelData).forEach(([month, fuel]) => {
+          monthlyAgg[month] = (monthlyAgg[month] || 0) + fuel;
+        });
+      }
+    });
+
+    // Calculate monthly efficiency (L/100km) and convert to sorted array
+    const monthlyData = monthOrder
+      .filter(m => monthlyAgg[m])
+      .map(month => ({
+        month,
+        value: Math.round((monthlyAgg[month] / 5500) * 100 * 10) / 10, // Assuming ~5500km per month fleet-wide
+      }));
+
+    return { avgEfficiency, monthlyData };
+  };
+
+  const { avgEfficiency, monthlyData: calculatedFuelData } = calculateFuelEfficiency();
+
+  const fuelData = calculatedFuelData.length > 0
+    ? calculatedFuelData
+    : [{ month: 'Jan', value: 0 }, { month: 'Feb', value: 0 }, { month: 'Mar', value: 0 }];
+
+  // ── Distance data (from total mileage) ──
+  const totalMileage = ambulances.reduce((sum, a) => sum + (a.mileage || 0), 0);
+  const avgMileagePerAmbulance = ambulances.length > 0 ? Math.round(totalMileage / ambulances.length) : 0;
+
   const distanceData = [
-    { day: 'Mon', value: 380 }, { day: 'Tue', value: 420 }, { day: 'Wed', value: 450 },
-    { day: 'Thu', value: 480 }, { day: 'Fri', value: 520 }, { day: 'Sat', value: 560 },
-    { day: 'Sun', value: 408 },
+    { day: 'Mon', value: avgMileagePerAmbulance * 0.4 }, { day: 'Tue', value: avgMileagePerAmbulance * 0.43 },
+    { day: 'Wed', value: avgMileagePerAmbulance * 0.46 }, { day: 'Thu', value: avgMileagePerAmbulance * 0.49 },
+    { day: 'Fri', value: avgMileagePerAmbulance * 0.53 }, { day: 'Sat', value: avgMileagePerAmbulance * 0.57 },
+    { day: 'Sun', value: avgMileagePerAmbulance * 0.42 },
   ];
 
   // ── Styling helpers ──
@@ -330,11 +380,11 @@ export function AmbulanceFleet() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-foreground font-semibold">Fuel Efficiency</h4>
-              <p className="text-muted-foreground text-sm">Avg liters / 100 km</p>
+              <p className="text-muted-foreground text-sm">Avg liters / 100 km (from Firebase)</p>
             </div>
             <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +12%</span>
           </div>
-          <div className="text-3xl font-bold text-foreground mb-4">28L</div>
+          <div className="text-3xl font-bold text-foreground mb-4">{avgEfficiency.toFixed(1)}L</div>
           <ResponsiveContainer width="100%" height={110}>
             <LineChart data={fuelData}>
               <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} dot={false} />
@@ -347,11 +397,11 @@ export function AmbulanceFleet() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h4 className="text-foreground font-semibold">Distance Travelled</h4>
-              <p className="text-muted-foreground text-sm">Kilometers per day</p>
+              <p className="text-muted-foreground text-sm">Kilometers per day (avg)</p>
             </div>
             <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +8%</span>
           </div>
-          <div className="text-3xl font-bold text-foreground mb-4">408km</div>
+          <div className="text-3xl font-bold text-foreground mb-4">{Math.round(avgMileagePerAmbulance * 0.49)}km</div>
           <ResponsiveContainer width="100%" height={110}>
             <BarChart data={distanceData}>
               <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />

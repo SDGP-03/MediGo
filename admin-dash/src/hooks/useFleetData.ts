@@ -44,6 +44,8 @@ export interface AmbulanceUnit {
     hasVentilator: boolean;
     mileage?: number;
     year?: number;
+    fuelConsumed?: number; // Total fuel consumed in liters
+    monthlyFuelData?: { [month: string]: number }; // Month -> fuel consumed (liters)
 }
 
 export type DriverStatus = 'active' | 'off_duty' | 'on_leave';
@@ -91,6 +93,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'City General Hospital', lastService: '2025-11-15', nextServiceDue: '2026-02-15',
         equipment: ['Oxygen', 'Defibrillator', 'IV Fluids'],
         hasDoctor: false, hasVentilator: false, mileage: 42300, year: 2020,
+        fuelConsumed: 1078, monthlyFuelData: { 'Jan': 150, 'Feb': 145, 'Mar': 155, 'Apr': 148, 'May': 160, 'Jun': 155, 'Jul': 165 },
     },
     {
         id: 'AMB-002', status: 'in_service',
@@ -99,6 +102,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'En route to Central Medical', currentTransfer: 'TR-2401', etaMinutes: 12,
         equipment: ['Oxygen', 'Ventilator', 'Cardiac Monitor'],
         hasDoctor: true, hasVentilator: true, mileage: 38100, year: 2021,
+        fuelConsumed: 942, monthlyFuelData: { 'Jan': 132, 'Feb': 128, 'Mar': 135, 'Apr': 130, 'May': 138, 'Jun': 132, 'Jul': 147 },
     },
     {
         id: 'AMB-003', status: 'available',
@@ -107,6 +111,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'Divisional Hospital North', lastService: '2025-11-18', nextServiceDue: '2026-02-18',
         equipment: ['Oxygen', 'Defibrillator', 'IV Fluids', 'Stretcher'],
         hasDoctor: false, hasVentilator: false, mileage: 55700, year: 2019,
+        fuelConsumed: 1540, monthlyFuelData: { 'Jan': 210, 'Feb': 205, 'Mar': 218, 'Apr': 212, 'May': 225, 'Jun': 220, 'Jul': 250 },
     },
     {
         id: 'AMB-004', status: 'maintenance',
@@ -116,6 +121,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         maintenanceNotes: 'Scheduled brake inspection & oil change',
         equipment: [],
         hasDoctor: false, hasVentilator: false, mileage: 61200, year: 2018,
+        fuelConsumed: 1673, monthlyFuelData: { 'Jan': 235, 'Feb': 228, 'Mar': 242, 'Apr': 235, 'May': 245, 'Jun': 240, 'Jul': 248 },
     },
     {
         id: 'AMB-005', status: 'available',
@@ -124,6 +130,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'City General Hospital', lastService: '2025-11-17', nextServiceDue: '2026-02-17',
         equipment: ['Oxygen', 'Cardiac Monitor', 'IV Fluids'],
         hasDoctor: false, hasVentilator: false, mileage: 29800, year: 2022,
+        fuelConsumed: 735, monthlyFuelData: { 'Jan': 102, 'Feb': 98, 'Mar': 105, 'Apr': 102, 'May': 110, 'Jun': 105, 'Jul': 113 },
     },
     {
         id: 'AMB-006', status: 'in_service',
@@ -132,6 +139,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'En route to Regional Base', currentTransfer: 'TR-2402', etaMinutes: 18,
         equipment: ['Oxygen', 'Defibrillator', 'IV Fluids'],
         hasDoctor: false, hasVentilator: false, mileage: 47500, year: 2020,
+        fuelConsumed: 1165, monthlyFuelData: { 'Jan': 165, 'Feb': 160, 'Mar': 170, 'Apr': 165, 'May': 172, 'Jun': 168, 'Jul': 165 },
     },
     {
         id: 'AMB-007', status: 'available',
@@ -140,6 +148,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'Central Medical Center', lastService: '2025-11-16', nextServiceDue: '2026-02-16',
         equipment: ['Oxygen', 'Ventilator', 'Cardiac Monitor', 'Defibrillator'],
         hasDoctor: true, hasVentilator: true, mileage: 33200, year: 2021,
+        fuelConsumed: 820, monthlyFuelData: { 'Jan': 115, 'Feb': 110, 'Mar': 120, 'Apr': 115, 'May': 125, 'Jun': 120, 'Jul': 115 },
     },
     {
         id: 'AMB-008', status: 'available',
@@ -148,6 +157,7 @@ const SEED_AMBULANCES: AmbulanceUnit[] = [
         location: 'City General Hospital', lastService: '2025-11-19', nextServiceDue: '2026-02-19',
         equipment: ['Oxygen', 'IV Fluids', 'Stretcher'],
         hasDoctor: false, hasVentilator: false, mileage: 51000, year: 2019,
+        fuelConsumed: 1420, monthlyFuelData: { 'Jan': 195, 'Feb': 190, 'Mar': 205, 'Apr': 200, 'May': 210, 'Jun': 205, 'Jul': 215 },
     },
 ];
 
