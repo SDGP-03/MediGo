@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File } from 'lucide-react';
 import { database } from '../firebase';
 import { ref, push, set, onValue, off } from 'firebase/database';
@@ -8,6 +8,47 @@ const hospitalCoordinates: Record<string, { lat: number; lng: number; address: s
   'General Hospital O P D': { lat: 6.918955913694652, lng: 79.86611697073118, address: 'WV98+HC9, EW Perera Mawatha, Colombo 01000, Sri Lanka' },
   'Lady Ridgeway Hospital for Children (LRH)': { lat: 6.918381526890345, lng: 79.8759550393045, address: 'Dr Danister De Silva Mawatha, Colombo 00800, Sri Lanka' },
 };
+
+// Patient records (mirrored from PatientRecords page)
+interface PatientRecord {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  bloodGroup: string;
+  allergies: string;
+  medicalHistory: string;
+}
+
+const patientRecords: PatientRecord[] = [
+  {
+    id: 'PT-20251',
+    name: 'Sarah Johnson',
+    age: 45,
+    gender: 'Female',
+    bloodGroup: 'A+',
+    allergies: 'Penicillin',
+    medicalHistory: 'Hypertension, Diabetes Type 2',
+  },
+  {
+    id: 'PT-20252',
+    name: 'David Miller',
+    age: 62,
+    gender: 'Male',
+    bloodGroup: 'O+',
+    allergies: 'None',
+    medicalHistory: 'Coronary Artery Disease, Previous MI',
+  },
+  {
+    id: 'PT-20253',
+    name: 'Emma Davis',
+    age: 28,
+    gender: 'Female',
+    bloodGroup: 'B+',
+    allergies: 'Latex, Shellfish',
+    medicalHistory: 'Asthma, Seasonal Allergies',
+  },
+];
 
 interface AvailableDriver {
   id: string;
@@ -23,6 +64,22 @@ export function TransferRequest() {
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+
+  // Autocomplete state for patient name
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<PatientRecord[]>([]);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [formData, setFormData] = useState({
     // Patient Info
@@ -314,21 +371,75 @@ export function TransferRequest() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                {/* Patient Name with Autocomplete */}
+                <div ref={autocompleteRef} className="relative">
                   <label className="block text-foreground mb-2">Patient Name *</label>
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     value={formData.patientName}
                     onChange={(e) => {
-                      setFormData({ ...formData, patientName: e.target.value });
+                      const val = e.target.value;
+                      setFormData({ ...formData, patientName: val });
                       if (formErrors.patientName) setFormErrors({ ...formErrors, patientName: '' });
+                      if (val.trim().length > 0) {
+                        const matches = patientRecords.filter(p =>
+                          p.name.toLowerCase().includes(val.toLowerCase())
+                        );
+                        setNameSuggestions(matches);
+                        setShowSuggestions(matches.length > 0);
+                      } else {
+                        setShowSuggestions(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (formData.patientName.trim().length > 0 && nameSuggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
                     }}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientName ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
                       }`}
-                    placeholder="Full name"
+                    placeholder="Start typing a patient name..."
                   />
                   {formErrors.patientName && <p className="text-red-500 text-xs mt-1">{formErrors.patientName}</p>}
+
+                  {/* Autocomplete Dropdown */}
+                  {showSuggestions && (
+                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {nameSuggestions.map((patient) => (
+                        <button
+                          key={patient.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormData(prev => ({
+                              ...prev,
+                              patientName: patient.name,
+                              patientAge: String(patient.age),
+                              patientId: patient.id,
+                              bloodGroup: patient.bloodGroup || prev.bloodGroup,
+                              allergies: patient.allergies || prev.allergies,
+                              medicalHistory: patient.medicalHistory || prev.medicalHistory,
+                              patientGender: patient.gender || prev.patientGender,
+                              attendantGender: patient.gender || prev.attendantGender,
+                            }));
+                            setFormErrors(prev => ({ ...prev, patientName: '', patientId: '', patientAge: '' }));
+                            setShowSuggestions(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left border-b border-border last:border-b-0"
+                        >
+                          <div className="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
+                            <User size={15} className="text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-foreground font-medium text-sm">{patient.name}</p>
+                            <p className="text-muted-foreground text-xs">{patient.id} • {patient.age} yrs • {patient.gender}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -604,8 +715,8 @@ export function TransferRequest() {
                             <label
                               key={idx}
                               className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${selectedDocumentIndices.includes(idx)
-                                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                                  : 'border-border hover:bg-accent'
+                                ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-border hover:bg-accent'
                                 }`}
                             >
                               <input
