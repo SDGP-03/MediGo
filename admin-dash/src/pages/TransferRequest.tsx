@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2 } from 'lucide-react';
+import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File } from 'lucide-react';
 import { database } from '../firebase';
 import { ref, push, set, onValue, off } from 'firebase/database';
 
@@ -22,6 +22,7 @@ export function TransferRequest() {
   const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     // Patient Info
@@ -185,6 +186,17 @@ export function TransferRequest() {
           equipment: formData.requiredEquipment,
         },
 
+        attachedDocuments: (() => {
+          const stored = localStorage.getItem('patientFiles');
+          const allFiles: Record<string, { name: string; size: number; type: string }[]> = stored ? JSON.parse(stored) : {};
+          const patientFiles = allFiles[formData.patientId] || [];
+          return selectedDocumentIndices.map(i => ({
+            name: patientFiles[i]?.name || '',
+            type: patientFiles[i]?.type || '',
+            size: patientFiles[i]?.size || 0,
+          })).filter(d => d.name);
+        })(),
+
         reason: formData.reason,
       });
 
@@ -213,6 +225,7 @@ export function TransferRequest() {
         attendantGender: '',
       });
       setSelectedDriverId('');
+      setSelectedDocumentIndices([]);
 
       // Clear success message after 5 seconds
       setTimeout(() => {
@@ -572,6 +585,59 @@ export function TransferRequest() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Optional Patient Document Attachment */}
+                  {(() => {
+                    const stored = localStorage.getItem('patientFiles');
+                    const allFiles: Record<string, { name: string; size: number; type: string }[]> = stored ? JSON.parse(stored) : {};
+                    const patientDocs = allFiles[formData.patientId] || [];
+                    if (patientDocs.length === 0) return null;
+                    return (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Paperclip size={16} className="text-blue-600" />
+                          <label className="text-foreground font-medium text-sm">Attach Patient Records <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                        </div>
+                        <p className="text-muted-foreground text-xs mb-3">Select documents from the patient's records to send to the receiving hospital.</p>
+                        <div className="space-y-2">
+                          {patientDocs.map((file, idx) => (
+                            <label
+                              key={idx}
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${selectedDocumentIndices.includes(idx)
+                                  ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                  : 'border-border hover:bg-accent'
+                                }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedDocumentIndices.includes(idx)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedDocumentIndices(prev => [...prev, idx]);
+                                  } else {
+                                    setSelectedDocumentIndices(prev => prev.filter(i => i !== idx));
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 flex-shrink-0"
+                              />
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <File size={15} className="text-blue-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-foreground text-sm font-medium truncate">{file.name}</p>
+                                <p className="text-muted-foreground text-xs">{(file.size / 1024).toFixed(1)} KB • {file.type || 'Unknown type'}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        {selectedDocumentIndices.length > 0 && (
+                          <p className="text-blue-600 text-xs mt-2 font-medium">
+                            {selectedDocumentIndices.length} document{selectedDocumentIndices.length > 1 ? 's' : ''} selected to transfer
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
