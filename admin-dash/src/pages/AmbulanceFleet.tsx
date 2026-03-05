@@ -167,6 +167,19 @@ export function AmbulanceFleet() {
     ? calculatedFuelData
     : [{ month: 'Jan', value: 0 }, { month: 'Feb', value: 0 }, { month: 'Mar', value: 0 }];
 
+  // ── Calculate fuel efficiency trend (compare last month to previous month) ──
+  const calculateFuelTrend = (): { trend: number; isImprovement: boolean } => {
+    if (fuelData.length < 2) return { trend: 0, isImprovement: true };
+    const lastValue = fuelData[fuelData.length - 1].value;
+    const prevValue = fuelData[fuelData.length - 2].value;
+    if (prevValue === 0) return { trend: 0, isImprovement: true };
+    // Lower fuel consumption is better, so negative change is improvement
+    const change = ((prevValue - lastValue) / prevValue) * 100;
+    return { trend: Math.abs(Math.round(change)), isImprovement: change > 0 };
+  };
+
+  const { trend: fuelTrend, isImprovement: isFuelImproving } = calculateFuelTrend();
+
   // ── Distance data (from total mileage) ──
   const totalMileage = ambulances.reduce((sum, a) => sum + (a.mileage || 0), 0);
   const avgMileagePerAmbulance = ambulances.length > 0 ? Math.round(totalMileage / ambulances.length) : 0;
@@ -382,7 +395,10 @@ export function AmbulanceFleet() {
               <h4 className="text-foreground font-semibold">Fuel Efficiency</h4>
               <p className="text-muted-foreground text-sm">Avg liters / 100 km (from Firebase)</p>
             </div>
-            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +12%</span>
+            <span className={`flex items-center gap-1 text-sm font-medium ${isFuelImproving ? 'text-green-600' : 'text-red-600'}`}>
+              <TrendingUp size={14} style={{ transform: isFuelImproving ? 'rotate(0deg)' : 'rotate(180deg)' }} />
+              {isFuelImproving ? '+' : '-'}{fuelTrend}%
+            </span>
           </div>
           <div className="text-3xl font-bold text-foreground mb-4">{avgEfficiency.toFixed(1)}L</div>
           <ResponsiveContainer width="100%" height={110}>
