@@ -485,19 +485,19 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
                 <div className="space-y-2 text-sm">
                     <div className="flex justify-between py-1.5 border-b border-border/50">
                         <span className="text-muted-foreground">Base Salary</span>
-                        <span className="text-foreground font-medium">₹{driver.baseSalary.toLocaleString()}</span>
+                        <span className="text-foreground font-medium">Rs. {driver.baseSalary.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-border/50">
-                        <span className="text-muted-foreground">Overtime ({driver.overtimeHours}h × ₹{driver.overtimeRate})</span>
-                        <span className="text-foreground font-medium">₹{(driver.overtimeHours * driver.overtimeRate).toLocaleString()}</span>
+                        <span className="text-muted-foreground">Overtime ({driver.overtimeHours}h × Rs. {driver.overtimeRate})</span>
+                        <span className="text-foreground font-medium">Rs. {(driver.overtimeHours * driver.overtimeRate).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-1.5 border-b border-border/50">
-                        <span className="text-muted-foreground">Trip Bonus ({driver.totalTrips} trips × ₹{driver.tripsBonus})</span>
-                        <span className="text-foreground font-medium">₹{(driver.totalTrips * driver.tripsBonus).toLocaleString()}</span>
+                        <span className="text-muted-foreground">Trip Bonus ({driver.totalTrips} trips × Rs. {driver.tripsBonus})</span>
+                        <span className="text-foreground font-medium">Rs. {(driver.totalTrips * driver.tripsBonus).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between py-2 mt-1">
                         <span className="text-foreground font-semibold">Estimated Total</span>
-                        <span className="text-green-600 font-bold text-base">₹{estimatedSalary.toLocaleString()}</span>
+                        <span className="text-green-600 font-bold text-base">Rs. {estimatedSalary.toLocaleString()}</span>
                     </div>
                 </div>
                 <div className="mt-4 bg-card border border-border rounded-lg p-3">
