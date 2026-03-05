@@ -50,6 +50,19 @@ const patientRecords: PatientRecord[] = [
   },
 ];
 
+// Compute the next patient ID based on the highest existing numeric suffix
+function getNextPatientId(): string {
+  const maxNum = patientRecords.reduce((max, p) => {
+    const match = p.id.match(/PT-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return num > max ? num : max;
+    }
+    return max;
+  }, 20250);
+  return `PT-${maxNum + 1}`;
+}
+
 interface AvailableDriver {
   id: string;
   driverName: string;
@@ -68,6 +81,7 @@ export function TransferRequest() {
   // Autocomplete state for patient name
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<PatientRecord[]>([]);
+  const [isNewPatient, setIsNewPatient] = useState(false);
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
   // Close suggestions when clicking outside
@@ -389,8 +403,17 @@ export function TransferRequest() {
                         );
                         setNameSuggestions(matches);
                         setShowSuggestions(matches.length > 0);
+                        // New (unregistered) patient – suggest next ID
+                        if (matches.length === 0) {
+                          const nextId = getNextPatientId();
+                          setFormData(prev => ({ ...prev, patientName: val, patientId: nextId }));
+                          setIsNewPatient(true);
+                        } else {
+                          setIsNewPatient(false);
+                        }
                       } else {
                         setShowSuggestions(false);
+                        setIsNewPatient(false);
                       }
                     }}
                     onFocus={() => {
@@ -425,6 +448,7 @@ export function TransferRequest() {
                               attendantGender: patient.gender || prev.attendantGender,
                             }));
                             setFormErrors(prev => ({ ...prev, patientName: '', patientId: '', patientAge: '' }));
+                            setIsNewPatient(false);
                             setShowSuggestions(false);
                           }}
                           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left border-b border-border last:border-b-0"
@@ -443,7 +467,14 @@ export function TransferRequest() {
                 </div>
 
                 <div>
-                  <label className="block text-foreground mb-2">Patient ID *</label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-foreground">Patient ID *</label>
+                    {isNewPatient && (
+                      <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full font-medium">
+                        New Patient – ID suggested
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
@@ -452,10 +483,19 @@ export function TransferRequest() {
                       setFormData({ ...formData, patientId: e.target.value });
                       if (formErrors.patientId) setFormErrors({ ...formErrors, patientId: '' });
                     }}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientId
+                        ? 'border-red-500 ring-1 ring-red-500'
+                        : isNewPatient
+                          ? 'border-amber-400 ring-1 ring-amber-300'
+                          : 'border-input'
                       }`}
                     placeholder="Hospital patient ID"
                   />
+                  {isNewPatient && (
+                    <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
+                      Auto-generated for new patient. Edit if needed.
+                    </p>
+                  )}
                   {formErrors.patientId && <p className="text-red-500 text-xs mt-1">{formErrors.patientId}</p>}
                 </div>
 
