@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:driver_application/models/assignment.dart';
-import 'package:driver_application/pages/navigation_page.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:http/http.dart' as http;
+import 'package:driver_application/services/directions_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_styles.dart';
@@ -16,6 +12,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver_application/global/global_var.dart';
 import '../widgets/side_menu.dart';
+import 'package:driver_application/pages/navigation_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,11 +23,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   GoogleMapController? controllerGoogleMap;
+  final DirectionsService _directionsService = DirectionsService();
 
   StreamSubscription<Position>? positionStream;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
+  LatLng? _driverLatLng;
   Marker? driverMarker;
+  Marker? destinationMarker;
+  late final BitmapDescriptor _destinationRedIcon;
 
   String selectedMapStyle = "standard";
   MapType _mapType = MapType.normal;
@@ -47,6 +48,8 @@ class _HomePageState extends State<HomePage> {
   // Firebase reference for driver location tracking
   DatabaseReference? _driverLocationRef;
 
+  String? _activeRequestDialogId;
+
   String t(String en, String si, [String? ta]) {
     if (_isSinhala) return si;
     if (_isTamil) return ta ?? en;
@@ -59,6 +62,8 @@ class _HomePageState extends State<HomePage> {
     _loadLanguage();
     _initConnectivityListener();
     MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
+    _destinationRedIcon =
+        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
   }
 
   Future<void> _loadLanguage() async {
@@ -110,12 +115,13 @@ class _HomePageState extends State<HomePage> {
               markerId: const MarkerId("driverMarker"),
               position: newPosition,
               icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueRed,
+                BitmapDescriptor.hueAzure,
               ),
               infoWindow: InfoWindow(title: t("You", "ඔබ", "நீங்கள்")),
             );
 
             setState(() {
+              _driverLatLng = newPosition;
               driverMarker = updatedMarker;
             });
 
@@ -327,6 +333,7 @@ class _HomePageState extends State<HomePage> {
         .listen((event) {
           final data = event.snapshot.value;
           if (data == null) return;
+          if (currentAssignment != null) return;
 
           final requests = data as Map<dynamic, dynamic>;
 
@@ -335,6 +342,7 @@ class _HomePageState extends State<HomePage> {
             final requestData = entry.value as Map<dynamic, dynamic>;
             if (requestData['status'] == 'pending') {
               final assignment = Assignment.fromJson(entry.key, requestData);
+              if (_activeRequestDialogId == assignment.requestId) return;
               _showTripAlert(assignment);
               break; // Show one at a time
             }
@@ -346,6 +354,7 @@ class _HomePageState extends State<HomePage> {
   void _showTripAlert(Assignment assignment) {
     if (!mounted) return;
 
+    _activeRequestDialogId = assignment.requestId;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -429,6 +438,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.pop(ctx);
               _rejectAssignment(assignment.requestId);
+              _activeRequestDialogId = null;
             },
             child: Text(
               t('REJECT', 'ප්‍රතික්ෂේප', 'நிராகரி'),
@@ -440,12 +450,17 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               Navigator.pop(ctx);
               _acceptAssignment(assignment);
+              _activeRequestDialogId = null;
             },
             child: Text(t('ACCEPT', 'පිළිගන්න', 'ஏற்று')),
           ),
         ],
       ),
-    );
+    ).then((_) {
+      if (_activeRequestDialogId == assignment.requestId) {
+        _activeRequestDialogId = null;
+      }
+    });
   }
 
   /// Accept the assignment
@@ -462,6 +477,12 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       currentAssignment = assignment;
+      destinationMarker = Marker(
+        markerId: const MarkerId("destinationMarker"),
+        position: assignment.dropLatLng,
+        icon: _destinationRedIcon,
+        infoWindow: InfoWindow(title: assignment.dropName),
+      );
     });
 
     drawRouteToDestination();
@@ -477,6 +498,15 @@ class _HomePageState extends State<HomePage> {
     await requestRef.update({
       'status': 'cancelled',
       'driverId': null, // Unassign so admin can reassign
+    });
+
+    if (!mounted) return;
+    setState(() {
+      if (currentAssignment?.requestId == requestId) {
+        currentAssignment = null;
+        destinationMarker = null;
+        polylines = {};
+      }
     });
   }
 
@@ -500,34 +530,26 @@ class _HomePageState extends State<HomePage> {
   Future<void> drawRouteToDestination() async {
     if (currentAssignment == null) return;
 
-    final origin =
-        "${currentAssignment!.pickupLatLng.latitude},${currentAssignment!.pickupLatLng.longitude}";
-    final destination =
-        "${currentAssignment!.dropLatLng.latitude},${currentAssignment!.dropLatLng.longitude}";
-
-    final url =
-        "https://maps.googleapis.com/maps/api/directions/json"
-        "?origin=$origin"
-        "&destination=$destination"
-        "&key=$googleMapKey";
-
-    final response = await http.get(Uri.parse(url));
-    final data = json.decode(response.body);
-
-    final points = PolylinePoints.decodePolyline(
-      data["routes"][0]["overview_polyline"]["points"],
-    );
-
-    setState(() {
-      polylines = {
-        Polyline(
-          polylineId: const PolylineId("route"),
-          color: Colors.red,
-          width: 5,
-          points: points.map((e) => LatLng(e.latitude, e.longitude)).toList(),
-        ),
-      };
-    });
+    final originLatLng = _driverLatLng ?? currentAssignment!.pickupLatLng;
+    try {
+      final route = await _directionsService.getDrivingRoute(
+        origin: originLatLng,
+        destination: currentAssignment!.dropLatLng,
+      );
+      if (!mounted) return;
+      setState(() {
+        polylines = {
+          Polyline(
+            polylineId: const PolylineId("route"),
+            color: Colors.red,
+            width: 5,
+            points: route.polylinePoints,
+          ),
+        };
+      });
+    } catch (e) {
+      debugPrint("Failed to fetch route: $e");
+    }
   }
 
   // ================= CLEANUP =================
@@ -729,17 +751,19 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(18),
                   child: Stack(
                     children: [
-                      GoogleMap(
-                        mapType: _mapType,
-                        zoomControlsEnabled: false,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
-                        initialCameraPosition: googlePlexInitialPosition,
-                        markers: driverMarker != null ? {driverMarker!} : {},
-                        polylines: polylines,
-                        onMapCreated:
-                            (GoogleMapController mapController) async {
-                              controllerGoogleMap = mapController;
+	                      GoogleMap(
+	                        mapType: _mapType,
+	                        zoomControlsEnabled: false,
+	                        myLocationEnabled: true,
+	                        myLocationButtonEnabled: false,
+	                        initialCameraPosition: googlePlexInitialPosition,
+	                        markers: {
+	                          if (destinationMarker != null) destinationMarker!,
+	                        },
+	                        polylines: polylines,
+	                        onMapCreated:
+	                            (GoogleMapController mapController) async {
+	                              controllerGoogleMap = mapController;
 
                               await loadMapStyle();
                               applyMapStyle();
@@ -800,7 +824,9 @@ class _HomePageState extends State<HomePage> {
                             ),
                             PopupMenuItem(
                               value: MapType.satellite,
-                              child: Text(t('Satellite', 'චන්ද්‍රිකා', 'சாடலைட்')),
+                              child: Text(
+                                t('Satellite', 'චන්ද්‍රිකා', 'சாடலைட்'),
+                              ),
                             ),
                             PopupMenuItem(
                               value: MapType.terrain,
@@ -809,7 +835,11 @@ class _HomePageState extends State<HomePage> {
                           ],
                           child: _mapControlButton(
                             icon: Icons.layers_outlined,
-                            tooltip: t('Map type', 'සිතියම් වර්ගය', 'வரைபட வகை'),
+                            tooltip: t(
+                              'Map type',
+                              'සිතියම් වර්ගය',
+                              'வரைபட வகை',
+                            ),
                           ),
                         ),
                       ),
@@ -1058,7 +1088,15 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () async {
                             // Update trip status to in_progress
                             await _startTrip();
-                            _showNavigationOptionDialog();
+                            if (!mounted) return;
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => NavigationPage(
+                                  assignment: currentAssignment!,
+                                ),
+                              ),
+                            );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red.shade500,
@@ -1125,30 +1163,26 @@ class _HomePageState extends State<HomePage> {
               icon: Icons.miscellaneous_services,
               color: Colors.blue,
               title: t("Service", "සේවාව", "சேவை"),
-              onTap: () => _showIssueDetailsDialog(
-                ctx,
-                t("Service", "සේවාව", "சேவை"),
-              ),
+              onTap: () =>
+                  _showIssueDetailsDialog(ctx, t("Service", "සේවාව", "சேவை")),
             ),
             _sheetActionTile(
               icon: Icons.build_circle,
               color: Colors.orange,
               title: t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
-              onTap: () =>
-                  _showIssueDetailsDialog(
-                    ctx,
-                    t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
-                  ),
+              onTap: () => _showIssueDetailsDialog(
+                ctx,
+                t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
+              ),
             ),
             _sheetActionTile(
               icon: Icons.car_repair,
               color: Colors.red,
               title: t("Breakdown", "බිඳවැටීම", "கோளாறு"),
-              onTap: () =>
-                  _showIssueDetailsDialog(
-                    ctx,
-                    t("Breakdown", "බිඳවැටීම", "கோளாறு"),
-                  ),
+              onTap: () => _showIssueDetailsDialog(
+                ctx,
+                t("Breakdown", "බිඳවැටීම", "கோளாறு"),
+              ),
             ),
             _sheetActionTile(
               icon: Icons.error_outline,
@@ -1243,109 +1277,6 @@ class _HomePageState extends State<HomePage> {
                   "$issueType වාර්තාව සාර්ථකව යවන ලදී.",
                   "$issueType அறிக்கை வெற்றிகரமாக அனுப்பப்பட்டது.",
                 ),
-        ),
-      ),
-    );
-  }
-
-  void _showNavigationOptionDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 46,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            Text(
-              t(
-                "Select Navigation Method",
-                "නාවිකරණ ක්‍රමය තෝරන්න",
-                "வழிகாட்டு முறையை தேர்வு செய்யவும்",
-              ),
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _sheetActionTile(
-              icon: Icons.map,
-              color: Colors.blue,
-              title: t("Google Maps", "Google Maps", "Google Maps"),
-              subtitle: t(
-                "Use external Google Maps app",
-                "බාහිර Google Maps යෙදුම භාවිතා කරන්න",
-                "வெளி Google Maps ஆப்பை பயன்படுத்தவும்",
-              ),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final lat = currentAssignment!.dropLatLng.latitude;
-                final lng = currentAssignment!.dropLatLng.longitude;
-                final url = Uri.parse(
-                  'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
-                );
-
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        t(
-                          'Could not open Google Maps',
-                          'Google Maps විවෘත කළ නොහැක',
-                          'Google Maps திறக்க முடியவில்லை',
-                        ),
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-            _sheetActionTile(
-              icon: Icons.navigation,
-              color: Colors.red,
-              title: t(
-                "MediGo Navigation",
-                "MediGo නාවිකරණය",
-                "MediGo வழிகாட்டல்",
-              ),
-              subtitle: t(
-                "Stay inside the MediGo app",
-                "MediGo යෙදුම තුළම සිටින්න",
-                "MediGo ஆப்பில் உள்ளேயே இருங்கள்",
-              ),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NavigationPage(
-                      destination: currentAssignment!.dropLatLng,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
         ),
       ),
     );
