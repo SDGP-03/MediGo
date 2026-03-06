@@ -1,4 +1,4 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_navigation_flutter/google_navigation_flutter.dart';
 
 class Assignment {
   final String requestId;
@@ -62,14 +62,14 @@ class Assignment {
       pickupName: pickup['hospitalName'] ?? 'Pickup Location',
       pickupAddress: pickup['address'] ?? '',
       pickupLatLng: LatLng(
-        (pickup['lat'] ?? 0.0).toDouble(),
-        (pickup['lng'] ?? 0.0).toDouble(),
+        latitude: (pickup['lat'] ?? 0.0).toDouble(),
+        longitude: (pickup['lng'] ?? 0.0).toDouble(),
       ),
       dropName: destination['hospitalName'] ?? 'Destination',
       dropAddress: destination['address'] ?? '',
       dropLatLng: LatLng(
-        (destination['lat'] ?? 0.0).toDouble(),
-        (destination['lng'] ?? 0.0).toDouble(),
+        latitude: (destination['lat'] ?? 0.0).toDouble(),
+        longitude: (destination['lng'] ?? 0.0).toDouble(),
       ),
       requiresDoctor: requirements['requiresDoctor'] ?? false,
       requiresVentilator: requirements['requiresVentilator'] ?? false,

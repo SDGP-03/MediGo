@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>We use your location to provide turn-by-turn navigation to the destination.</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>We use your location to provide navigation even when the app is in use.</string>
+		<key>GMSApiKey</key>
+		<string>$(GMS_API_KEY)</string>
 	</dict>
 </plist>

@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'package:driver_application/models/assignment.dart';
-import 'package:driver_application/services/directions_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../widgets/map_styles.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_navigation_flutter/google_navigation_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver_application/global/global_var.dart';
@@ -22,23 +21,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  GoogleMapController? controllerGoogleMap;
-  final DirectionsService _directionsService = DirectionsService();
+  GoogleMapViewController? controllerGoogleMap;
 
   StreamSubscription<Position>? positionStream;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
-  LatLng? _driverLatLng;
   Marker? driverMarker;
   Marker? destinationMarker;
-  late final BitmapDescriptor _destinationRedIcon;
 
   String selectedMapStyle = "standard";
   MapType _mapType = MapType.normal;
 
   Assignment? currentAssignment;
-
-  Set<Polyline> polylines = {};
 
   bool _isOnline = true;
   String _language = 'English';
@@ -62,9 +56,6 @@ class _HomePageState extends State<HomePage> {
     _loadLanguage();
     _initConnectivityListener();
     MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
-    _destinationRedIcon = BitmapDescriptor.defaultMarkerWithHue(
-      BitmapDescriptor.hueRed,
-    );
   }
 
   Future<void> _loadLanguage() async {
@@ -110,21 +101,12 @@ class _HomePageState extends State<HomePage> {
               _startListeningForAssignments();
             }
 
-            LatLng newPosition = LatLng(position.latitude, position.longitude);
-
-            Marker updatedMarker = Marker(
-              markerId: const MarkerId("driverMarker"),
-              position: newPosition,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueAzure,
-              ),
-              infoWindow: InfoWindow(title: t("You", "ඔබ", "நீங்கள்")),
+            final newPosition = LatLng(
+              latitude: position.latitude,
+              longitude: position.longitude,
             );
 
-            setState(() {
-              _driverLatLng = newPosition;
-              driverMarker = updatedMarker;
-            });
+            _upsertDriverMarker(newPosition);
 
             // Push location to Firebase for admin dashboard tracking
             _pushLocationToFirebase(position);
@@ -134,6 +116,48 @@ class _HomePageState extends State<HomePage> {
             );
           },
         );
+  }
+
+  Future<void> _upsertDriverMarker(LatLng position) async {
+    final controller = controllerGoogleMap;
+    if (controller == null) return;
+
+    final options = MarkerOptions(
+      position: position,
+      infoWindow: InfoWindow(title: t("You", "ඔබ", "நீங்கள்")),
+      flat: true,
+      anchor: const MarkerAnchor(u: 0.5, v: 0.5),
+    );
+
+    if (driverMarker == null) {
+      final created = await controller.addMarkers([options]);
+      driverMarker = created.isNotEmpty ? created.first : null;
+      return;
+    }
+
+    final updated = driverMarker!.copyWith(options: options);
+    final res = await controller.updateMarkers([updated]);
+    driverMarker = res.isNotEmpty ? res.first : driverMarker;
+  }
+
+  Future<void> _upsertDestinationMarker(LatLng position, String title) async {
+    final controller = controllerGoogleMap;
+    if (controller == null) return;
+
+    final options = MarkerOptions(
+      position: position,
+      infoWindow: InfoWindow(title: title),
+    );
+
+    if (destinationMarker == null) {
+      final created = await controller.addMarkers([options]);
+      destinationMarker = created.isNotEmpty ? created.first : null;
+      return;
+    }
+
+    final updated = destinationMarker!.copyWith(options: options);
+    final res = await controller.updateMarkers([updated]);
+    destinationMarker = res.isNotEmpty ? res.first : destinationMarker;
   }
 
   // ================= FIREBASE LOCATION PUSH =================
@@ -267,7 +291,10 @@ class _HomePageState extends State<HomePage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      final target = LatLng(position.latitude, position.longitude);
+      final target = LatLng(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
       controllerGoogleMap?.animateCamera(
         CameraUpdate.newLatLngZoom(target, 16),
       );
@@ -778,15 +805,9 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       currentAssignment = assignment;
-      destinationMarker = Marker(
-        markerId: const MarkerId("destinationMarker"),
-        position: assignment.dropLatLng,
-        icon: _destinationRedIcon,
-        infoWindow: InfoWindow(title: assignment.dropName),
-      );
     });
 
-    drawRouteToDestination();
+    await _upsertDestinationMarker(assignment.dropLatLng, assignment.dropName);
   }
 
   /// Reject the assignment
@@ -806,9 +827,15 @@ class _HomePageState extends State<HomePage> {
       if (currentAssignment?.requestId == requestId) {
         currentAssignment = null;
         destinationMarker = null;
-        polylines = {};
       }
     });
+
+    if (controllerGoogleMap != null) {
+      await controllerGoogleMap!.clearMarkers();
+      if (driverMarker != null) {
+        await controllerGoogleMap!.addMarkers([driverMarker!.options]);
+      }
+    }
   }
 
   /// Mark trip as started (in_progress)
@@ -824,33 +851,6 @@ class _HomePageState extends State<HomePage> {
       'status': 'in_progress',
       'startedAt': ServerValue.timestamp,
     });
-  }
-
-  // ================= ROUTE DRAWER =================
-
-  Future<void> drawRouteToDestination() async {
-    if (currentAssignment == null) return;
-
-    final originLatLng = _driverLatLng ?? currentAssignment!.pickupLatLng;
-    try {
-      final route = await _directionsService.getDrivingRoute(
-        origin: originLatLng,
-        destination: currentAssignment!.dropLatLng,
-      );
-      if (!mounted) return;
-      setState(() {
-        polylines = {
-          Polyline(
-            polylineId: const PolylineId("route"),
-            color: Colors.red,
-            width: 5,
-            points: route.polylinePoints,
-          ),
-        };
-      });
-    } catch (e) {
-      debugPrint("Failed to fetch route: $e");
-    }
   }
 
   // ================= CLEANUP =================
@@ -1052,24 +1052,35 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(18),
                   child: Stack(
                     children: [
-                      GoogleMap(
-                        mapType: _mapType,
-                        zoomControlsEnabled: false,
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
+                      GoogleMapsMapView(
+                        initialMapType: _mapType,
+                        initialZoomControlsEnabled: false,
                         initialCameraPosition: googlePlexInitialPosition,
-                        markers: {
-                          if (destinationMarker != null) destinationMarker!,
-                        },
-                        polylines: polylines,
-                        onMapCreated:
-                            (GoogleMapController mapController) async {
-                              controllerGoogleMap = mapController;
+                        onViewCreated: (controller) async {
+                          controllerGoogleMap = controller;
 
-                              await loadMapStyle();
-                              applyMapStyle();
-                              checkLocationPermission();
-                            },
+                          await controller.setMyLocationEnabled(true);
+                          await controller.settings.setMyLocationButtonEnabled(
+                            false,
+                          );
+                          try {
+                            await controller.settings.setZoomControlsEnabled(
+                              false,
+                            );
+                          } catch (_) {}
+
+                          await loadMapStyle();
+                          applyMapStyle();
+                          checkLocationPermission();
+
+                          final assignment = currentAssignment;
+                          if (assignment != null) {
+                            await _upsertDestinationMarker(
+                              assignment.dropLatLng,
+                              assignment.dropName,
+                            );
+                          }
+                        },
                       ),
                       Positioned(
                         top: 12,
@@ -1115,6 +1126,7 @@ class _HomePageState extends State<HomePage> {
                             setState(() {
                               _mapType = value;
                             });
+                            controllerGoogleMap?.setMapType(mapType: value);
                           },
                           itemBuilder: (context) => [
                             PopupMenuItem(
