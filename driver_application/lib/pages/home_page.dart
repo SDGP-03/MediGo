@@ -62,8 +62,9 @@ class _HomePageState extends State<HomePage> {
     _loadLanguage();
     _initConnectivityListener();
     MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
-    _destinationRedIcon =
-        BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+    _destinationRedIcon = BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueRed,
+    );
   }
 
   Future<void> _loadLanguage() async {
@@ -355,112 +356,412 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     _activeRequestDialogId = assignment.requestId;
+    final priority = assignment.priority.toLowerCase();
+
+    const brandPrimary = Color(0xFFFF6B6B);
+    const brandSecondary = Color(0xFFFF9B7B);
+
+    late final Color priorityColor;
+    late final List<Color> gradientColors;
+
+    switch (priority) {
+      case 'critical':
+        priorityColor = Colors.red.shade800;
+        gradientColors = [Colors.red.shade900, brandPrimary];
+        break;
+      case 'urgent':
+        priorityColor = Colors.red.shade700;
+        gradientColors = [Colors.red.shade800, brandSecondary];
+        break;
+      default:
+        priorityColor = brandPrimary;
+        gradientColors = [brandPrimary, brandSecondary];
+    }
+
+    final patientAge = assignment.patientAge?.toString() ?? '?';
+    final patientGender = assignment.patientGender ?? '?';
+    final hasRequirements =
+        assignment.requiresDoctor ||
+        assignment.requiresVentilator ||
+        assignment.requiresOxygen;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              assignment.priority == 'critical'
-                  ? Icons.warning
-                  : assignment.priority == 'urgent'
-                  ? Icons.priority_high
-                  : Icons.local_hospital,
-              color: assignment.priority == 'critical'
-                  ? Colors.red
-                  : assignment.priority == 'urgent'
-                  ? Colors.orange
-                  : Colors.green,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              t(
-                'New ${assignment.priority.toUpperCase()} Transfer',
-                'නව ${assignment.priority.toUpperCase()} මාරු කිරීම',
-                'புதிய ${assignment.priority.toUpperCase()} மாற்றம்',
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutBack,
+          tween: Tween(begin: 0.0, end: 1.0),
+          builder: (context, value, child) {
+            return Transform.scale(
+              scale: value,
+              child: Opacity(
+                opacity: value.clamp(0.0, 1.0),
+                child: Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  elevation: 12,
+                  backgroundColor: Colors.white,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.78,
+                    ),
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: Colors.white,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // --- HEADER ---
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 20,
+                              horizontal: 16,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: gradientColors,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(24),
+                                topRight: Radius.circular(24),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: priority == 'critical'
+                                      ? const Icon(
+                                          Icons.warning_rounded,
+                                          color: Colors.white,
+                                          size: 28,
+                                        )
+                                      : priority == 'urgent'
+                                      ? const Icon(
+                                          Icons.priority_high_rounded,
+                                          color: Colors.white,
+                                          size: 28,
+                                        )
+                                      : Image.asset(
+                                          'assets/icon/app_icon.png',
+                                          height: 28,
+                                          width: 28,
+                                          fit: BoxFit.contain,
+                                        ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        t(
+                                          'New Request',
+                                          'නව ඉල්ලීම',
+                                          'புதிய கோரிக்கை',
+                                        ).toUpperCase(),
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          fontSize: 10,
+                                          letterSpacing: 1.2,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      Text(
+                                        t(
+                                          '${priority.toUpperCase()} Transfer',
+                                          'නව ${priority.toUpperCase()} මාරු කිරීම',
+                                          'புதிய ${priority.toUpperCase()} மாற்றம்',
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // --- CONTENT ---
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: SingleChildScrollView(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  24,
+                                  20,
+                                  16,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Patient Info
+                                    Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 22,
+                                          backgroundColor: priorityColor
+                                              .withValues(alpha: 0.1),
+                                          child: Text(
+                                            assignment.patientName.isNotEmpty
+                                                ? assignment.patientName[0]
+                                                      .toUpperCase()
+                                                : 'P',
+                                            style: TextStyle(
+                                              color: priorityColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                assignment.patientName,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                  color: Color(0xFF2D3133),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                "${t("Age", "වයස", "வயது")}: $patientAge • ${t("Gender", "ස්ත්‍රී/පුරුෂ", "பாலினம்")}: $patientGender",
+                                                style: const TextStyle(
+                                                  color: Colors.black54,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 24),
+
+                                    // Route Timeline
+                                    Row(
+                                      children: [
+                                        Column(
+                                          children: [
+                                            Icon(
+                                              Icons.radio_button_checked,
+                                              size: 18,
+                                              color: priorityColor,
+                                            ),
+                                            Container(
+                                              width: 2,
+                                              height: 30,
+                                              color: priorityColor.withValues(
+                                                alpha: 0.2,
+                                              ),
+                                            ),
+                                            Icon(
+                                              Icons.location_on,
+                                              size: 20,
+                                              color: priorityColor,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                assignment.pickupName,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 18),
+                                              Text(
+                                                assignment.dropName,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    if (hasRequirements) ...[
+                                      const SizedBox(height: 24),
+
+                                      // Requirements Chips
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          if (assignment.requiresDoctor)
+                                            _buildRequirementChip(
+                                              '⚕️ ${t('Doctor', 'වෛද්‍ය', 'மருத்துவர்')}',
+                                              const Color(0xFFFFE0E0),
+                                              Colors.red.shade800,
+                                            ),
+                                          if (assignment.requiresVentilator)
+                                            _buildRequirementChip(
+                                              '🫁 ${t('Ventilator', 'වෙන්ටිලේටර්', 'வென்டிலேட்டர்')}',
+                                              const Color(0xFFFFE6E6),
+                                              Colors.red.shade700,
+                                            ),
+                                          if (assignment.requiresOxygen)
+                                            _buildRequirementChip(
+                                              '💨 ${t('Oxygen', 'ඔක්සිජන්', 'ஆக்ஸிஜன்')}',
+                                              const Color(0xFFFFF0F0),
+                                              Colors.red.shade700,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // --- ACTIONS ---
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _rejectAssignment(assignment.requestId);
+                                      _activeRequestDialogId = null;
+                                    },
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      t('REJECT', 'ප්‍රතික්ෂේප', 'நிராகரி'),
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 2,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _acceptAssignment(assignment);
+                                      _activeRequestDialogId = null;
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: gradientColors,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: gradientColors[0].withValues(
+                                              alpha: 0.4,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          t('ACCEPT', 'පිළිගන්න', 'ஏற்று'),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              style: const TextStyle(fontSize: 18),
-            ),
-          ],
+            );
+          },
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${t("Patient", "රෝගියා", "நோயாளர்")}: ${assignment.patientName}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              if (assignment.patientAge != null)
-                Text('${t("Age", "වයස", "வயது")}: ${assignment.patientAge}'),
-              if (assignment.patientGender != null)
-                Text(
-                  '${t("Gender", "ස්ත්‍රී/පුරුෂ", "பாலினம்")}: ${assignment.patientGender}',
-                ),
-              const Divider(),
-              Text('${t("From", "සිට", "இருந்து")}: ${assignment.pickupName}'),
-              Text('${t("To", "දක්වා", "வரை")}: ${assignment.dropName}'),
-              const Divider(),
-              if (assignment.requiresDoctor)
-                Text(
-                  t(
-                    '⚕️ Doctor Required',
-                    '⚕️ වෛද්‍යවරයෙක් අවශ්‍යයි',
-                    '⚕️ மருத்துவர் தேவை',
-                  ),
-                  style: TextStyle(color: Colors.red),
-                ),
-              if (assignment.requiresVentilator)
-                Text(
-                  t(
-                    '🫁 Ventilator Required',
-                    '🫁 වෙන්ටිලේටරයක් අවශ්‍යයි',
-                    '🫁 வென்டிலேட்டர் தேவை',
-                  ),
-                  style: TextStyle(color: Colors.orange),
-                ),
-              if (assignment.requiresOxygen)
-                Text(
-                  t(
-                    '💨 Oxygen Required',
-                    '💨 ඔක්සිජන් අවශ්‍යයි',
-                    '💨 ஆக்ஸிஜன் தேவை',
-                  ),
-                  style: TextStyle(color: Colors.blue),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _rejectAssignment(assignment.requestId);
-              _activeRequestDialogId = null;
-            },
-            child: Text(
-              t('REJECT', 'ප්‍රතික්ෂේප', 'நிராகரி'),
-              style: const TextStyle(color: Colors.grey),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _acceptAssignment(assignment);
-              _activeRequestDialogId = null;
-            },
-            child: Text(t('ACCEPT', 'පිළිගන්න', 'ஏற்று')),
-          ),
-        ],
       ),
     ).then((_) {
       if (_activeRequestDialogId == assignment.requestId) {
         _activeRequestDialogId = null;
       }
     });
+  }
+
+  Widget _buildRequirementChip(
+    String label,
+    Color backgroundColor,
+    Color textColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: textColor.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
+    );
   }
 
   /// Accept the assignment
@@ -751,19 +1052,19 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(18),
                   child: Stack(
                     children: [
-	                      GoogleMap(
-	                        mapType: _mapType,
-	                        zoomControlsEnabled: false,
-	                        myLocationEnabled: true,
-	                        myLocationButtonEnabled: false,
-	                        initialCameraPosition: googlePlexInitialPosition,
-	                        markers: {
-	                          if (destinationMarker != null) destinationMarker!,
-	                        },
-	                        polylines: polylines,
-	                        onMapCreated:
-	                            (GoogleMapController mapController) async {
-	                              controllerGoogleMap = mapController;
+                      GoogleMap(
+                        mapType: _mapType,
+                        zoomControlsEnabled: false,
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: false,
+                        initialCameraPosition: googlePlexInitialPosition,
+                        markers: {
+                          if (destinationMarker != null) destinationMarker!,
+                        },
+                        polylines: polylines,
+                        onMapCreated:
+                            (GoogleMapController mapController) async {
+                              controllerGoogleMap = mapController;
 
                               await loadMapStyle();
                               applyMapStyle();

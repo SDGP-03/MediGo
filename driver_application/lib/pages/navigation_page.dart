@@ -233,10 +233,7 @@ class _NavigationPageState extends State<NavigationPage>
           );
 
     final driverSet = driverMarker == null ? null : {driverMarker};
-    _markers = {
-      _destinationMarker,
-      ...?driverSet,
-    };
+    _markers = {_destinationMarker, ...?driverSet};
   }
 
   void _onMarkerTick() {
@@ -389,12 +386,7 @@ class _NavigationPageState extends State<NavigationPage>
     try {
       await controller.animateCamera(
         CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: target,
-            zoom: 18,
-            tilt: 60,
-            bearing: bearing,
-          ),
+          CameraPosition(target: target, zoom: 18, tilt: 60, bearing: bearing),
         ),
       );
     } finally {
@@ -477,7 +469,9 @@ class _NavigationPageState extends State<NavigationPage>
       duration: duration,
     );
 
-    if (_navigationStarted && route != null && route.polylinePoints.length >= 2) {
+    if (_navigationStarted &&
+        route != null &&
+        route.polylinePoints.length >= 2) {
       final newIndex = _closestRoutePointIndex(
         points: route.polylinePoints,
         target: gpsLatLng,
@@ -570,8 +564,9 @@ class _NavigationPageState extends State<NavigationPage>
 
     if (!mounted) return;
     final route = _route;
-    final (remainingDistanceMeters, remainingDurationSeconds) =
-        route == null ? (0, 0) : _computeRemaining(route, 0);
+    final (remainingDistanceMeters, remainingDurationSeconds) = route == null
+        ? (0, 0)
+        : _computeRemaining(route, 0);
     setState(() {
       _navigationStarted = true;
       _isFollowing = true;
@@ -599,8 +594,9 @@ class _NavigationPageState extends State<NavigationPage>
 
   void _stopNavigation() {
     final route = _route;
-    final (remainingDistanceMeters, remainingDurationSeconds) =
-        route == null ? (0, 0) : _computeRemaining(route, 0);
+    final (remainingDistanceMeters, remainingDurationSeconds) = route == null
+        ? (0, 0)
+        : _computeRemaining(route, 0);
     setState(() {
       _navigationStarted = false;
       _isFollowing = false;
@@ -689,7 +685,9 @@ class _NavigationPageState extends State<NavigationPage>
             compassEnabled: false,
             zoomControlsEnabled: false,
             onCameraMoveStarted: () {
-              if (_navigationStarted && _isFollowing && !_isProgrammaticCameraMove) {
+              if (_navigationStarted &&
+                  _isFollowing &&
+                  !_isProgrammaticCameraMove) {
                 setState(() => _isFollowing = false);
               }
             },
@@ -750,10 +748,7 @@ class _NavigationPageState extends State<NavigationPage>
                         const SizedBox(height: 10),
                       ],
                       if (_navigationStarted) ...[
-                        _FloatingNavButton(
-                          icon: Icons.add,
-                          onPressed: _zoomIn,
-                        ),
+                        _FloatingNavButton(icon: Icons.add, onPressed: _zoomIn),
                         const SizedBox(height: 10),
                         _FloatingNavButton(
                           icon: Icons.remove,
@@ -980,7 +975,11 @@ class _TopNavBanner extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
       child: Row(
@@ -1111,7 +1110,7 @@ class _BottomNavBanner extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-              const SizedBox(width: 4),
+                  const SizedBox(width: 4),
                   const Icon(Icons.eco, color: Color(0xFF2E7D32), size: 20),
                 ],
               ),
@@ -1271,7 +1270,7 @@ class _RoutePreviewCard extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: onStartNavigation,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A73E8),
+                    backgroundColor: const Color.fromARGB(208, 241, 47, 21),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
