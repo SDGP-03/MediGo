@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
     User, Star, Phone, Clock, Car, Search,
     ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
-    X, CreditCard, Calendar, Mail, Ambulance, Trash2
+    X, CreditCard, Calendar, Mail, Ambulance, Trash2, Pencil
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -400,6 +400,171 @@ function DeleteConfirmModal({
     );
 }
 
+// ─── Edit Driver Modal ───────────────────────────────────────────────────────
+
+interface EditModalProps {
+    driver: Driver;
+    onClose: () => void;
+    onSave: (updated: Driver) => void;
+}
+
+function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
+    const [form, setForm] = useState({
+        name: driver.name,
+        gender: driver.gender,
+        phone: driver.phone,
+        email: driver.email,
+        licenseNumber: driver.licenseNumber,
+        licenseExpiry: driver.licenseExpiry,
+        joinDate: driver.joinDate,
+        status: driver.status,
+        assignedAmbulance: driver.assignedAmbulance ?? '',
+        baseSalary: String(driver.baseSalary),
+        overtimeRate: String(driver.overtimeRate),
+        tripsBonus: String(driver.tripsBonus),
+        overtimeHours: String(driver.overtimeHours),
+        attendanceDays: String(driver.attendanceDays),
+        leaveDays: String(driver.leaveDays),
+        fuelEfficiencyScore: String(driver.fuelEfficiencyScore),
+        incidentReports: String(driver.incidentReports),
+    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const set = (key: string, value: string) =>
+        setForm(f => ({ ...f, [key]: value }));
+
+    const validate = () => {
+        const e: Record<string, string> = {};
+        if (!form.name.trim()) e.name = 'Required';
+        if (!form.phone.trim()) e.phone = 'Required';
+        if (!form.email.includes('@')) e.email = 'Invalid email';
+        if (!form.licenseNumber.trim()) e.licenseNumber = 'Required';
+        if (!form.licenseExpiry) e.licenseExpiry = 'Required';
+        if (!form.baseSalary || isNaN(Number(form.baseSalary))) e.baseSalary = 'Enter a valid number';
+        return e;
+    };
+
+    const handleSubmit = () => {
+        const e = validate();
+        if (Object.keys(e).length > 0) { setErrors(e); return; }
+        onSave({
+            ...driver,
+            name: form.name,
+            gender: form.gender as 'Male' | 'Female' | 'Other',
+            phone: form.phone,
+            email: form.email,
+            licenseNumber: form.licenseNumber,
+            licenseExpiry: form.licenseExpiry,
+            joinDate: form.joinDate,
+            status: form.status as Driver['status'],
+            assignedAmbulance: form.assignedAmbulance.trim() || null,
+            baseSalary: Number(form.baseSalary),
+            overtimeRate: Number(form.overtimeRate) || 0,
+            tripsBonus: Number(form.tripsBonus) || 0,
+            overtimeHours: Number(form.overtimeHours) || 0,
+            attendanceDays: Number(form.attendanceDays) || 0,
+            leaveDays: Number(form.leaveDays) || 0,
+            fuelEfficiencyScore: Math.min(100, Math.max(0, Number(form.fuelEfficiencyScore) || 0)),
+            incidentReports: Number(form.incidentReports) || 0,
+        });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-card rounded-xl shadow-2xl border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="sticky top-0 bg-card z-10 flex items-center justify-between p-5 border-b border-border">
+                    <div>
+                        <h2 className="text-foreground font-semibold text-lg">Edit Driver Profile</h2>
+                        <p className="text-muted-foreground text-sm">{driver.name} &bull; {driver.id}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
+                        <X size={18} className="text-muted-foreground" />
+                    </button>
+                </div>
+                <div className="p-5 space-y-6">
+                    {/* Personal Information */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <User size={15} className="text-red-500" />
+                            <h3 className="text-foreground text-sm font-medium">Personal Information</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <Field label="Full Name *" icon={<User size={14} />} value={form.name} onChange={v => set('name', v)} error={errors.name} />
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Gender</label>
+                                <select value={form.gender} onChange={e => set('gender', e.target.value)}
+                                    className="w-full px-3 py-2.5 text-sm border border-input rounded-lg bg-input-field-bg text-foreground focus:outline-none focus:ring-2 focus:ring-red-500">
+                                    <option>Male</option><option>Female</option><option>Other</option>
+                                </select>
+                            </div>
+                            <Field label="Phone Number *" type="tel" icon={<Phone size={14} />} value={form.phone} onChange={v => set('phone', v)} error={errors.phone} />
+                            <Field label="Email Address *" type="email" icon={<Mail size={14} />} value={form.email} onChange={v => set('email', v)} error={errors.email} />
+                        </div>
+                    </div>
+                    {/* License & Employment */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <CreditCard size={15} className="text-red-500" />
+                            <h3 className="text-foreground text-sm font-medium">License &amp; Employment</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <Field label="License Number *" icon={<CreditCard size={14} />} value={form.licenseNumber} onChange={v => set('licenseNumber', v)} error={errors.licenseNumber} />
+                            <Field label="License Expiry *" type="date" icon={<Calendar size={14} />} value={form.licenseExpiry} onChange={v => set('licenseExpiry', v)} error={errors.licenseExpiry} />
+                            <Field label="Joining Date" type="date" icon={<Calendar size={14} />} value={form.joinDate} onChange={v => set('joinDate', v)} />
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Status</label>
+                                <select value={form.status} onChange={e => set('status', e.target.value)}
+                                    className="w-full px-3 py-2.5 text-sm border border-input rounded-lg bg-input-field-bg text-foreground focus:outline-none focus:ring-2 focus:ring-red-500">
+                                    <option value="active">Active</option>
+                                    <option value="off_duty">Off Duty</option>
+                                    <option value="on_leave">On Leave</option>
+                                </select>
+                            </div>
+                            <Field label="Assigned Ambulance" icon={<Car size={14} />} value={form.assignedAmbulance} onChange={v => set('assignedAmbulance', v)} />
+                        </div>
+                    </div>
+                    {/* Salary */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp size={15} className="text-red-500" />
+                            <h3 className="text-foreground text-sm font-medium">Salary Configuration</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <Field label="Base Monthly Salary (LKR) *" type="number" value={form.baseSalary} onChange={v => set('baseSalary', v)} error={errors.baseSalary} />
+                            <Field label="Overtime Rate/Hour" type="number" value={form.overtimeRate} onChange={v => set('overtimeRate', v)} />
+                            <Field label="Per Trip Bonus (LKR)" type="number" value={form.tripsBonus} onChange={v => set('tripsBonus', v)} />
+                        </div>
+                    </div>
+                    {/* Attendance & Performance */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Clock size={15} className="text-red-500" />
+                            <h3 className="text-foreground text-sm font-medium">Attendance &amp; Performance</h3>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Field label="Overtime Hours" type="number" value={form.overtimeHours} onChange={v => set('overtimeHours', v)} />
+                            <Field label="Attendance Days" type="number" value={form.attendanceDays} onChange={v => set('attendanceDays', v)} />
+                            <Field label="Leave Days" type="number" value={form.leaveDays} onChange={v => set('leaveDays', v)} />
+                            <Field label="Incident Reports" type="number" value={form.incidentReports} onChange={v => set('incidentReports', v)} />
+                        </div>
+                        <div className="mt-3">
+                            <Field label="Fuel Efficiency Score (0-100)" type="number" value={form.fuelEfficiencyScore} onChange={v => set('fuelEfficiencyScore', v)} />
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-3 p-5 border-t border-border">
+                    <button onClick={onClose} className="flex-1 px-4 py-2.5 text-sm border border-border rounded-lg text-foreground hover:bg-accent transition-colors">Cancel</button>
+                    <button onClick={handleSubmit} className="flex-1 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Driver Detail Expanded Panel ─────────────────────────────────────────────
 
 function DriverDetailPanel({ driver }: { driver: Driver }) {
@@ -525,6 +690,12 @@ export function DriverProfiles() {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
+    const [editTarget, setEditTarget] = useState<Driver | null>(null);
+
+    const handleEditSave = (updated: Driver) => {
+        setDrivers(prev => prev.map(d => d.id === updated.id ? updated : d));
+        setEditTarget(null);
+    };
 
     const handleDeleteConfirm = () => {
         if (!deleteTarget) return;
@@ -661,6 +832,13 @@ export function DriverProfiles() {
                                     {expandedId === driver.id ? <><ChevronUp size={17} />Hide</> : <><ChevronDown size={17} />Details</>}
                                 </button>
                                 <button
+                                    onClick={() => setEditTarget(driver)}
+                                    className="p-2 rounded-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                    title="Edit driver"
+                                >
+                                    <Pencil size={16} />
+                                </button>
+                                <button
                                     onClick={() => setDeleteTarget(driver)}
                                     className="p-2 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                                     title="Remove driver"
@@ -686,6 +864,15 @@ export function DriverProfiles() {
                 <RegisterDriverModal
                     onClose={() => setShowRegisterModal(false)}
                     onRegister={driver => setDrivers(prev => [driver, ...prev])}
+                />
+            )}
+
+            {/* ── Edit Driver Modal ── */}
+            {editTarget && (
+                <EditDriverModal
+                    driver={editTarget}
+                    onClose={() => setEditTarget(null)}
+                    onSave={handleEditSave}
                 />
             )}
 
