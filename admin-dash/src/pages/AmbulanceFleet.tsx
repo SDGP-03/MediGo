@@ -416,7 +416,11 @@ export function AmbulanceFleet() {
             <LineChart data={fuelData}>
               <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} dot={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
+              <Tooltip
+                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                labelStyle={{ color: '#000' }}
+                itemStyle={{ color: '#000' }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -436,7 +440,11 @@ export function AmbulanceFleet() {
             <BarChart data={distanceData}>
               <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
+              <Tooltip
+                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                labelStyle={{ color: '#000' }}
+                itemStyle={{ color: '#000' }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
