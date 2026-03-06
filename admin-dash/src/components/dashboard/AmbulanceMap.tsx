@@ -28,6 +28,7 @@ interface AmbulanceMapProps {
   ambulances: AmbulanceLocation[];
   activeTransfers?: any[];
   height?: string;
+  trackedDriverTrigger?: { id: string; timestamp: number } | null;
 }
 
 // Default center (Colombo, Sri Lanka)
@@ -56,7 +57,7 @@ const getMarkerColor = (status: string): string => {
   }
 };
 
-export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px' }: AmbulanceMapProps) {
+export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px', trackedDriverTrigger = null }: AmbulanceMapProps) {
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
@@ -97,6 +98,46 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       }
     );
   }, []);
+
+  // Listen for trackedDriverTrigger to center map and show route
+  useEffect(() => {
+    if (trackedDriverTrigger) {
+      const driver = driverLocations.find(d => d.id === trackedDriverTrigger.id);
+      if (driver) {
+        setSelectedDriver(driver);
+        setSelectedOfflineDriver(null);
+        setSelectedAmbulance(null);
+        setShowUserLocationInfo(false);
+        setShowTrackedDeviceInfo(false);
+
+        const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
+        if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
+          fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+        } else {
+          setDirections(null);
+        }
+
+        if (map) {
+          map.setCenter({ lat: driver.lat, lng: driver.lng });
+          map.setZoom(14);
+        }
+      } else {
+        const offlineDriver = offlineDrivers.find(d => d.id === trackedDriverTrigger.id);
+        if (offlineDriver) {
+          setSelectedOfflineDriver(offlineDriver);
+          setSelectedDriver(null);
+          setSelectedAmbulance(null);
+          setShowUserLocationInfo(false);
+          setShowTrackedDeviceInfo(false);
+          if (map) {
+            map.setCenter({ lat: offlineDriver.lat, lng: offlineDriver.lng });
+            map.setZoom(14);
+          }
+        }
+      }
+    }
+  }, [trackedDriverTrigger, driverLocations, offlineDrivers, activeTransfers, map, fetchDirections]);
+
   // Listen for location updates from external tracker app via BroadcastChannel
   useEffect(() => {
     // Try to load initial data from localStorage

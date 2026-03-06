@@ -12,6 +12,20 @@ export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+
+  const handleTrackLive = (transfer: any) => {
+    if (!transfer.driverId) {
+      alert("No driver assigned to this transfer yet.");
+      return;
+    }
+    setMapView("map");
+    setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() });
+
+    setTimeout(() => {
+      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // --- STATE: RESOURCE AVAILABILITY ---
   const [resources, setResources] = useState([
@@ -350,6 +364,7 @@ export function HospitalDashboard() {
               }))}
                 activeTransfers={dbActiveTransfers}
                 height="650px"
+                trackedDriverTrigger={trackedDriverTrigger}
               />
             )}
 
@@ -655,7 +670,10 @@ export function HospitalDashboard() {
                       </span>
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                  <button
+                    onClick={() => handleTrackLive(transfer)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
                     Track Live
                   </button>
                 </div>
