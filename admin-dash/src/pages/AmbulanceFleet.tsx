@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Ambulance, MapPin, User, Clock, Search, TrendingUp,
@@ -184,12 +184,23 @@ export function AmbulanceFleet() {
   const totalMileage = ambulances.reduce((sum, a) => sum + (a.mileage || 0), 0);
   const avgMileagePerAmbulance = ambulances.length > 0 ? Math.round(totalMileage / ambulances.length) : 0;
 
-  const distanceData = [
-    { day: 'Mon', value: avgMileagePerAmbulance * 0.4 }, { day: 'Tue', value: avgMileagePerAmbulance * 0.43 },
-    { day: 'Wed', value: avgMileagePerAmbulance * 0.46 }, { day: 'Thu', value: avgMileagePerAmbulance * 0.49 },
-    { day: 'Fri', value: avgMileagePerAmbulance * 0.53 }, { day: 'Sat', value: avgMileagePerAmbulance * 0.57 },
-    { day: 'Sun', value: avgMileagePerAmbulance * 0.42 },
-  ];
+  // bar chart: use the same real average for every day (no hard‑coded ratios)
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const distanceData = days.map(d => ({ day: d, value: avgMileagePerAmbulance }));
+
+  // ── Track previous total mileage for a realtime trend percentage ──
+  const [prevTotalMileage, setPrevTotalMileage] = useState<number>(0);
+  const [distanceTrend, setDistanceTrend] = useState<number>(0);
+  const [isDistanceImproving, setIsDistanceImproving] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (prevTotalMileage > 0) {
+      const change = ((totalMileage - prevTotalMileage) / prevTotalMileage) * 100;
+      setDistanceTrend(Math.abs(Math.round(change)));
+      setIsDistanceImproving(change >= 0);
+    }
+    setPrevTotalMileage(totalMileage);
+  }, [totalMileage, prevTotalMileage]);
 
   // ── Styling helpers ──
   const getStatusColor = (s: string) => {
@@ -415,9 +426,12 @@ export function AmbulanceFleet() {
               <h4 className="text-foreground font-semibold">Distance Travelled</h4>
               <p className="text-muted-foreground text-sm">Kilometers per day (avg)</p>
             </div>
-            <span className="flex items-center gap-1 text-teal-600 text-sm font-medium"><TrendingUp size={14} /> +8%</span>
+            <span className={`flex items-center gap-1 text-sm font-medium ${isDistanceImproving ? 'text-teal-600' : 'text-red-600'}`}>
+              <TrendingUp size={14} style={{ transform: isDistanceImproving ? 'rotate(0deg)' : 'rotate(180deg)' }} />
+              {isDistanceImproving ? '+' : '-'}{distanceTrend}%
+            </span>
           </div>
-          <div className="text-3xl font-bold text-foreground mb-4">{Math.round(avgMileagePerAmbulance * 0.49)}km</div>
+          <div className="text-3xl font-bold text-foreground mb-4">{avgMileagePerAmbulance.toLocaleString()} km</div>
           <ResponsiveContainer width="100%" height={110}>
             <BarChart data={distanceData}>
               <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
