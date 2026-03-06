@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
 import { useDriverLocations, DriverLocation } from '../../useDriverLocations';
 
@@ -26,6 +26,7 @@ interface TrackedDevice {
 
 interface AmbulanceMapProps {
   ambulances: AmbulanceLocation[];
+  activeTransfers?: any[];
   height?: string;
 }
 
@@ -55,7 +56,7 @@ const getMarkerColor = (status: string): string => {
   }
 };
 
-export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps) {
+export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px' }: AmbulanceMapProps) {
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
@@ -73,6 +74,29 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
   const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
+
+  // --- ADDED FOR MAP ROUTING ---
+  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+
+  const fetchDirections = useCallback((originLat: number, originLng: number, destLat: number, destLng: number) => {
+    if (typeof google === 'undefined') return;
+    const directionsService = new google.maps.DirectionsService();
+    directionsService.route(
+      {
+        origin: { lat: originLat, lng: originLng },
+        destination: { lat: destLat, lng: destLng },
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          setDirections(result);
+        } else {
+          console.error(`Error fetching directions: ${status}`);
+          setDirections(null);
+        }
+      }
+    );
+  }, []);
   // Listen for location updates from external tracker app via BroadcastChannel
   useEffect(() => {
     // Try to load initial data from localStorage
@@ -418,6 +442,21 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
           fullscreenControl: false,
         }}
       >
+        {/* --- ADDED FOR MAP ROUTING --- */}
+        {directions && (
+          <DirectionsRenderer
+            directions={directions}
+            options={{
+              suppressMarkers: true,
+              polylineOptions: {
+                strokeColor: "#3b82f6",
+                strokeWeight: 5,
+                strokeOpacity: 0.8,
+              },
+            }}
+          />
+        )}
+
         {ambulances.map((ambulance) => {
           const color = getMarkerColor(ambulance.status);
           const icon = getMarkerIcon(color);
@@ -541,6 +580,15 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
               setSelectedAmbulance(null);
               setShowUserLocationInfo(false);
               setShowTrackedDeviceInfo(false);
+
+              // --- ADDED FOR MAP ROUTING ---
+              const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
+              if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
+                fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+              } else {
+                setDirections(null);
+              }
+              // -----------------------------
             }}
           />
         ))}
@@ -549,7 +597,10 @@ export function AmbulanceMap({ ambulances, height = '384px' }: AmbulanceMapProps
         {selectedDriver && (
           <InfoWindow
             position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
-            onCloseClick={() => setSelectedDriver(null)}
+            onCloseClick={() => {
+              setSelectedDriver(null);
+              setDirections(null); // Clear route when closed
+            }}
           >
             <div className="p-2">
               <h3 className="font-semibold text-green-600 mb-1 flex items-center gap-1">

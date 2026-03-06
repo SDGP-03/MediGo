@@ -69,6 +69,12 @@ export function HospitalDashboard() {
           requestedBy: 'System',
           time: formatTimeAgo(value.createdAt),
 
+          // --- ADDED FOR MAP ROUTING ---
+          driverId: value.driverId,
+          destLat: value.destination?.lat,
+          destLng: value.destination?.lng,
+          // -----------------------------
+
           ambulance: value.ambulanceId || 'Pending',
           driver: value.driverId || 'Unknown',
           attendant: value.attendant || 'N/A',
@@ -342,6 +348,7 @@ export function HospitalDashboard() {
                 lat: amb.lat,
                 lng: amb.lng,
               }))}
+                activeTransfers={dbActiveTransfers}
                 height="650px"
               />
             )}
@@ -722,9 +729,14 @@ export function HospitalDashboard() {
                       {request.requestedBy}
                     </span>
                   </p>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                    Assign Ambulance
-                  </button>
+                  <div className='flex item-center gap-4'>
+                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                      View Driver
+                    </button>
+                    <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
