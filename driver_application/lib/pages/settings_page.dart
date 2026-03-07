@@ -594,18 +594,18 @@ class _SettingsPageState extends State<SettingsPage> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text(t('Logout', 'à¶‰à·€à¶­à·Š à·€à·“à¶¸', 'à®µà¯†à®³à®¿à®¯à¯‡à®±à¯à®¤à®²à¯')),
+                  title: Text(t('Logout', 'ඉවත් වීම', 'வெளியேறுதல்')),
                   content: Text(
                     t(
                       'Are you sure you want to logout?',
-                      'à¶”à¶¶à¶§ à¶‰à·€à¶­à·Š à·€à·™à¶±à·Šà¶± à¶•à¶±à·™à¶¯?',
+                      'ඔබට ඉවත් වෙන්න ඕනෙද?',
                       'நீங்கள் வெளியேற விரும்புகிறீர்களா?',
                     ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text(t('Cancel', 'à¶…à·€à¶½à¶‚à¶œà·” à¶šà¶»à¶±à·Šà¶±', 'à®°à®¤à¯à®¤à¯ à®šà¯†à®¯à¯')),
+                      child: Text(t('Cancel', 'අවලංගු කරන්න', 'ரத்து செய்')),
                     ),
                     TextButton(
                       onPressed: () {
@@ -613,7 +613,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         logout();
                       },
                       child: Text(
-                        t('Logout', 'à¶‰à·€à¶­à·Š à·€à¶±à·Šà¶±', 'à®µà¯†à®³à®¿à®¯à¯‡à®±à¯'),
+                        t('Logout', 'ඉවත් වන්න', 'வெளியேறு'),
                         style: TextStyle(color: Colors.red),
                       ),
                     ),

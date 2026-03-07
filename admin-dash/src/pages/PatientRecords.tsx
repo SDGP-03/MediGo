@@ -1,182 +1,590 @@
-import { useState } from 'react';
+
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText } from 'lucide-react';
+import { database } from '../firebase';
+import { off, onValue, push, ref, set, update } from 'firebase/database';
+
+interface PatientTransfer {
+  date: string;
+  from: string;
+  to: string;
+  reason: string;
+  status: string;
+}
+
+interface VitalSigns {
+  bp: string;
+  heartRate: string;
+  temperature: string;
+  oxygen: string;
+}
+
+interface PatientDocument {
+  name: string;
+  size: number;
+  type: string;
+  data: string;
+  uploadedAt: number;
+}
+
+interface PatientRecord {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  bloodGroup: string;
+  allergies: string;
+  medicalHistory: string;
+  medications: string[];
+  vitalSigns: VitalSigns;
+  recentTransfers: PatientTransfer[];
+  documents: PatientDocument[];
+}
+
+interface TransferRequestRecord {
+  createdAt?: number;
+  status?: string;
+  reason?: string;
+  patient?: {
+    name?: string;
+    age?: number | string;
+    gender?: string;
+    id?: string;
+    bloodGroup?: string;
+    allergies?: string;
+    medicalHistory?: string;
+    currentCondition?: string;
+    vitalSigns?: string;
+  };
+  pickup?: {
+    hospitalName?: string;
+  };
+  destination?: {
+    hospitalName?: string;
+  };
+}
+
+type PatientOverrides = Record<string, Partial<PatientRecord>>;
+
+const EMPTY_VITALS: VitalSigns = {
+  bp: 'Not recorded',
+  heartRate: 'Not recorded',
+  temperature: 'Not recorded',
+  oxygen: 'Not recorded',
+};
+
+const sanitizeKey = (value: string) => value.replace(/[.#$/[\]]/g, '_');
+
+const normalizeNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatDate = (timestamp?: number): string => {
+  if (!timestamp) return 'Unknown';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toISOString().slice(0, 10);
+};
+
+const statusLabel = (status?: string): string => {
+  if (!status) return 'Pending';
+  return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+};
+
+const toDocumentsArray = (value: unknown): PatientDocument[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value as PatientDocument[];
+  return Object.values(value as Record<string, PatientDocument>);
+};
+
+const toAscii = (value: string) => value.replace(/[^\x20-\x7E]/g, '?');
+const escapePdfText = (value: string) => toAscii(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+const HOSPITAL_OPTIONS = [
+  'Central Medical Center',
+  'Specialist Care Hospital',
+  'Regional Base Hospital',
+  'Teaching Hospital East',
+  'Metro Hospital',
+];
+
+const wrapText = (text: string, maxChars = 80): string[] => {
+  const cleaned = toAscii(text || '');
+  if (!cleaned) return ['-'];
+  const words = cleaned.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  words.forEach((word) => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > maxChars) {
+      lines.push(line || word);
+      line = line ? word : '';
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) lines.push(line);
+  return lines;
+};
+
+const loadJpegHexFromPath = async (path: string, maxSize = 42): Promise<{ hex: string; width: number; height: number } | null> => {
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Failed to load image ${path}`));
+      img.src = path;
+    });
+
+    const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = window.document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(image, 0, 0, width, height);
+    const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    const base64 = jpegDataUrl.split(',')[1];
+    if (!base64) return null;
+    const binary = window.atob(base64);
+
+    let hex = '';
+    for (let i = 0; i < binary.length; i += 1) {
+      hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
+    }
+    hex += '>';
+    return { hex, width, height };
+  } catch {
+    return null;
+  }
+};
+
+const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
+  const logo = await loadJpegHexFromPath('/MediGo-icon.PNG');
+  const now = new Date();
+  const generatedAt = now.toLocaleString();
+
+  let content = '';
+  content += '0.95 0.96 0.98 rg 0 730 612 62 re f\n';
+  content += '0.80 0.11 0.11 rg 0 726 612 6 re f\n';
+
+  if (logo) {
+    content += `q ${logo.width} 0 0 ${logo.height} 42 742 cm /Im1 Do Q\n`;
+    content += `q 18 0 0 18 556 746 cm /Im1 Do Q\n`;
+  }
+
+  content += '0.07 0.10 0.18 rg\n';
+  content += 'BT /F2 20 Tf 95 764 Td (MediGo Patient Medical Report) Tj ET\n';
+  content += '0.16 0.16 0.16 rg\n';
+  content += `BT /F1 10 Tf 95 748 Td (Generated: ${escapePdfText(generatedAt)}) Tj ET\n`;
+
+  content += '0.3 0.3 0.3 RG 1 w 40 615 532 95 re S\n';
+  content += '40 645 m 572 645 l S\n';
+  content += '305 615 m 305 710 l S\n';
+
+  content += '0.08 0.08 0.08 rg\n';
+  content += `BT /F2 10 Tf 50 692 Td (Patient ID) Tj ET\n`;
+  content += `BT /F1 10 Tf 50 677 Td (${escapePdfText(patient.id)}) Tj ET\n`;
+  content += `BT /F2 10 Tf 50 662 Td (Name) Tj ET\n`;
+  content += `BT /F1 10 Tf 50 647 Td (${escapePdfText(patient.name)}) Tj ET\n`;
+
+  content += `BT /F2 10 Tf 315 692 Td (Age / Gender) Tj ET\n`;
+  content += `BT /F1 10 Tf 315 677 Td (${escapePdfText(`${patient.age} / ${patient.gender}`)}) Tj ET\n`;
+  content += `BT /F2 10 Tf 315 662 Td (Blood Group / Allergies) Tj ET\n`;
+  content += `BT /F1 10 Tf 315 647 Td (${escapePdfText(`${patient.bloodGroup} / ${patient.allergies || 'None'}`)}) Tj ET\n`;
+
+  let y = 596;
+  const sectionTitle = (title: string) => {
+    content += `0.90 0.93 0.98 rg 40 ${y - 4} 532 20 re f\n`;
+    content += '0.08 0.08 0.08 rg\n';
+    content += `BT /F2 11 Tf 46 ${y + 2} Td (${escapePdfText(title)}) Tj ET\n`;
+    y -= 24;
+  };
+
+  const writeLines = (lines: string[], font = '/F1', size = 10) => {
+    content += '0.08 0.08 0.08 rg\n';
+    lines.forEach((line) => {
+      if (y < 40) return;
+      content += `BT ${font} ${size} Tf 48 ${y} Td (${escapePdfText(line)}) Tj ET\n`;
+      y -= 14;
+    });
+  };
+
+  sectionTitle('Vital Signs');
+  writeLines([
+    `Blood Pressure: ${patient.vitalSigns.bp}`,
+    `Heart Rate: ${patient.vitalSigns.heartRate} bpm`,
+    `Temperature: ${patient.vitalSigns.temperature}`,
+    `Oxygen Saturation: ${patient.vitalSigns.oxygen}`,
+  ]);
+
+  y -= 4;
+  sectionTitle('Medical History');
+  writeLines(wrapText(patient.medicalHistory || 'No history available.', 92));
+
+  y -= 4;
+  sectionTitle('Current Medications');
+  writeLines(
+    patient.medications.length > 0
+      ? patient.medications.map((med) => `- ${med}`)
+      : ['- None recorded'],
+  );
+
+  y -= 4;
+  sectionTitle('Recent Transfers');
+  if (patient.recentTransfers.length === 0) {
+    writeLines(['- No transfer records']);
+  } else {
+    patient.recentTransfers.slice(0, 8).forEach((transfer, index) => {
+      writeLines([
+        `${index + 1}. ${transfer.date} | ${transfer.status}`,
+        `   ${transfer.from} -> ${transfer.to}`,
+        ...wrapText(`   Reason: ${transfer.reason}`, 90),
+      ]);
+    });
+  }
+
+  content += '0.45 0.45 0.45 rg BT /F1 8 Tf 40 20 Td (Generated by MediGo Admin Dashboard) Tj ET\n';
+
+  const objects: string[] = [];
+  const imageObjectIndex = logo ? 7 : null;
+  const xObjectPart = logo ? `/XObject << /Im1 ${imageObjectIndex} 0 R >>` : '';
+
+  objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  objects.push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+  objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> ${xObjectPart} >> /Contents 6 0 R >>\nendobj\n`);
+  objects.push('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
+  objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n');
+  objects.push(`6 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`);
+  if (logo && imageObjectIndex) {
+    objects.push(
+      `${imageObjectIndex} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter [/ASCIIHexDecode /DCTDecode] /Length ${logo.hex.length} >>\nstream\n${logo.hex}\nendstream\nendobj\n`,
+    );
+  }
+
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((object) => {
+    offsets.push(pdf.length);
+    pdf += object;
+  });
+
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i += 1) {
+    pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return new Blob([pdf], { type: 'application/pdf' });
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to convert report to data URL'));
+    reader.readAsDataURL(blob);
+  });
+
+const mergePatients = (
+  transferRequests: Record<string, TransferRequestRecord>,
+  overrides: PatientOverrides,
+): PatientRecord[] => {
+  const byPatientId: Record<string, PatientRecord> = {};
+
+  Object.values(transferRequests).forEach((request) => {
+    if (!request?.patient) return;
+
+    const id = request.patient.id || `REQ-${request.createdAt ?? Date.now()}`;
+    if (!byPatientId[id]) {
+      byPatientId[id] = {
+        id,
+        name: request.patient.name || 'Unknown Patient',
+        age: normalizeNumber(request.patient.age),
+        gender: request.patient.gender || 'Unknown',
+        bloodGroup: request.patient.bloodGroup || 'Unknown',
+        allergies: request.patient.allergies || 'None',
+        medicalHistory: request.patient.medicalHistory || 'No history available.',
+        medications: [],
+        vitalSigns: {
+          ...EMPTY_VITALS,
+          temperature: request.patient.vitalSigns || EMPTY_VITALS.temperature,
+        },
+        recentTransfers: [],
+        documents: [],
+      };
+    }
+
+    byPatientId[id].recentTransfers.push({
+      date: formatDate(request.createdAt),
+      from: request.pickup?.hospitalName || 'Unknown',
+      to: request.destination?.hospitalName || 'Unknown',
+      reason: request.reason || 'Not specified',
+      status: statusLabel(request.status),
+    });
+  });
+
+  Object.entries(byPatientId).forEach(([id, patient]) => {
+    patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
+    const override = overrides[id] || overrides[sanitizeKey(id)] || {};
+    byPatientId[id] = {
+      ...patient,
+      ...override,
+      medications: Array.isArray(override.medications) ? override.medications : patient.medications,
+      recentTransfers: Array.isArray(override.recentTransfers) ? override.recentTransfers : patient.recentTransfers,
+      vitalSigns: { ...patient.vitalSigns, ...(override.vitalSigns || {}) },
+      documents: toDocumentsArray(override.documents),
+    };
+  });
+
+  return Object.values(byPatientId).sort((a, b) => a.name.localeCompare(b.name));
+};
 
 export function PatientRecords() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: any[] }>(() => {
-    const stored = localStorage.getItem('patientFiles');
-    return stored ? JSON.parse(stored) : {};
-  });
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>({});
+  const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editedPatient, setEditedPatient] = useState<any>(null);
+  const [editedPatient, setEditedPatient] = useState<PatientRecord | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [selectedHospital, setSelectedHospital] = useState('');
   const [newMedication, setNewMedication] = useState('');
   const [newTransfer, setNewTransfer] = useState({
     date: '',
     from: '',
     to: '',
     reason: '',
-    status: 'In Progress'
+    status: 'In Progress',
   });
-  const patients = [
-    {
-      id: 'PT-20251',
-      name: 'Sarah Johnson',
-      age: 45,
-      gender: 'Female',
-      bloodGroup: 'A+',
-      allergies: 'Penicillin',
-      medicalHistory: 'Hypertension, Diabetes Type 2',
-      recentTransfers: [
-        {
-          date: '2025-11-20',
-          from: 'City General Hospital',
-          to: 'Central Medical Center',
-          reason: 'Cardiac Emergency',
-          status: 'Completed',
-        },
-      ],
-      vitalSigns: {
-        bp: '140/90',
-        heartRate: '82',
-        temperature: '98.6°F',
-        oxygen: '96%',
-      },
-      medications: ['Metformin 500mg', 'Lisinopril 10mg', 'Aspirin 81mg'],
-    },
-    {
-      id: 'PT-20252',
-      name: 'David Miller',
-      age: 62,
-      gender: 'Male',
-      bloodGroup: 'O+',
-      allergies: 'None',
-      medicalHistory: 'Coronary Artery Disease, Previous MI',
-      recentTransfers: [
-        {
-          date: '2025-11-21',
-          from: 'Divisional Hospital North',
-          to: 'City General Hospital',
-          reason: 'Chest Pain',
-          status: 'In Progress',
-        },
-      ],
-      vitalSigns: {
-        bp: '155/95',
-        heartRate: '95',
-        temperature: '98.4°F',
-        oxygen: '94%',
-      },
-      medications: ['Atorvastatin 40mg', 'Clopidogrel 75mg', 'Metoprolol 50mg'],
-    },
-    {
-      id: 'PT-20253',
-      name: 'Emma Davis',
-      age: 28,
-      gender: 'Female',
-      bloodGroup: 'B+',
-      allergies: 'Latex, Shellfish',
-      medicalHistory: 'Asthma, Seasonal Allergies',
-      recentTransfers: [],
-      vitalSigns: {
-        bp: '118/75',
-        heartRate: '72',
-        temperature: '98.2°F',
-        oxygen: '98%',
-      },
-      medications: ['Albuterol Inhaler', 'Fluticasone Nasal Spray'],
-    },
-  ];
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.id.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    const transferRef = ref(database, 'transfer_requests');
+    const recordsRef = ref(database, 'patient_records');
+
+    const handleTransferData = (snapshot: any) => {
+      setTransferRequests(snapshot.val() || {});
+      setIsLoading(false);
+    };
+
+    const handleRecordData = (snapshot: any) => {
+      setPatientOverrides(snapshot.val() || {});
+    };
+
+    const handleError = (error: any) => {
+      console.error('Patient records load error:', error);
+      setLoadError('Failed to load patient records.');
+      setIsLoading(false);
+    };
+
+    onValue(transferRef, handleTransferData, handleError);
+    onValue(recordsRef, handleRecordData, handleError);
+
+    return () => {
+      off(transferRef);
+      off(recordsRef);
+    };
+  }, []);
+
+  const patients = useMemo(
+    () => mergePatients(transferRequests, patientOverrides),
+    [transferRequests, patientOverrides],
   );
 
-  // File upload handler with localStorage persistence
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>, patientId: string) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setIsUploading(true); // Start loading state
-      const newFiles = Array.from(files);
+  const filteredPatients = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return patients;
+    return patients.filter(
+      (patient) =>
+        patient.name.toLowerCase().includes(term) ||
+        patient.id.toLowerCase().includes(term),
+    );
+  }, [patients, searchTerm]);
 
-      // File size validation (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      const oversizedFiles = newFiles.filter(file => file.size > maxSize);
+  const selectedPatient = useMemo(
+    () => patients.find((patient) => patient.id === selectedPatientId) || null,
+    [patients, selectedPatientId],
+  );
 
-      if (oversizedFiles.length > 0) {
-        alert(`Some files are too large (max 5MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
-        setIsUploading(false); // Stop loading
-        return;
-      }
+  useEffect(() => {
+    if (!selectedPatientId) return;
+    const stillExists = patients.some((patient) => patient.id === selectedPatientId);
+    if (!stillExists) {
+      setSelectedPatientId(null);
+      setIsEditing(false);
+      setEditedPatient(null);
+    }
+  }, [patients, selectedPatientId]);
 
-      // Convert files to base64 for storage
-      const filePromises = newFiles.map(file => {
-        return new Promise<{ name: string, size: number, type: string, data: string }>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            resolve({
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              data: e.target?.result as string
-            });
-          };
-          reader.readAsDataURL(file);
-        });
+  const savePatient = async (record: PatientRecord) => {
+    const key = sanitizeKey(record.id);
+    setIsSaving(true);
+    try {
+      await update(ref(database, `patient_records/${key}`), {
+        id: record.id,
+        name: record.name,
+        age: record.age,
+        gender: record.gender,
+        bloodGroup: record.bloodGroup,
+        allergies: record.allergies,
+        medicalHistory: record.medicalHistory,
+        medications: record.medications,
+        vitalSigns: record.vitalSigns,
+        recentTransfers: record.recentTransfers,
+        documents: record.documents || [],
       });
-
-      Promise.all(filePromises).then(fileData => {
-        // Get existing files from localStorage
-        const stored = localStorage.getItem('patientFiles');
-        const existingFiles = stored ? JSON.parse(stored) : {};
-
-        // Add new files to existing files for this patient
-        const updatedFiles = {
-          ...existingFiles,
-          [patientId]: [...(existingFiles[patientId] || []), ...fileData]
-        };
-
-        // Save to localStorage (persistent storage)
-        localStorage.setItem('patientFiles', JSON.stringify(updatedFiles));
-
-        // Update React state (for immediate UI update)
-        setUploadedFiles(prev => ({
-          ...prev,
-          [patientId]: [...(prev[patientId] || []), ...fileData.map(fd => ({
-            name: fd.name,
-            size: fd.size,
-            type: fd.type,
-            data: fd.data
-          } as any))]
-        }));
-
-        setIsUploading(false); // Stop loading state
-      });
+      setIsEditing(false);
+      setEditedPatient(null);
+    } finally {
+      setIsSaving(false);
     }
   };
-  // File removal handler
-  const handleFileRemove = (patientId: string, fileIndex: number) => {
-    setUploadedFiles(prev => {
-      const updatedFiles = {
-        ...prev,
-        [patientId]: prev[patientId].filter((_, index) => index !== fileIndex)
+
+  const handleSaveChanges = async () => {
+    if (!editedPatient) return;
+    try {
+      await savePatient(editedPatient);
+    } catch (error) {
+      console.error('Failed to save patient record:', error);
+      alert('Failed to save patient changes. Please try again.');
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, patient: PatientRecord) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxSize = 5 * 1024 * 1024;
+    const selectedFiles = Array.from(files);
+    const oversized = selectedFiles.filter((file) => file.size > maxSize);
+
+    if (oversized.length > 0) {
+      alert(`Some files are too large (max 5MB): ${oversized.map((file) => file.name).join(', ')}`);
+      event.target.value = '';
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const encodedFiles = await Promise.all(
+        selectedFiles.map(
+          (file) =>
+            new Promise<PatientDocument>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (loadEvent) => {
+                resolve({
+                  name: file.name,
+                  size: file.size,
+                  type: file.type || 'Unknown type',
+                  data: String(loadEvent.target?.result || ''),
+                  uploadedAt: Date.now(),
+                });
+              };
+              reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+              reader.readAsDataURL(file);
+            }),
+        ),
+      );
+
+      const updatedRecord: PatientRecord = {
+        ...patient,
+        documents: [...(patient.documents || []), ...encodedFiles],
       };
-      localStorage.setItem('patientFiles', JSON.stringify(updatedFiles));
-      return updatedFiles;
-    });
+      await savePatient(updatedRecord);
+    } catch (error) {
+      console.error('Failed to upload files:', error);
+      alert('File upload failed. Please try again.');
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleFileRemove = async (patient: PatientRecord, fileIndex: number) => {
+    const updatedRecord: PatientRecord = {
+      ...patient,
+      documents: patient.documents.filter((_, index) => index !== fileIndex),
+    };
+
+    try {
+      await savePatient(updatedRecord);
+    } catch (error) {
+      console.error('Failed to remove file:', error);
+      alert('Failed to remove file. Please try again.');
+    }
+  };
+
+  const downloadPatientReportPdf = async (patient: PatientRecord) => {
+    const pdfBlob = await createStyledPdfBlob(patient);
+    const url = URL.createObjectURL(pdfBlob);
+    const link = window.document.createElement('a');
+    link.href = url;
+    link.download = `${sanitizeKey(patient.id)}-report.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const sendPatientReportToHospital = async (patient: PatientRecord) => {
+    if (!selectedHospital) {
+      alert('Please select a destination hospital first.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const pdfBlob = await createStyledPdfBlob(patient);
+      const reportData = await blobToDataUrl(pdfBlob);
+      const reportRef = push(ref(database, 'hospital_reports'));
+
+      await set(reportRef, {
+        id: reportRef.key,
+        destinationHospital: selectedHospital,
+        createdAt: Date.now(),
+        status: 'sent',
+        reportType: 'patient_medical_report',
+        fileName: `${sanitizeKey(patient.id)}-report.pdf`,
+        fileType: 'application/pdf',
+        reportData,
+        patient: {
+          id: patient.id,
+          name: patient.name,
+          age: patient.age,
+          gender: patient.gender,
+          bloodGroup: patient.bloodGroup,
+        },
+        summary: {
+          transferCount: patient.recentTransfers.length,
+          medicationsCount: patient.medications.length,
+        },
+      });
+
+      alert(`Report sent to ${selectedHospital} successfully.`);
+    } catch (error) {
+      console.error('Failed to send report:', error);
+      alert('Failed to send report to hospital. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <h2 className="text-foreground mb-4">Centralized Patient Records</h2>
         <p className="text-muted-foreground mb-4">
-          Search by name or ID to view complete medical histories, vital signs, and transfer records across all facilities.
+          Search by name or ID to view complete medical histories, vital signs, and transfer records across facilities.
         </p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -184,491 +592,551 @@ export function PatientRecords() {
             type="text"
             placeholder="Search by patient name or ID..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="w-full pl-10 pr-10 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Clear search">
-              ✕
+              aria-label="Clear search"
+            >
+              x
             </button>
           )}
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Patient List */}
-        <div className={`lg:col-span-1 ${!selectedPatient ? 'lg:col-span-3' : ''} transition-all duration-300`}>
-          <div className="bg-card rounded-lg shadow-sm border border-border">
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center justify-between">
-                <h3 className="text-foreground">Patient List</h3>
-                <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-                  {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
-                </span>
+      {isLoading && (
+        <div className="bg-card rounded-lg border border-border p-8 text-center">
+          <Loader2 className="mx-auto mb-3 animate-spin text-red-600" size={28} />
+          <p className="text-muted-foreground">Loading patient records...</p>
+        </div>
+      )}
+
+      {!isLoading && loadError && (
+        <div className="bg-card rounded-lg border border-red-200 p-6 text-center">
+          <AlertCircle className="mx-auto text-red-600 mb-2" />
+          <p className="text-red-600">{loadError}</p>
+        </div>
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className={`lg:col-span-1 ${!selectedPatient ? 'lg:col-span-3' : ''} transition-all duration-300`}>
+            <div className="bg-card rounded-lg shadow-sm border border-border">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-foreground">Patient List</h3>
+                  <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
+                    {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
+                  </span>
+                </div>
+              </div>
+
+              <div className={`divide-y divide-border overflow-y-auto ${selectedPatient ? 'max-h-[600px]' : ''}`}>
+                {filteredPatients.length > 0 ? (
+                  <div className={`${!selectedPatient ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4' : ''}`}>
+                    {filteredPatients.map((patient) => (
+                      <button
+                        key={patient.id}
+                        onClick={() => {
+                          setSelectedPatientId(patient.id);
+                          setIsEditing(false);
+                          setEditedPatient(null);
+                        }}
+                        className={`w-full p-4 text-left hover:bg-accent transition-colors border rounded-lg ${
+                          selectedPatient?.id === patient.id
+                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
+                            : 'border-transparent hover:border-border'
+                        } ${!selectedPatient ? 'border-border' : ''}`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
+                            <User className="text-red-600" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-foreground font-medium">{patient.name}</p>
+                            <p className="text-muted-foreground text-sm">{patient.id}</p>
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground text-sm mt-2">
+                          {patient.age} yrs - {patient.gender} - {patient.bloodGroup}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <AlertCircle className="mx-auto text-muted-foreground mb-3" size={40} />
+                    <p className="text-foreground font-medium mb-1">No matches found</p>
+                    <p className="text-muted-foreground text-sm">
+                      {searchTerm ? `No patients match "${searchTerm}"` : 'No patients available'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-            <div className={`divide-y divide-border overflow-y-auto ${selectedPatient ? 'max-h-[600px]' : ''}`}>
-              {filteredPatients.length > 0 ? (
-                <div className={`${!selectedPatient ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4' : ''}`}>
-                  {filteredPatients.map((patient) => (
-                    <button
-                      key={patient.id}
-                      onClick={() => setSelectedPatient(patient)}
-                      className={`w-full p-4 text-left hover:bg-accent transition-colors border rounded-lg ${selectedPatient?.id === patient.id
-                        ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
-                        : 'border-transparent hover:border-border'
-                        } ${!selectedPatient ? 'border-border' : ''}`}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
-                          <User className="text-red-600" size={20} />
-                        </div>
-                        <div>
-                          <p className="text-foreground font-medium">{patient.name}</p>
-                          <p className="text-muted-foreground text-sm">{patient.id}</p>
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground text-sm mt-2">
-                        {patient.age} yrs • {patient.gender} • {patient.bloodGroup}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <AlertCircle className="mx-auto text-muted-foreground mb-3" size={40} />
-                  <p className="text-foreground font-medium mb-1">No matches found</p>
-                  <p className="text-muted-foreground text-sm">
-                    {searchTerm ? `No patients match "${searchTerm}"` : 'No patients available'}
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
-        </div>
 
-        {/* Patient Details */}
-        {selectedPatient && (
-          <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            {/* Patient Header */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-4">
-                  <button
-                    onClick={() => setSelectedPatient(null)}
-                    className="p-2 -ml-2 hover:bg-accent rounded-lg text-muted-foreground lg:hidden"
-                  >
-                    <span className="sr-only">Back to list</span>
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-foreground mb-1 font-bold text-xl">{selectedPatient.name}</h2>
-                      <button
-                        onClick={() => setSelectedPatient(null)}
-                        className="text-xs text-blue-600 hover:text-blue-800 underline hidden lg:block"
+          {selectedPatient && (
+            <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start gap-4">
+                    <button
+                      onClick={() => setSelectedPatientId(null)}
+                      className="p-2 -ml-2 hover:bg-accent rounded-lg text-muted-foreground lg:hidden"
+                    >
+                      <span className="sr-only">Back to list</span>
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h2 className="text-foreground mb-1 font-bold text-xl">{selectedPatient.name}</h2>
+                        <button
+                          onClick={() => setSelectedPatientId(null)}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline hidden lg:block"
+                        >
+                          Back to List
+                        </button>
+                      </div>
+                      <p className="text-muted-foreground">{selectedPatient.id}</p>
+                    </div>
+                  </div>
+
+                  {!isEditing ? (
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedHospital}
+                        onChange={(event) => setSelectedHospital(event.target.value)}
+                        className="px-3 py-2 bg-input-field-bg border border-input rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        Back to List
+                        <option value="">Select hospital</option>
+                        {HOSPITAL_OPTIONS.map((hospital) => (
+                          <option key={hospital} value={hospital}>
+                            {hospital}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => sendPatientReportToHospital(selectedPatient)}
+                        disabled={isSending || !selectedHospital}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isSending ? 'Sending...' : 'Send Report'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await downloadPatientReportPdf(selectedPatient);
+                          } catch (error) {
+                            console.error('Failed to download report:', error);
+                            alert('Failed to download PDF report. Please try again.');
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm inline-flex items-center gap-2"
+                      >
+                        <FileText size={16} />
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditing(true);
+                          setEditedPatient({
+                            ...selectedPatient,
+                            medications: [...selectedPatient.medications],
+                            recentTransfers: [...selectedPatient.recentTransfers],
+                            documents: [...selectedPatient.documents],
+                          });
+                        }}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Edit Record
                       </button>
                     </div>
-                    <p className="text-muted-foreground">{selectedPatient.id}</p>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveChanges}
+                        disabled={isSaving}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-70"
+                      >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditedPatient(null);
+                        }}
+                        className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6 pt-6 border-t border-border">
+                  <div>
+                    <p className="text-muted-foreground mb-1">Age</p>
+                    {isEditing && editedPatient ? (
+                      <input
+                        type="number"
+                        value={editedPatient.age}
+                        onChange={(event) =>
+                          setEditedPatient({ ...editedPatient, age: normalizeNumber(event.target.value) })
+                        }
+                        className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
+                      />
+                    ) : (
+                      <p className="text-foreground font-medium">{selectedPatient.age} years</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground mb-1">Gender</p>
+                    {isEditing && editedPatient ? (
+                      <select
+                        value={editedPatient.gender}
+                        onChange={(event) => setEditedPatient({ ...editedPatient, gender: event.target.value })}
+                        className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      >
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                      </select>
+                    ) : (
+                      <p className="text-foreground font-medium">{selectedPatient.gender}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground mb-1">Blood Group</p>
+                    {isEditing && editedPatient ? (
+                      <select
+                        value={editedPatient.bloodGroup}
+                        onChange={(event) => setEditedPatient({ ...editedPatient, bloodGroup: event.target.value })}
+                        className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
+                      >
+                        <option>A+</option>
+                        <option>A-</option>
+                        <option>B+</option>
+                        <option>B-</option>
+                        <option>AB+</option>
+                        <option>AB-</option>
+                        <option>O+</option>
+                        <option>O-</option>
+                      </select>
+                    ) : (
+                      <p className="text-foreground font-medium">{selectedPatient.bloodGroup}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground mb-1">Allergies</p>
+                    {isEditing && editedPatient ? (
+                      <input
+                        type="text"
+                        value={editedPatient.allergies}
+                        onChange={(event) => setEditedPatient({ ...editedPatient, allergies: event.target.value })}
+                        className="text-red-600 bg-input-field-bg border border-input rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
+                      />
+                    ) : (
+                      <p className="text-red-600 font-medium">{selectedPatient.allergies}</p>
+                    )}
                   </div>
                 </div>
-                {!isEditing ? (
-                  <button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setEditedPatient({ ...selectedPatient });
-                    }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Edit Record
-                  </button>
+              </div>
+
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-4 font-semibold">Current Vital Signs</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                    <p className="text-blue-600 dark:text-blue-400 text-sm mb-1 font-medium">Blood Pressure</p>
+                    <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.bp}</p>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
+                    <p className="text-green-600 dark:text-green-400 text-sm mb-1 font-medium">Heart Rate</p>
+                    <p className="text-foreground text-lg font-bold">
+                      {selectedPatient.vitalSigns.heartRate}{' '}
+                      <span className="text-sm font-normal text-muted-foreground">bpm</span>
+                    </p>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
+                    <p className="text-orange-600 dark:text-orange-400 text-sm mb-1 font-medium">Temperature</p>
+                    <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.temperature}</p>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800">
+                    <p className="text-purple-600 dark:text-purple-400 text-sm mb-1 font-medium">Oxygen Sat.</p>
+                    <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.oxygen}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-4 font-semibold">Medical History</h3>
+                {isEditing && editedPatient ? (
+                  <textarea
+                    value={editedPatient.medicalHistory}
+                    onChange={(event) => setEditedPatient({ ...editedPatient, medicalHistory: event.target.value })}
+                    className="w-full text-foreground bg-input-field-bg border border-input rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
+                  />
                 ) : (
+                  <p className="text-foreground leading-relaxed">{selectedPatient.medicalHistory}</p>
+                )}
+              </div>
+
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-4 font-semibold">Current Medications</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {(isEditing && editedPatient ? editedPatient.medications : selectedPatient.medications).map((medication, index) => (
+                    <div key={`${medication}-${index}`} className="flex items-center gap-2 px-3 py-2 bg-secondary/50 border border-border rounded-lg group">
+                      <div className="w-2 h-2 bg-red-600 rounded-full" />
+                      <span className="text-foreground font-medium">{medication}</span>
+                      {isEditing && editedPatient && (
+                        <button
+                          onClick={() => {
+                            const nextMeds = editedPatient.medications.filter((_, medIndex) => medIndex !== index);
+                            setEditedPatient({ ...editedPatient, medications: nextMeds });
+                          }}
+                          className="ml-2 text-muted-foreground hover:text-red-600"
+                        >
+                          x
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {isEditing && editedPatient && (
                   <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMedication}
+                      onChange={(event) => setNewMedication(event.target.value)}
+                      placeholder="Add new medication..."
+                      className="flex-1 border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && newMedication.trim()) {
+                          setEditedPatient({
+                            ...editedPatient,
+                            medications: [...editedPatient.medications, newMedication.trim()],
+                          });
+                          setNewMedication('');
+                        }
+                      }}
+                    />
                     <button
                       onClick={() => {
-                        // Save changes
-                        setSelectedPatient(editedPatient);
-                        setIsEditing(false);
-                        alert('Changes saved! (In production, this would update the database)');
+                        if (!newMedication.trim()) return;
+                        setEditedPatient({
+                          ...editedPatient,
+                          medications: [...editedPatient.medications, newMedication.trim()],
+                        });
+                        setNewMedication('');
                       }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
                     >
-                      Save Changes
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setEditedPatient(null);
-                      }}
-                      className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-colors text-sm"
-                    >
-                      Cancel
+                      Add
                     </button>
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-6 pt-6 border-t border-border">
-                <div>
-                  <p className="text-muted-foreground mb-1">Age</p>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedPatient.age}
-                      onChange={(e) => setEditedPatient({ ...editedPatient, age: parseInt(e.target.value) })}
-                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
-                    />
-                  ) : (
-                    <p className="text-foreground font-medium">{selectedPatient.age} years</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Gender</p>
-                  {isEditing ? (
-                    <select
-                      value={editedPatient.gender}
-                      onChange={(e) => setEditedPatient({ ...editedPatient, gender: e.target.value })}
-                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
-                  ) : (
-                    <p className="text-foreground font-medium">{selectedPatient.gender}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Blood Group</p>
-                  {isEditing ? (
-                    <select
-                      value={editedPatient.bloodGroup}
-                      onChange={(e) => setEditedPatient({ ...editedPatient, bloodGroup: e.target.value })}
-                      className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      <option>A+</option>
-                      <option>A-</option>
-                      <option>B+</option>
-                      <option>B-</option>
-                      <option>AB+</option>
-                      <option>AB-</option>
-                      <option>O+</option>
-                      <option>O-</option>
-                    </select>
-                  ) : (
-                    <p className="text-foreground font-medium">{selectedPatient.bloodGroup}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Allergies</p>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedPatient.allergies}
-                      onChange={(e) => setEditedPatient({ ...editedPatient, allergies: e.target.value })}
-                      className="text-red-600 bg-input-field-bg border border-input rounded px-2 py-1 w-full focus:ring-2 focus:ring-red-500 outline-none"
-                    />
-                  ) : (
-                    <p className="text-red-600 font-medium">{selectedPatient.allergies}</p>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Vital Signs */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-foreground mb-4 font-semibold">Current Vital Signs</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                  <p className="text-blue-600 dark:text-blue-400 text-sm mb-1 font-medium">Blood Pressure</p>
-                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.bp}</p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
-                  <p className="text-green-600 dark:text-green-400 text-sm mb-1 font-medium">Heart Rate</p>
-                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.heartRate} <span className="text-sm font-normal text-muted-foreground">bpm</span></p>
-                </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
-                  <p className="text-orange-600 dark:text-orange-400 text-sm mb-1 font-medium">Temperature</p>
-                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.temperature}</p>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-100 dark:border-purple-800">
-                  <p className="text-purple-600 dark:text-purple-400 text-sm mb-1 font-medium">Oxygen Sat.</p>
-                  <p className="text-foreground text-lg font-bold">{selectedPatient.vitalSigns.oxygen}</p>
-                </div>
-              </div>
-            </div>
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <h3 className="text-foreground mb-4 font-semibold">Transfer History</h3>
 
-            {/* Medical History */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-foreground mb-4 font-semibold">Medical History</h3>
-              {isEditing ? (
-                <textarea
-                  value={editedPatient.medicalHistory}
-                  onChange={(e) => setEditedPatient({ ...editedPatient, medicalHistory: e.target.value })}
-                  className="w-full text-foreground bg-input-field-bg border border-input rounded p-3 min-h-[80px] focus:ring-2 focus:ring-red-500 outline-none"
-                />
-              ) : (
-                <p className="text-foreground leading-relaxed">{selectedPatient.medicalHistory}</p>
-              )}
-            </div>
-
-            {/* Medications */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-foreground mb-4 font-semibold">Current Medications</h3>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {(isEditing ? editedPatient.medications : selectedPatient.medications).map((med: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-secondary/50 border border-border rounded-lg group">
-                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                    <span className="text-foreground font-medium">{med}</span>
-                    {isEditing && (
-                      <button
-                        onClick={() => {
-                          const newMeds = editedPatient.medications.filter((_: any, i: number) => i !== index);
-                          setEditedPatient({ ...editedPatient, medications: newMeds });
-                        }}
-                        className="ml-2 text-muted-foreground hover:text-red-600"
+                {isEditing && editedPatient && (
+                  <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border">
+                    <h4 className="text-sm font-medium text-foreground mb-3">Add New Transfer Record</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <input
+                        type="date"
+                        value={newTransfer.date}
+                        onChange={(event) => setNewTransfer({ ...newTransfer, date: event.target.value })}
+                        className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
+                      />
+                      <select
+                        value={newTransfer.status}
+                        onChange={(event) => setNewTransfer({ ...newTransfer, status: event.target.value })}
+                        className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
                       >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {isEditing && (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMedication}
-                    onChange={(e) => setNewMedication(e.target.value)}
-                    placeholder="Add new medication..."
-                    className="flex-1 border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newMedication.trim()) {
-                        setEditedPatient({
-                          ...editedPatient,
-                          medications: [...editedPatient.medications, newMedication.trim()]
-                        });
-                        setNewMedication('');
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={() => {
-                      if (newMedication.trim()) {
-                        setEditedPatient({
-                          ...editedPatient,
-                          medications: [...editedPatient.medications, newMedication.trim()]
-                        });
-                        setNewMedication('');
-                      }
-                    }}
-                    className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </div>
+                        <option>In Progress</option>
+                        <option>Completed</option>
+                        <option>Pending</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Reason"
+                        value={newTransfer.reason}
+                        onChange={(event) => setNewTransfer({ ...newTransfer, reason: event.target.value })}
+                        className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm md:col-span-2"
+                      />
+                      <input
+                        type="text"
+                        placeholder="From Facility"
+                        value={newTransfer.from}
+                        onChange={(event) => setNewTransfer({ ...newTransfer, from: event.target.value })}
+                        className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="To Facility"
+                        value={newTransfer.to}
+                        onChange={(event) => setNewTransfer({ ...newTransfer, to: event.target.value })}
+                        className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!newTransfer.date || !newTransfer.reason) {
+                          alert('Please fill in Date and Reason');
+                          return;
+                        }
 
-            {/* Transfer History */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <h3 className="text-foreground mb-4 font-semibold">Transfer History</h3>
-
-              {isEditing && (
-                <div className="mb-6 p-4 bg-muted/30 rounded-lg border border-border">
-                  <h4 className="text-sm font-medium text-foreground mb-3">Add New Transfer Record</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <input
-                      type="date"
-                      value={newTransfer.date}
-                      onChange={(e) => setNewTransfer({ ...newTransfer, date: e.target.value })}
-                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
-                    />
-                    <select
-                      value={newTransfer.status}
-                      onChange={(e) => setNewTransfer({ ...newTransfer, status: e.target.value })}
-                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
-                    >
-                      <option>In Progress</option>
-                      <option>Completed</option>
-                      <option>Pending</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Reason"
-                      value={newTransfer.reason}
-                      onChange={(e) => setNewTransfer({ ...newTransfer, reason: e.target.value })}
-                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm md:col-span-2"
-                    />
-                    <input
-                      type="text"
-                      placeholder="From Facility"
-                      value={newTransfer.from}
-                      onChange={(e) => setNewTransfer({ ...newTransfer, from: e.target.value })}
-                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="To Facility"
-                      value={newTransfer.to}
-                      onChange={(e) => setNewTransfer({ ...newTransfer, to: e.target.value })}
-                      className="border border-input bg-input-field-bg text-foreground rounded px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <button
-                    onClick={() => {
-                      if (newTransfer.date && newTransfer.reason) {
                         setEditedPatient({
                           ...editedPatient,
-                          recentTransfers: [newTransfer, ...editedPatient.recentTransfers]
+                          recentTransfers: [newTransfer, ...editedPatient.recentTransfers],
                         });
                         setNewTransfer({
                           date: '',
                           from: '',
                           to: '',
                           reason: '',
-                          status: 'In Progress'
+                          status: 'In Progress',
                         });
-                      } else {
-                        alert('Please fill in Date and Reason');
-                      }
-                    }}
-                    className="w-full py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                  >
-                    Add Record
-                  </button>
-                </div>
-              )}
-
-              {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).length > 0 ? (
-                <div className="space-y-4">
-                  {(isEditing ? editedPatient.recentTransfers : selectedPatient.recentTransfers).map((transfer: any, index: number) => (
-                    <div key={index} className="border border-border rounded-lg p-4 hover:bg-accent transition-colors relative group">
-                      {isEditing && (
-                        <button
-                          onClick={() => {
-                            const newTransfers = editedPatient.recentTransfers.filter((_: any, i: number) => i !== index);
-                            setEditedPatient({ ...editedPatient, recentTransfers: newTransfers });
-                          }}
-                          className="absolute top-2 right-2 text-muted-foreground hover:text-red-600 p-1"
-                          title="Remove record"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-
-                      <div className="flex items-center justify-between mb-2 pr-8">
-                        <span className="text-muted-foreground text-sm flex items-center gap-2">
-                          <Calendar size={16} className="text-muted-foreground" />
-                          {transfer.date}
-                        </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${transfer.status === 'Completed'
-                          ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                          : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                          }`}>
-                          {transfer.status}
-                        </span>
-                      </div>
-                      <p className="text-foreground mb-1 font-medium">{transfer.reason}</p>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">
-                        <span>{transfer.from}</span>
-                        <span className="text-muted-foreground">→</span>
-                        <span>{transfer.to}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4 bg-muted/30 rounded-lg border border-dashed border-border">No transfer history records found</p>
-              )}
-            </div>
-            {/* Medical Documents */}
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-foreground font-semibold">Medical Documents</h3>
-                {uploadedFiles[selectedPatient.id]?.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
-                    {uploadedFiles[selectedPatient.id].length}
-                  </span>
-                )}
-              </div>
-              <label className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm cursor-pointer flex items-center justify-center gap-2 mb-4">
-                <Upload size={16} />
-                {isUploading ? 'Uploading...' : 'Upload New File'}
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                  onChange={(e) => handleFileUpload(e, selectedPatient.id)}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-              </label>
-
-
-              {/* Display uploaded files */}
-              <div className="space-y-2">
-                {uploadedFiles[selectedPatient.id]?.length > 0 ? (
-                  uploadedFiles[selectedPatient.id].map((file: File, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border hover:border-input transition-colors group">
-                      <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <File className="text-blue-600" size={20} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-foreground font-medium text-sm truncate">{file.name}</p>
-                          <p className="text-muted-foreground text-xs">
-                            {(file.size / 1024).toFixed(2)} KB • {file.type || 'Unknown type'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            const url = URL.createObjectURL(file);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = file.name;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Download file"
-                        >
-                          <Download size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleFileRemove(selectedPatient.id, index)}
-                          className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title="Remove file"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
-                    <File className="mx-auto text-muted-foreground mb-3" size={32} />
-                    <p className="text-muted-foreground text-sm font-medium">No documents uploaded yet</p>
-                    <p className="text-muted-foreground text-xs mt-1">Upload patient reports, lab results, or transfer documents</p>
+                      }}
+                      className="w-full py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    >
+                      Add Record
+                    </button>
                   </div>
                 )}
+
+                {(isEditing && editedPatient ? editedPatient.recentTransfers : selectedPatient.recentTransfers).length > 0 ? (
+                  <div className="space-y-4">
+                    {(isEditing && editedPatient ? editedPatient.recentTransfers : selectedPatient.recentTransfers).map((transfer, index) => (
+                      <div key={`${transfer.date}-${index}`} className="border border-border rounded-lg p-4 hover:bg-accent transition-colors relative group">
+                        {isEditing && editedPatient && (
+                          <button
+                            onClick={() => {
+                              const nextTransfers = editedPatient.recentTransfers.filter((_, transferIndex) => transferIndex !== index);
+                              setEditedPatient({ ...editedPatient, recentTransfers: nextTransfers });
+                            }}
+                            className="absolute top-2 right-2 text-muted-foreground hover:text-red-600 p-1"
+                            title="Remove record"
+                          >
+                            x
+                          </button>
+                        )}
+
+                        <div className="flex items-center justify-between mb-2 pr-8">
+                          <span className="text-muted-foreground text-sm flex items-center gap-2">
+                            <Calendar size={16} className="text-muted-foreground" />
+                            {transfer.date}
+                          </span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              transfer.status.toLowerCase() === 'completed'
+                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {transfer.status}
+                          </span>
+                        </div>
+                        <p className="text-foreground mb-1 font-medium">{transfer.reason}</p>
+                        <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">
+                          <span>{transfer.from}</span>
+                          <span>to</span>
+                          <span>{transfer.to}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4 bg-muted/30 rounded-lg border border-dashed border-border">
+                    No transfer history records found
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-card rounded-lg shadow-sm border border-border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-foreground font-semibold">Medical Documents</h3>
+                  {selectedPatient.documents?.length > 0 && (
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+                      {selectedPatient.documents.length}
+                    </span>
+                  )}
+                </div>
+
+                <label className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm cursor-pointer inline-flex items-center justify-center gap-2 mb-4">
+                  <Upload size={16} />
+                  {isUploading ? 'Uploading...' : 'Upload New File'}
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    onChange={(event) => handleFileUpload(event, selectedPatient)}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </label>
+
+                <div className="space-y-2">
+                  {selectedPatient.documents?.length > 0 ? (
+                    selectedPatient.documents.map((doc, index) => (
+                      <div key={`${doc.name}-${index}`} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border hover:border-input transition-colors group">
+                        <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <File className="text-blue-600" size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground font-medium text-sm truncate">{doc.name}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {(doc.size / 1024).toFixed(2)} KB - {doc.type || 'Unknown type'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              const link = window.document.createElement('a');
+                              link.href = doc.data;
+                              link.download = doc.name;
+                              link.click();
+                            }}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                            title="Download file"
+                          >
+                            <Download size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleFileRemove(selectedPatient, index)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            title="Remove file"
+                          >
+                            x
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
+                      <File className="mx-auto text-muted-foreground mb-3" size={32} />
+                      <p className="text-muted-foreground text-sm font-medium">No documents uploaded yet</p>
+                      <p className="text-muted-foreground text-xs mt-1">
+                        Upload patient reports, lab results, or transfer documents
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          )}
+        </div>
+      )}
 
-          </div>
-        )}
-      </div>
       <button
         onClick={() => navigate('/transfer')}
         className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
