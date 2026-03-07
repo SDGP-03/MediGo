@@ -898,7 +898,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   bool _canResumeTrip(Trip trip) {
     final s = trip.status.trim().toLowerCase();
-    return s == 'in_progress' || s == 'accepted';
+    return s == 'in_progress' || s == 'accepted' || s == 'cancelled';
   }
 
   Future<void> _resumeTripFromHistory({
@@ -936,7 +936,7 @@ class _HistoryPageState extends State<HistoryPage> {
         return;
       }
 
-      if (status == 'completed' || status == 'cancelled' || status == 'canceled') {
+      if (status == 'completed') {
         messenger.showSnackBar(
           SnackBar(content: Text(t('This trip cannot be resumed', 'මෙම ගමන නැවත ආරම්භ කළ නොහැක', 'இந்த பயணத்தை மீண்டும் தொடங்க முடியாது'))),
         );

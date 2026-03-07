@@ -107,8 +107,6 @@ class _HomePageState extends State<HomePage> {
               longitude: position.longitude,
             );
 
-            _upsertDriverMarker(newPosition);
-
             // Push location to Firebase for admin dashboard tracking
             _pushLocationToFirebase(position);
 
@@ -117,28 +115,6 @@ class _HomePageState extends State<HomePage> {
             );
           },
         );
-  }
-
-  Future<void> _upsertDriverMarker(LatLng position) async {
-    final controller = controllerGoogleMap;
-    if (controller == null) return;
-
-    final options = MarkerOptions(
-      position: position,
-      infoWindow: InfoWindow(title: t("You", "ඔබ", "நீங்கள்")),
-      flat: true,
-      anchor: const MarkerAnchor(u: 0.5, v: 0.5),
-    );
-
-    if (driverMarker == null) {
-      final created = await controller.addMarkers([options]);
-      driverMarker = created.isNotEmpty ? created.first : null;
-      return;
-    }
-
-    final updated = driverMarker!.copyWith(options: options);
-    final res = await controller.updateMarkers([updated]);
-    driverMarker = res.isNotEmpty ? res.first : driverMarker;
   }
 
   Future<void> _upsertDestinationMarker(LatLng position, String title) async {

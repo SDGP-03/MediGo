@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:driver_application/models/assignment.dart';
 import 'package:driver_application/services/navigation_service.dart';
 import 'package:driver_application/services/trip_history_service.dart';
-import 'package:driver_application/widgets/navigation_controls.dart';
 import 'package:driver_application/widgets/navigation_preview_card.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -59,7 +59,9 @@ class _NavigationPageState extends State<NavigationPage> {
         'MediGo',
       );
       if (!accepted) {
-        throw StateError('Navigation terms must be accepted to start guidance.');
+        throw StateError(
+          'Navigation terms must be accepted to start guidance.',
+        );
       }
 
       await _nav.initializeSession();
@@ -103,18 +105,6 @@ class _NavigationPageState extends State<NavigationPage> {
     return '$meters m';
   }
 
-  String? _timeText() {
-    final seconds =
-        _nav.navInfo?.timeToFinalDestinationSeconds ??
-        _nav.navInfo?.timeToNextDestinationSeconds;
-    if (seconds == null) return null;
-    final minutes = (seconds / 60).round();
-    if (minutes < 60) return '$minutes min';
-    final hours = minutes ~/ 60;
-    final rem = minutes % 60;
-    return '${hours}h ${rem}m';
-  }
-
   String? _etaText() {
     final seconds =
         _nav.navInfo?.timeToFinalDestinationSeconds ??
@@ -124,144 +114,37 @@ class _NavigationPageState extends State<NavigationPage> {
     return DateFormat('h:mm a').format(eta);
   }
 
-  StepInfo? _nextStep() {
-    final info = _nav.navInfo;
-    return info?.currentStep ?? (info?.remainingSteps.isNotEmpty == true
-        ? info!.remainingSteps.first
-        : null);
-  }
-
-  String _formatStepDistance(int meters) {
-    if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
-    return '$meters m';
-  }
-
-  Widget _buildTopBanner() {
-    final step = _nextStep();
-    if (step == null) return const SizedBox.shrink();
-
-    final instruction = (step.fullInstructions ?? '').isEmpty
-        ? 'Continue'
-        : step.fullInstructions!;
-    final metersToManeuver = _nav.navInfo?.distanceToCurrentStepMeters ?? 0;
-    final dist = _formatStepDistance(metersToManeuver);
-
+  Widget _buildCancelButtonOverlay() {
     return SafeArea(
       bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-        child: Material(
-          elevation: 10,
-          color: const Color(0xFF1A73E8),
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: step.maneuverImage == null
-                      ? const Icon(
-                          Icons.turn_right_rounded,
-                          color: Colors.white,
-                        )
-                      : FutureBuilder<Image?>(
-                          future: getRegisteredImage(step.maneuverImage!),
-                          builder: (context, snapshot) {
-                            final img = snapshot.data;
-                            if (img == null) {
-                              return const Icon(
-                                Icons.turn_right_rounded,
-                                color: Colors.white,
-                              );
-                            }
-                            return ColorFiltered(
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
-                              ),
-                              child: img,
-                            );
-                          },
-                        ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    instruction,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      height: 1.1,
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 20, bottom: 8),
+          child: Tooltip(
+            message: 'Cancel trip',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Material(
+                  color: const Color.fromARGB(
+                    10,
+                    158,
+                    145,
+                    145,
+                  ).withValues(alpha: 0.92),
+                  elevation: 10,
+                  child: InkWell(
+                    onTap: _confirmCancelNavigation,
+                    child: const SizedBox(
+                      width: 54,
+                      height: 54,
+                      child: Icon(Icons.close_rounded, color: Colors.white),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  dist,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomPanel() {
-    final time = _timeText();
-    final distance = _distanceText();
-    final eta = _etaText();
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Material(
-          elevation: 14,
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        time ?? '--',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${distance ?? '--'} • ETA ${eta ?? '--'}',
-                        style: const TextStyle(
-                          color: Color(0xFF5F6368),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.directions_car_rounded,
-                  color: Color(0xFF5F6368),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -369,9 +252,9 @@ class _NavigationPageState extends State<NavigationPage> {
       _disposedSession = true;
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to complete trip: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to complete trip: $e')));
       return;
     }
 
@@ -413,7 +296,7 @@ class _NavigationPageState extends State<NavigationPage> {
                   const Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'This will stop guidance, cancel this assignment, and return to Home.',
+                      'This will stop guidance, cancel this assignment, and return to Home. You can redo this trip from History.',
                       style: TextStyle(
                         color: Color(0xFF5F6368),
                         fontWeight: FontWeight.w600,
@@ -480,7 +363,8 @@ class _NavigationPageState extends State<NavigationPage> {
       await requestRef.update({
         'status': 'cancelled',
         'cancelledAt': ServerValue.timestamp,
-        'driverId': null,
+        // Keep assigned to this driver so it can be redone from History.
+        'driverId': uid,
       });
 
       await _history.upsertTrip(
@@ -494,9 +378,9 @@ class _NavigationPageState extends State<NavigationPage> {
       _disposedSession = true;
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to cancel trip: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to cancel trip: $e')));
       return;
     }
 
@@ -524,29 +408,7 @@ class _NavigationPageState extends State<NavigationPage> {
                 },
               ),
 
-              if (_nav.isNavigating)
-                Positioned(top: 0, left: 0, right: 0, child: _buildTopBanner()),
-              if (_nav.isNavigating)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildBottomPanel(),
-                ),
-
-              if (_nav.isNavigating)
-                Positioned(
-                  right: 12,
-                  bottom: 120,
-                  child: NavigationControls(
-                    onStop: () async {
-                      await _confirmCancelNavigation();
-                    },
-                    onRecenter: () => _nav.recenter(),
-                    onZoomIn: () => _nav.zoomIn(),
-                    onZoomOut: () => _nav.zoomOut(),
-                  ),
-                ),
+              if (_nav.isNavigating) _buildCancelButtonOverlay(),
 
               if (!_nav.isNavigating)
                 Positioned(
@@ -565,10 +427,10 @@ class _NavigationPageState extends State<NavigationPage> {
                     onPrimaryCta: (_initError != null)
                         ? _boot
                         : (_isReady
-                            ? () async {
-                                await _nav.startNavigation();
-                              }
-                            : null),
+                              ? () async {
+                                  await _nav.startNavigation();
+                                }
+                              : null),
                   ),
                 ),
 

@@ -24,10 +24,29 @@ class NavigationPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Material(
-      elevation: 10,
-      borderRadius: BorderRadius.circular(18),
-      color: Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFFFFFF),
+            Color(0xFFFFEAEA),
+          ],
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33D32F2F),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+        border: Border.all(
+          color: Colors.red.shade100,
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -36,13 +55,14 @@ class NavigationPreviewCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.place_rounded, color: Color(0xFF1A73E8)),
+                Icon(Icons.place_rounded, color: Colors.red.shade700),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
+                      color: Colors.black87,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -54,7 +74,7 @@ class NavigationPreviewCard extends StatelessWidget {
             Text(
               subtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF5F6368),
+                color: Colors.black54,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -76,14 +96,30 @@ class NavigationPreviewCard extends StatelessWidget {
               width: double.infinity,
               height: 48,
               child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: isLoading ? null : onPrimaryCta,
                 child: isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(primaryCtaLabel),
+                    : Text(
+                        primaryCtaLabel,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -96,20 +132,21 @@ class NavigationPreviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F4),
+        color: Colors.red.shade50,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.red.shade200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: const Color(0xFF3C4043)),
+          Icon(icon, size: 16, color: Colors.red.shade700),
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF3C4043),
+              color: Colors.red.shade900,
             ),
           ),
         ],

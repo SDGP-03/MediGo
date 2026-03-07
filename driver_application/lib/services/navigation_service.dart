@@ -10,6 +10,7 @@ class NavigationService extends ChangeNotifier {
   bool _sessionReady = false;
   bool _isNavigating = false;
   bool _hasLocationFix = false;
+  bool _routeOverviewShown = false;
 
   NavigationWaypoint? _destination;
   NavInfo? _navInfo;
@@ -21,19 +22,22 @@ class NavigationService extends ChangeNotifier {
   bool get isNavigating => _isNavigating;
   bool get hasLocationFix => _hasLocationFix;
 
-  GoogleNavigationViewController? get controller => _controller;
   NavInfo? get navInfo => _navInfo;
-  NavigationWaypoint? get destination => _destination;
 
-  Future<void> attachController(GoogleNavigationViewController controller) async {
+  Future<void> showRouteOverview() => _maybeShowRouteOverview(force: true);
+
+  Future<void> attachController(
+    GoogleNavigationViewController controller,
+  ) async {
     _controller = controller;
 
-    // Keep SDK-provided overlay controls off; we render our own UI.
-    await controller.setNavigationHeaderEnabled(false);
-    await controller.setNavigationFooterEnabled(false);
+    // Use SDK-provided overlay controls (header/footer/progress/recenter).
+    await controller.setNavigationHeaderEnabled(true);
+    await controller.setNavigationFooterEnabled(true);
     await controller.setNavigationTripProgressBarEnabled(false);
-    await controller.setRecenterButtonEnabled(false);
+    await controller.setRecenterButtonEnabled(true);
 
+    unawaited(_maybeShowRouteOverview());
     notifyListeners();
   }
 
@@ -50,8 +54,10 @@ class NavigationService extends ChangeNotifier {
     _sessionReady = true;
 
     await _roadSnappedSub?.cancel();
-    _roadSnappedSub = await GoogleMapsNavigator
-        .setRoadSnappedLocationUpdatedListener((event) {
+    _roadSnappedSub =
+        await GoogleMapsNavigator.setRoadSnappedLocationUpdatedListener((
+          event,
+        ) {
           if (!_hasLocationFix) {
             _hasLocationFix = true;
             notifyListeners();
@@ -62,6 +68,7 @@ class NavigationService extends ChangeNotifier {
     _navInfoSub = GoogleMapsNavigator.setNavInfoListener(
       (event) {
         _navInfo = event.navInfo;
+        unawaited(_maybeShowRouteOverview());
         notifyListeners();
       },
       numNextStepsToPreview: 3,
@@ -84,13 +91,30 @@ class NavigationService extends ChangeNotifier {
       target: target,
     );
 
+    _routeOverviewShown = false;
     await GoogleMapsNavigator.setDestinations(
       Destinations(
         waypoints: [_destination!],
         displayOptions: NavigationDisplayOptions(showDestinationMarkers: true),
       ),
     );
+    unawaited(_maybeShowRouteOverview());
     notifyListeners();
+  }
+
+  Future<void> _maybeShowRouteOverview({bool force = false}) async {
+    if (!_sessionReady) return;
+    if (_controller == null) return;
+    if (_isNavigating) return;
+    if (_destination == null) return;
+    if (!force && _routeOverviewShown) return;
+
+    try {
+      await _controller!.showRouteOverview();
+      _routeOverviewShown = true;
+    } catch (_) {
+      // Best-effort; the SDK can reject this if route isn't ready yet.
+    }
   }
 
   /// Starts turn-by-turn guidance (driving mode).
@@ -119,18 +143,6 @@ class NavigationService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> recenter() async {
-    await _controller?.followMyLocation(CameraPerspective.tilted);
-  }
-
-  Future<void> zoomIn() async {
-    await _controller?.animateCamera(CameraUpdate.zoomIn());
-  }
-
-  Future<void> zoomOut() async {
-    await _controller?.animateCamera(CameraUpdate.zoomOut());
-  }
-
   /// Fully cleans up native resources. Call from `dispose()` of the page.
   Future<void> disposeSession() async {
     try {
@@ -145,6 +157,7 @@ class NavigationService extends ChangeNotifier {
       _sessionReady = false;
       _isNavigating = false;
       _hasLocationFix = false;
+      _routeOverviewShown = false;
       _destination = null;
       _navInfo = null;
     }
