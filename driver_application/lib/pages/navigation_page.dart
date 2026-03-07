@@ -1,11 +1,18 @@
+import 'dart:async';
+
 import 'package:driver_application/models/assignment.dart';
 import 'package:driver_application/services/navigation_service.dart';
+import 'package:driver_application/services/trip_history_service.dart';
 import 'package:driver_application/widgets/navigation_controls.dart';
 import 'package:driver_application/widgets/navigation_preview_card.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:google_navigation_flutter/google_navigation_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+enum NavigationExitResult { completed, cancelled }
 
 class NavigationPage extends StatefulWidget {
   const NavigationPage({super.key, required this.assignment});
@@ -18,11 +25,16 @@ class NavigationPage extends StatefulWidget {
 
 class _NavigationPageState extends State<NavigationPage> {
   final NavigationService _nav = NavigationService();
+  final TripHistoryService _history = TripHistoryService();
 
   bool _initializing = true;
   String? _initError;
 
   bool get _isReady => _nav.sessionReady && _nav.hasLocationFix;
+
+  StreamSubscription<OnArrivalEvent>? _arrivalSub;
+  bool _arrivalSheetOpen = false;
+  bool _disposedSession = false;
 
   @override
   void initState() {
@@ -51,6 +63,16 @@ class _NavigationPageState extends State<NavigationPage> {
       }
 
       await _nav.initializeSession();
+      await _arrivalSub?.cancel();
+      _arrivalSub = GoogleMapsNavigator.setOnArrivalListener((event) {
+        if (_arrivalSheetOpen) return;
+        _arrivalSheetOpen = true;
+        if (!context.mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          _showArrivedCard();
+        });
+      });
       await _nav.setDestination(
         target: LatLng(
           latitude: widget.assignment.dropLatLng.latitude,
@@ -249,8 +271,237 @@ class _NavigationPageState extends State<NavigationPage> {
 
   @override
   void dispose() {
-    _nav.disposeSession();
+    _arrivalSub?.cancel();
+    if (!_disposedSession) {
+      _nav.disposeSession();
+    }
     super.dispose();
+  }
+
+  Future<void> _showArrivedCard() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.flag_rounded, color: Color(0xFF34A853)),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'arrive to your destination',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.of(ctx).pop();
+                        await _completeTripAndExit();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF34A853),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'Complete',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _completeTripAndExit() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      await _nav.stopNavigation();
+
+      final requestRef = FirebaseDatabase.instance
+          .ref()
+          .child('transfer_requests')
+          .child(widget.assignment.requestId);
+
+      await requestRef.update({
+        'status': 'completed',
+        'completedAt': ServerValue.timestamp,
+      });
+
+      await _history.upsertTrip(
+        driverId: uid,
+        assignment: widget.assignment,
+        status: 'completed',
+        extra: {'completedAt': ServerValue.timestamp},
+      );
+
+      await _nav.disposeSession();
+      _disposedSession = true;
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to complete trip: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop(NavigationExitResult.completed);
+  }
+
+  Future<void> _confirmCancelNavigation() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.close_rounded, color: Color(0xFFEA4335)),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Cancel trip?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'This will stop guidance, cancel this assignment, and return to Home.',
+                      style: TextStyle(
+                        color: Color(0xFF5F6368),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text('Keep'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.of(ctx).pop();
+                            await _cancelTripAndExit();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEA4335),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Confirm',
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cancelTripAndExit() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      await _nav.stopNavigation();
+
+      final requestRef = FirebaseDatabase.instance
+          .ref()
+          .child('transfer_requests')
+          .child(widget.assignment.requestId);
+
+      await requestRef.update({
+        'status': 'cancelled',
+        'cancelledAt': ServerValue.timestamp,
+        'driverId': null,
+      });
+
+      await _history.upsertTrip(
+        driverId: uid,
+        assignment: widget.assignment,
+        status: 'cancelled',
+        extra: {'cancelledAt': ServerValue.timestamp},
+      );
+
+      await _nav.disposeSession();
+      _disposedSession = true;
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to cancel trip: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop(NavigationExitResult.cancelled);
   }
 
   @override
@@ -289,9 +540,7 @@ class _NavigationPageState extends State<NavigationPage> {
                   bottom: 120,
                   child: NavigationControls(
                     onStop: () async {
-                      await _nav.stopNavigation();
-                      if (!context.mounted) return;
-                      Navigator.of(context).pop();
+                      await _confirmCancelNavigation();
                     },
                     onRecenter: () => _nav.recenter(),
                     onZoomIn: () => _nav.zoomIn(),

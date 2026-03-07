@@ -1,3 +1,6 @@
+import 'package:driver_application/models/assignment.dart';
+import 'package:driver_application/pages/navigation_page.dart';
+import 'package:driver_application/services/trip_history_service.dart';
 import 'package:driver_application/core/utils/date_utils.dart';
 import 'package:driver_application/models/trip_model.dart';
 import 'package:flutter/material.dart';
@@ -528,6 +531,21 @@ class _HistoryPageState extends State<HistoryPage> {
         icon = Icons.check_circle;
         label = t('COMPLETED', 'අවසන්', 'முடிந்தது');
         break;
+      case 'paused':
+        bgColor = Colors.blue.shade100;
+        textColor = Colors.blue.shade700;
+        icon = Icons.pause_circle_filled;
+        label = t('PAUSED', 'නවතා ඇත', 'இடைநிறுத்தப்பட்டது');
+        break;
+      case 'in_progress':
+      case 'accepted':
+        bgColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade700;
+        icon = Icons.directions_car;
+        label = normalizedStatus == 'accepted'
+            ? t('ACCEPTED', 'පිළිගත්', 'ஏற்றுக்கொண்டது')
+            : t('IN PROGRESS', 'ගමන් කරමින්', 'சென்று கொண்டிருக்கிறது');
+        break;
       case 'cancelled':
       case 'canceled':
         bgColor = Colors.red.shade100;
@@ -819,6 +837,35 @@ class _HistoryPageState extends State<HistoryPage> {
 
                 const SizedBox(height: 24),
 
+                if (_canResumeTrip(trip)) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _resumeTripFromHistory(
+                        trip: trip,
+                        sheetContext: context,
+                      ),
+                      icon: const Icon(Icons.navigation),
+                      label: Text(
+                        t('Start Navigation', 'නාවිකරණය ආරම්භ කරන්න', 'வழிகாட்டலை தொடங்கு'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 // Close Button
                 SizedBox(
                   width: double.infinity,
@@ -847,6 +894,78 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
       ),
     );
+  }
+
+  bool _canResumeTrip(Trip trip) {
+    final s = trip.status.trim().toLowerCase();
+    return s == 'in_progress' || s == 'accepted';
+  }
+
+  Future<void> _resumeTripFromHistory({
+    required Trip trip,
+    required BuildContext sheetContext,
+  }) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final parentNavigator = Navigator.of(context);
+    final sheetNavigator = Navigator.of(sheetContext);
+
+    try {
+      final reqRef = FirebaseDatabase.instance
+          .ref()
+          .child('transfer_requests')
+          .child(trip.id);
+      final snapshot = await reqRef.get();
+      if (!snapshot.exists || snapshot.value is! Map) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(t('Trip not found', 'ගමන හමු වුණේ නැහැ', 'பயணம் கிடைக்கவில்லை'))),
+        );
+        return;
+      }
+
+      final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
+      final driverId = data['driverId']?.toString();
+      final status = data['status']?.toString().trim().toLowerCase();
+
+      if (driverId != uid) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(t('This trip is not assigned to you', 'මෙම ගමන ඔබට නොවේ', 'இந்த பயணம் உங்களுக்கு இல்லை'))),
+        );
+        return;
+      }
+
+      if (status == 'completed' || status == 'cancelled' || status == 'canceled') {
+        messenger.showSnackBar(
+          SnackBar(content: Text(t('This trip cannot be resumed', 'මෙම ගමන නැවත ආරම්භ කළ නොහැක', 'இந்த பயணத்தை மீண்டும் தொடங்க முடியாது'))),
+        );
+        return;
+      }
+
+      final assignment = Assignment.fromJson(trip.id, data);
+
+      await reqRef.update({
+        'status': 'in_progress',
+        'resumedAt': ServerValue.timestamp,
+      });
+
+      await TripHistoryService().upsertTrip(
+        driverId: uid,
+        assignment: assignment,
+        status: 'in_progress',
+        extra: {'resumedAt': ServerValue.timestamp},
+      );
+
+      if (!mounted) return;
+      sheetNavigator.pop();
+      await parentNavigator.push(
+        MaterialPageRoute(builder: (_) => NavigationPage(assignment: assignment)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Failed to start navigation: $e')));
+    }
   }
 
   Widget _buildDetailRow(

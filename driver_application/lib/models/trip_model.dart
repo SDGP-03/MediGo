@@ -112,6 +112,7 @@ class Trip {
   static String _normalizeStatus(dynamic value) {
     final status = (value?.toString().trim().toLowerCase() ?? 'unknown');
     if (status == 'canceled') return 'cancelled';
+    if (status == 'in progress') return 'in_progress';
     return status;
   }
 
@@ -120,6 +121,8 @@ class Trip {
 
   /// Check if trip is cancelled
   bool get isCancelled => status == 'cancelled';
+
+  bool get isPaused => status == 'paused';
 
   /// Get formatted distance string
   String get formattedDistance {
