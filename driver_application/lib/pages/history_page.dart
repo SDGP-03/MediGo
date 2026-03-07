@@ -67,14 +67,15 @@ class _HistoryPageState extends State<HistoryPage> {
     final normalizedQuery = _searchQuery.trim().toLowerCase();
     return trips.where((trip) {
       // Filter by search query
-      final matchesSearch = normalizedQuery.isEmpty ||
+      final matchesSearch =
+          normalizedQuery.isEmpty ||
           trip.pickup.toLowerCase().contains(normalizedQuery) ||
           trip.dropoff.toLowerCase().contains(normalizedQuery) ||
           (trip.patientName?.toLowerCase().contains(normalizedQuery) ?? false);
 
       // Filter by status
-      final matchesStatus = _statusFilter == 'all' ||
-          trip.status.toLowerCase() == _statusFilter;
+      final matchesStatus =
+          _statusFilter == 'all' || trip.status.toLowerCase() == _statusFilter;
 
       return matchesSearch && matchesStatus;
     }).toList();
@@ -101,12 +102,21 @@ class _HistoryPageState extends State<HistoryPage> {
               },
             ),
           ),
-          title: Text(t("Trip History", "ගමන් ඉතිහාසය", "பயண வரலாறு"), style: const TextStyle(color: Colors.white)),
+          title: Text(
+            t("Trip History", "ගමන් ඉතිහාසය", "பயண வரலாறு"),
+            style: const TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.red.shade700,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: Center(
-          child: Text(t("Please log in to view trip history", "ගමන් ඉතිහාසය බලන්න පිවිසෙන්න", "பயண வரலாற்றைப் பார்க்க உள்நுழையவும்")),
+          child: Text(
+            t(
+              "Please log in to view trip history",
+              "ගමන් ඉතිහාසය බලන්න පිවිසෙන්න",
+              "பயண வரலாற்றைப் பார்க்க உள்நுழையவும்",
+            ),
+          ),
         ),
       );
     }
@@ -127,7 +137,10 @@ class _HistoryPageState extends State<HistoryPage> {
             },
           ),
         ),
-        title: Text(t("Trip History", "ගමන් ඉතිහාසය", "பயண வரலாறு"), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          t("Trip History", "ගමන් ඉතිහාසය", "பயண வரலாறு"),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -142,7 +155,13 @@ class _HistoryPageState extends State<HistoryPage> {
                 children: [
                   CircularProgressIndicator(color: Colors.red.shade700),
                   const SizedBox(height: 12),
-                  Text(t("Loading trip history...", "ගමන් ඉතිහාසය පූරණය වෙයි...", "பயண வரலாறு ஏற்றப்படுகிறது...")),
+                  Text(
+                    t(
+                      "Loading trip history...",
+                      "ගමන් ඉතිහාසය පූරණය වෙයි...",
+                      "பயண வரலாறு ஏற்றப்படுகிறது...",
+                    ),
+                  ),
                 ],
               ),
             );
@@ -232,21 +251,29 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(t('Total', 'මුළු ගමන්', 'மொத்தம்'), totalTrips.toString(), Icons.local_shipping),
+          _buildStatItem(
+            t('Total', 'මුළු ගමන්', 'மொத்தம்'),
+            totalTrips.toString(),
+            Icons.local_shipping,
+          ),
           _buildStatDivider(),
-          _buildStatItem(t('Completed', 'අවසන්', 'முடிந்தது'), completedTrips.toString(), Icons.check_circle),
+          _buildStatItem(
+            t('Completed', 'අවසන්', 'முடிந்தது'),
+            completedTrips.toString(),
+            Icons.check_circle,
+          ),
           _buildStatDivider(),
-          _buildStatItem(t('This Month', 'මේ මාසය', 'இந்த மாதம்'), thisMonthTrips.toString(), Icons.calendar_today),
+          _buildStatItem(
+            t('This Month', 'මේ මාසය', 'இந்த மாதம்'),
+            thisMonthTrips.toString(),
+            Icons.calendar_today,
+          ),
         ],
       ),
     );
@@ -268,21 +295,14 @@ class _HistoryPageState extends State<HistoryPage> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
       ],
     );
   }
 
   Widget _buildStatDivider() {
-    return Container(
-      height: 50,
-      width: 1,
-      color: Colors.white30,
-    );
+    return Container(height: 50, width: 1, color: Colors.white30);
   }
 
   // ================= SEARCH AND FILTER =================
@@ -301,7 +321,11 @@ class _HistoryPageState extends State<HistoryPage> {
               });
             },
             decoration: InputDecoration(
-              hintText: t('Search trips...', 'ගමන් සොයන්න...', 'பயணங்களை தேடுங்கள்...'),
+              hintText: t(
+                'Search trips...',
+                'ගමන් සොයන්න...',
+                'பயணங்களை தேடுங்கள்...',
+              ),
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -328,7 +352,10 @@ class _HistoryPageState extends State<HistoryPage> {
           // Filter Chips
           Row(
             children: [
-              Text(t('Filter: ', 'පෙරහන්: ', 'வடிகட்டி: '), style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                t('Filter: ', 'පෙරහන්: ', 'வடிகட்டி: '),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: SingleChildScrollView(
@@ -337,9 +364,15 @@ class _HistoryPageState extends State<HistoryPage> {
                     children: [
                       _buildFilterChip(t('All', 'සියලු', 'அனைத்து'), 'all'),
                       const SizedBox(width: 8),
-                      _buildFilterChip(t('Completed', 'අවසන්', 'முடிந்தது'), 'completed'),
+                      _buildFilterChip(
+                        t('Completed', 'අවසන්', 'முடிந்தது'),
+                        'completed',
+                      ),
                       const SizedBox(width: 8),
-                      _buildFilterChip(t('Cancelled', 'අවලංගු', 'ரத்து'), 'cancelled'),
+                      _buildFilterChip(
+                        t('Cancelled', 'අවලංගු', 'ரத்து'),
+                        'cancelled',
+                      ),
                     ],
                   ),
                 ),
@@ -393,7 +426,11 @@ class _HistoryPageState extends State<HistoryPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         AppDateUtils.getDayLabel(trip.timestamp),
@@ -413,10 +450,7 @@ class _HistoryPageState extends State<HistoryPage> {
               // Time
               Text(
                 AppDateUtils.formatTime(trip.timestamp),
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
 
               const Divider(height: 20),
@@ -472,7 +506,9 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
 
               // Additional Info (Distance, Duration, Earnings)
-              if (trip.distance != null || trip.duration != null || trip.earnings != null) ...[
+              if (trip.distance != null ||
+                  trip.duration != null ||
+                  trip.earnings != null) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -594,11 +630,7 @@ class _HistoryPageState extends State<HistoryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.history,
-              size: 100,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.history, size: 100, color: Colors.grey.shade300),
             const SizedBox(height: 24),
             Text(
               t('No Trips Yet', 'තවම ගමන් නැහැ', 'இன்னும் பயணம் இல்லை'),
@@ -610,11 +642,12 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              t('Your completed trips will appear here', 'ඔබ අවසන් කළ ගමන් මෙතැන දිස්වේ', 'நீங்கள் முடித்த பயணங்கள் இங்கே வரும்'),
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade500,
+              t(
+                'Your completed trips will appear here',
+                'ඔබ අවසන් කළ ගමන් මෙතැන දිස්වේ',
+                'நீங்கள் முடித்த பயணங்கள் இங்கே வரும்',
               ),
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -630,11 +663,7 @@ class _HistoryPageState extends State<HistoryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.search_off, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               t('No trips found', 'ගමන් හමු වුණේ නැහැ', 'பயணம் எதுவும் இல்லை'),
@@ -646,11 +675,12 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              t('Try adjusting your search or filters', 'සෙවුම හෝ පෙරහන් වෙනස් කර බලන්න', 'தேடல் அல்லது வடிகட்டியை மாற்றி முயற்சிக்கவும்'),
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
+              t(
+                'Try adjusting your search or filters',
+                'සෙවුම හෝ පෙරහන් වෙනස් කර බලන්න',
+                'தேடல் அல்லது வடிகட்டியை மாற்றி முயற்சிக்கவும்',
               ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -667,14 +697,14 @@ class _HistoryPageState extends State<HistoryPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 80,
-              color: Colors.red.shade300,
-            ),
+            Icon(Icons.error_outline, size: 80, color: Colors.red.shade300),
             const SizedBox(height: 16),
             Text(
-              t('Oops! Something went wrong', 'අප්පා! ගැටලුවක් ඇති වුණා', 'அப்பா! ஏதோ தவறு நடந்தது'),
+              t(
+                'Something went wrong!',
+                'ගැටලුවක් ඇති වුණා!',
+                'ஏதோ தவறு நடந்தது!',
+              ),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -683,21 +713,27 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              t('Failed to load trip history', 'ගමන් ඉතිහාසය පූරණයට බැරි වුණා', 'பயண வரலாறு ஏற்ற முடியவில்லை'),
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
+              t(
+                'Failed to load trip history',
+                'ගමන් ඉතිහාසය පූරණයට බැරි වුණා',
+                'பயண வரலாறு ஏற்ற முடியவில்லை',
               ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => setState(() {}),
               icon: const Icon(Icons.refresh),
-              label: Text(t('Retry', 'නැවත උත්සාහ කරන්න', 'மீண்டும் முயற்சி செய்')),
+              label: Text(
+                t('Retry', 'නැවත උත්සාහ කරන්න', 'மீண்டும் முயற்சி செய்'),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -792,7 +828,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 _buildDetailRow(
                   Icons.location_on,
-                  t('Dropoff', 'දමන්න තැන', 'இறக்கும் இடம்'),
+                  t('Dropoff', 'දමන තැන', 'இறக்கும் இடம்'),
                   trip.dropoff,
                   iconColor: Colors.red,
                 ),
@@ -811,12 +847,6 @@ class _HistoryPageState extends State<HistoryPage> {
                     Icons.timer,
                     t('Duration', 'කාලය', 'நேரம்'),
                     trip.formattedDuration,
-                  ),
-                if (trip.earnings != null)
-                  _buildDetailRow(
-                    Icons.payments,
-                    t('Earnings', 'ආදායම', 'வருமானம்'),
-                    trip.formattedEarnings,
                   ),
                 if (trip.priority != null)
                   _buildDetailRow(
@@ -847,7 +877,11 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                       icon: const Icon(Icons.navigation),
                       label: Text(
-                        t('Start Navigation', 'නාවිකරණය ආරම්භ කරන්න', 'வழிகாட்டலை தொடங்கு'),
+                        t(
+                          'Start Navigation',
+                          'නාවිකරණය ආරම්භ කරන්න',
+                          'வழிகாட்டலை தொடங்கு',
+                        ),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -920,7 +954,11 @@ class _HistoryPageState extends State<HistoryPage> {
       final snapshot = await reqRef.get();
       if (!snapshot.exists || snapshot.value is! Map) {
         messenger.showSnackBar(
-          SnackBar(content: Text(t('Trip not found', 'ගමන හමු වුණේ නැහැ', 'பயணம் கிடைக்கவில்லை'))),
+          SnackBar(
+            content: Text(
+              t('Trip not found', 'ගමන හමු වුණේ නැහැ', 'பயணம் கிடைக்கவில்லை'),
+            ),
+          ),
         );
         return;
       }
@@ -929,16 +967,17 @@ class _HistoryPageState extends State<HistoryPage> {
       final driverId = data['driverId']?.toString();
       final status = data['status']?.toString().trim().toLowerCase();
 
-      if (driverId != uid) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(t('This trip is not assigned to you', 'මෙම ගමන ඔබට නොවේ', 'இந்த பயணம் உங்களுக்கு இல்லை'))),
-        );
-        return;
-      }
-
       if (status == 'completed') {
         messenger.showSnackBar(
-          SnackBar(content: Text(t('This trip cannot be resumed', 'මෙම ගමන නැවත ආරම්භ කළ නොහැක', 'இந்த பயணத்தை மீண்டும் தொடங்க முடியாது'))),
+          SnackBar(
+            content: Text(
+              t(
+                'This trip cannot be resumed',
+                'මෙම ගමන නැවත ආරම්භ කළ නොහැක',
+                'இந்த பயணத்தை மீண்டும் தொடங்க முடியாது',
+              ),
+            ),
+          ),
         );
         return;
       }
@@ -960,11 +999,15 @@ class _HistoryPageState extends State<HistoryPage> {
       if (!mounted) return;
       sheetNavigator.pop();
       await parentNavigator.push(
-        MaterialPageRoute(builder: (_) => NavigationPage(assignment: assignment)),
+        MaterialPageRoute(
+          builder: (_) => NavigationPage(assignment: assignment),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Failed to start navigation: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to start navigation: $e')),
+      );
     }
   }
 
@@ -979,11 +1022,7 @@ class _HistoryPageState extends State<HistoryPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: iconColor ?? Colors.grey.shade600,
-          ),
+          Icon(icon, size: 20, color: iconColor ?? Colors.grey.shade600),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
