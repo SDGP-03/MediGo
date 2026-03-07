@@ -12,6 +12,20 @@ export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+
+  const handleTrackLive = (transfer: any) => {
+    if (!transfer.driverId) {
+      alert("No driver assigned to this transfer yet.");
+      return;
+    }
+    setMapView("map");
+    setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() });
+
+    setTimeout(() => {
+      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // --- STATE: RESOURCE AVAILABILITY ---
   const [resources, setResources] = useState([
@@ -350,6 +364,7 @@ export function HospitalDashboard() {
               }))}
                 activeTransfers={dbActiveTransfers}
                 height="650px"
+                trackedDriverTrigger={trackedDriverTrigger}
               />
             )}
 
@@ -655,7 +670,10 @@ export function HospitalDashboard() {
                       </span>
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                  <button
+                    onClick={() => handleTrackLive(transfer)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
                     Track Live
                   </button>
                 </div>
@@ -802,11 +820,18 @@ export function HospitalDashboard() {
                   <p className="text-foreground text-sm">{request.symptoms}</p>
                 </div>
 
-                <div className="mt-3 flex gap-2">
-
-                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                <div className="mt-3 flex justify-end gap-3 pl-8">
+                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                    Accept
+                  </button>
+                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    Decline
+                  </button>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                     View Details
                   </button>
+
+
                 </div>
               </div>
             ))}

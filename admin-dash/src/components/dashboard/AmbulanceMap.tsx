@@ -28,6 +28,7 @@ interface AmbulanceMapProps {
   ambulances: AmbulanceLocation[];
   activeTransfers?: any[];
   height?: string;
+  trackedDriverTrigger?: { id: string; timestamp: number } | null;
 }
 
 // Default center (Colombo, Sri Lanka)
@@ -56,7 +57,7 @@ const getMarkerColor = (status: string): string => {
   }
 };
 
-export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px' }: AmbulanceMapProps) {
+export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px', trackedDriverTrigger = null }: AmbulanceMapProps) {
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
@@ -97,6 +98,46 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       }
     );
   }, []);
+
+  // Listen for trackedDriverTrigger to center map and show route
+  useEffect(() => {
+    if (trackedDriverTrigger) {
+      const driver = driverLocations.find(d => d.id === trackedDriverTrigger.id);
+      if (driver) {
+        setSelectedDriver(driver);
+        setSelectedOfflineDriver(null);
+        setSelectedAmbulance(null);
+        setShowUserLocationInfo(false);
+        setShowTrackedDeviceInfo(false);
+
+        const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
+        if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
+          fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+        } else {
+          setDirections(null);
+        }
+
+        if (map) {
+          map.setCenter({ lat: driver.lat, lng: driver.lng });
+          map.setZoom(14);
+        }
+      } else {
+        const offlineDriver = offlineDrivers.find(d => d.id === trackedDriverTrigger.id);
+        if (offlineDriver) {
+          setSelectedOfflineDriver(offlineDriver);
+          setSelectedDriver(null);
+          setSelectedAmbulance(null);
+          setShowUserLocationInfo(false);
+          setShowTrackedDeviceInfo(false);
+          if (map) {
+            map.setCenter({ lat: offlineDriver.lat, lng: offlineDriver.lng });
+            map.setZoom(14);
+          }
+        }
+      }
+    }
+  }, [trackedDriverTrigger, driverLocations, offlineDrivers, activeTransfers, map, fetchDirections]);
+
   // Listen for location updates from external tracker app via BroadcastChannel
   useEffect(() => {
     // Try to load initial data from localStorage
@@ -448,6 +489,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
             directions={directions}
             options={{
               suppressMarkers: true,
+              suppressInfoWindows: true,
               polylineOptions: {
                 strokeColor: "#3b82f6",
                 strokeWeight: 5,
@@ -593,35 +635,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           />
         ))}
 
-        {/* Driver Info Window */}
-        {selectedDriver && (
-          <InfoWindow
-            position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
-            onCloseClick={() => {
-              setSelectedDriver(null);
-              setDirections(null); // Clear route when closed
-            }}
-          >
-            <div className="p-2">
-              <h3 className="font-semibold text-green-600 mb-1 flex items-center gap-1">
-                <Car size={14} />
-                {selectedDriver.driverName}
-              </h3>
-              <p className="text-gray-600 text-xs mb-1">
-                ID: {selectedDriver.id.substring(0, 8)}...
-              </p>
-              <p className="text-gray-600 text-xs mb-1">
-                {selectedDriver.lat.toFixed(6)}, {selectedDriver.lng.toFixed(6)}
-              </p>
-              {selectedDriver.accuracy > 0 && (
-                <p className="text-gray-500 text-xs mb-1">
-                  Accuracy: ±{Math.round(selectedDriver.accuracy)}m
-                </p>
-              )}
-              <p className="text-green-600 text-xs">🚗 Active Driver</p>
-            </div>
-          </InfoWindow>
-        )}
+        {/* Driver Info Window removed as requested */}
 
         {/* Offline Driver Location Markers (grayed out) */}
         {offlineDrivers.map((driver) => (
@@ -641,30 +655,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           />
         ))}
 
-        {/* Offline Driver Info Window */}
-        {selectedOfflineDriver && (
-          <InfoWindow
-            position={{ lat: selectedOfflineDriver.lat, lng: selectedOfflineDriver.lng }}
-            onCloseClick={() => setSelectedOfflineDriver(null)}
-          >
-            <div className="p-2">
-              <h3 className="font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                <Car size={14} />
-                {selectedOfflineDriver.driverName}
-              </h3>
-              <p className="text-gray-600 text-xs mb-1">
-                ID: {selectedOfflineDriver.id.substring(0, 8)}...
-              </p>
-              <p className="text-gray-600 text-xs mb-1">
-                {selectedOfflineDriver.lat.toFixed(6)}, {selectedOfflineDriver.lng.toFixed(6)}
-              </p>
-              <p className="text-gray-500 text-xs mb-1">
-                Last seen: {formatTimeAgo(selectedOfflineDriver.timestamp)}
-              </p>
-              <p className="text-gray-400 text-xs">📍 Last Known Location</p>
-            </div>
-          </InfoWindow>
-        )}
+        {/* Offline Driver Info Window removed as requested */}
       </GoogleMap>
 
       {/* Map Controls */}
