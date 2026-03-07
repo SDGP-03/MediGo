@@ -820,11 +820,18 @@ export function HospitalDashboard() {
                   <p className="text-foreground text-sm">{request.symptoms}</p>
                 </div>
 
-                <div className="mt-3 flex gap-2">
-
-                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                <div className="mt-3 flex justify-end gap-3 pl-8">
+                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                    Accept
+                  </button>
+                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    Decline
+                  </button>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                     View Details
                   </button>
+
+
                 </div>
               </div>
             ))}
