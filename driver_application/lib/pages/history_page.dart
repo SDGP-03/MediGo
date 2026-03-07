@@ -964,7 +964,6 @@ class _HistoryPageState extends State<HistoryPage> {
       }
 
       final data = Map<dynamic, dynamic>.from(snapshot.value as Map);
-      final driverId = data['driverId']?.toString();
       final status = data['status']?.toString().trim().toLowerCase();
 
       if (status == 'completed') {

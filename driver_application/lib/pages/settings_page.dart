@@ -10,6 +10,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:driver_application/widgets/side_menu.dart';
 import '../widgets/map_styles.dart';
 
@@ -117,8 +118,18 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> loadAppVersion() async {
-    // TODO: Add package_info_plus when dependency conflicts are resolved
-    if (mounted) {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version;
+      final build = info.buildNumber;
+
+      if (!mounted) return;
+      setState(() {
+        appVersion = build.isEmpty ? version : "$version ($build)";
+      });
+    } catch (e) {
+      debugPrint('Error loading app version: $e');
+      if (!mounted) return;
       setState(() {
         appVersion = "1.0.0 (1)";
       });
