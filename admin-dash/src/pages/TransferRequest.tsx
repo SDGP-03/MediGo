@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File } from 'lucide-react';
+import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
 import { database } from '../firebase';
-import { ref, push, set, onValue, off } from 'firebase/database';
+import { ref, push, set } from 'firebase/database';
+import { useFleetData } from '../hooks/useFleetData';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
 const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
@@ -63,20 +64,18 @@ function getNextPatientId(): string {
   return `PT-${maxNum + 1}`;
 }
 
-interface AvailableDriver {
-  id: string;
-  driverName: string;
-  lat: number;
-  lng: number;
-}
-
 export function TransferRequest() {
   const [step, setStep] = useState<'patient' | 'transfer' | 'ambulance'>('patient');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+
+  // Fleet data from Firebase (ambulances + drivers)
+  const { ambulances, drivers } = useFleetData();
+  const availableAmbulances = ambulances.filter(a => a.status === 'available');
+  const activeDrivers = drivers.filter(d => d.status === 'active');
 
   // Autocomplete state for patient name
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -120,37 +119,6 @@ export function TransferRequest() {
     requiresOxygen: true,
     attendantGender: '',
   });
-
-  // Fetch available drivers from Firebase
-  useEffect(() => {
-    const driversRef = ref(database, 'driver_locations');
-    const now = Date.now();
-    const FIVE_MINUTES = 5 * 60 * 1000;
-
-    const handleData = (snapshot: any) => {
-      const data = snapshot.val();
-      if (!data) {
-        setAvailableDrivers([]);
-        return;
-      }
-
-      const drivers: AvailableDriver[] = Object.entries(data)
-        .map(([id, value]: [string, any]) => ({
-          id,
-          driverName: value.driverName || 'Unknown Driver',
-          lat: value.lat,
-          lng: value.lng,
-          isOnline: value.isOnline || false,
-          timestamp: value.timestamp || 0,
-        }))
-        .filter((d: any) => d.isOnline && d.lat && d.lng && (Date.now() - d.timestamp) < FIVE_MINUTES);
-
-      setAvailableDrivers(drivers);
-    };
-
-    onValue(driversRef, handleData);
-    return () => off(driversRef);
-  }, []);
 
   const hospitals = [
     'General Hospital O P D',
@@ -203,8 +171,11 @@ export function TransferRequest() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedDriverId) {
-      setFormErrors({ selectedDriverId: 'Please select a driver to assign this transfer request.' });
+    const errors: Record<string, string> = {};
+    if (!selectedAmbulanceId) errors.selectedAmbulanceId = 'Please select an ambulance for this transfer.';
+    if (!selectedDriverId) errors.selectedDriverId = 'Please select a driver for this transfer.';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -222,6 +193,7 @@ export function TransferRequest() {
       await set(newRequestRef, {
         status: 'pending',
         driverId: selectedDriverId,
+        ambulanceId: selectedAmbulanceId,
         priority: formData.priority,
         createdAt: Date.now(),
 
@@ -296,6 +268,7 @@ export function TransferRequest() {
         attendantGender: '',
       });
       setSelectedDriverId('');
+      setSelectedAmbulanceId('');
       setSelectedDocumentIndices([]);
 
       // Clear success message after 5 seconds
@@ -484,10 +457,10 @@ export function TransferRequest() {
                       if (formErrors.patientId) setFormErrors({ ...formErrors, patientId: '' });
                     }}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientId
-                        ? 'border-red-500 ring-1 ring-red-500'
-                        : isNewPatient
-                          ? 'border-amber-400 ring-1 ring-amber-300'
-                          : 'border-input'
+                      ? 'border-red-500 ring-1 ring-red-500'
+                      : isNewPatient
+                        ? 'border-amber-400 ring-1 ring-amber-300'
+                        : 'border-input'
                       }`}
                     placeholder="Hospital patient ID"
                   />
@@ -921,51 +894,109 @@ export function TransferRequest() {
                 </h2>
 
                 <div className="space-y-6">
-                  {/* Driver Selection */}
+                  {/* Ambulance Selection */}
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <Truck className="text-green-600 flex-shrink-0 mt-1" size={20} />
                       <div className="w-full">
-                        <p className="text-green-900 mb-2 font-medium">Select Available Driver</p>
-                        {availableDrivers.length === 0 ? (
-                          <p className="text-orange-600 text-sm">
-                            ⚠️ No drivers currently available. Please wait for a driver to come online.
-                          </p>
+                        <p className="text-green-900 dark:text-green-300 mb-1 font-semibold">Select Ambulance</p>
+                        <p className="text-green-700 dark:text-green-400 text-xs mb-3">
+                          {availableAmbulances.length} ambulance{availableAmbulances.length !== 1 ? 's' : ''} currently available
+                        </p>
+                        {availableAmbulances.length === 0 ? (
+                          <p className="text-orange-600 text-sm">⚠️ No ambulances currently available. Please check back shortly.</p>
                         ) : (
                           <>
                             <select
-                              required
+                              value={selectedAmbulanceId}
+                              onChange={(e) => {
+                                setSelectedAmbulanceId(e.target.value);
+                                if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
+                              }}
+                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground ${formErrors.selectedAmbulanceId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                                }`}
+                            >
+                              <option value="">Select an ambulance...</option>
+                              {availableAmbulances.map(amb => (
+                                <option key={amb.id} value={amb.id}>
+                                  {amb.id} — {amb.location}{amb.hasVentilator ? ' · Ventilator' : ''}{amb.hasDoctor ? ' · Doctor' : ''}
+                                </option>
+                              ))}
+                            </select>
+                            {formErrors.selectedAmbulanceId && (
+                              <p className="text-red-500 text-xs mt-1">{formErrors.selectedAmbulanceId}</p>
+                            )}
+                            {selectedAmbulanceId && (() => {
+                              const amb = availableAmbulances.find(a => a.id === selectedAmbulanceId);
+                              if (!amb) return null;
+                              return (
+                                <div className="mt-3 p-3 bg-white dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 text-xs space-y-1">
+                                  <p className="text-green-800 dark:text-green-300 font-medium">{amb.id} — {amb.location}</p>
+                                  <p className="text-green-700 dark:text-green-400">Equipment: {amb.equipment.join(', ') || 'None listed'}</p>
+                                  {(amb.hasDoctor || amb.hasVentilator) && (
+                                    <div className="flex gap-1.5 pt-1">
+                                      {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Doctor on board</span>}
+                                      {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Ventilator</span>}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Driver Selection */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Users className="text-blue-600 flex-shrink-0 mt-1" size={20} />
+                      <div className="w-full">
+                        <p className="text-blue-900 dark:text-blue-300 mb-1 font-semibold">Select Driver</p>
+                        <p className="text-blue-700 dark:text-blue-400 text-xs mb-3">
+                          {activeDrivers.length} driver{activeDrivers.length !== 1 ? 's' : ''} currently active
+                        </p>
+                        {activeDrivers.length === 0 ? (
+                          <p className="text-orange-600 text-sm">⚠️ No drivers currently active. Please check back shortly.</p>
+                        ) : (
+                          <>
+                            <select
                               value={selectedDriverId}
                               onChange={(e) => {
                                 setSelectedDriverId(e.target.value);
                                 if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
                               }}
-                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-input-field-bg text-foreground ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
                                 }`}
                             >
                               <option value="">Select a driver...</option>
-                              {availableDrivers.map(driver => (
+                              {activeDrivers.map(driver => (
                                 <option key={driver.id} value={driver.id}>
-                                  {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
+                                  {driver.name} ({driver.gender}) — ⭐ {driver.rating} · Avg {driver.avgResponseTime}
                                 </option>
                               ))}
                             </select>
-                            {formErrors.selectedDriverId && <p className="text-red-500 text-xs mt-1">{formErrors.selectedDriverId}</p>}
+                            {formErrors.selectedDriverId && (
+                              <p className="text-red-500 text-xs mt-1">{formErrors.selectedDriverId}</p>
+                            )}
+                            {selectedDriverId && (() => {
+                              const drv = activeDrivers.find(d => d.id === selectedDriverId);
+                              if (!drv) return null;
+                              return (
+                                <div className="mt-3 p-3 bg-white dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs space-y-1">
+                                  <p className="text-blue-800 dark:text-blue-300 font-medium">{drv.name} — {drv.id}</p>
+                                  <div className="flex items-center gap-3 text-blue-700 dark:text-blue-400">
+                                    <span className="flex items-center gap-1"><Star size={11} className="text-yellow-500" /> {drv.rating} rating</span>
+                                    <span>· {drv.totalTrips} trips</span>
+                                    <span>· Avg {drv.avgResponseTime}</span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </>
                         )}
-                        <p className="text-green-700 text-xs mt-2">
-                          {availableDrivers.length} driver(s) currently online
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-                      <div>
-                        <p className="text-blue-900 mb-1">Assignment Information</p>
-                        <p className="text-blue-700 text-sm">
+                        <p className="text-blue-600 dark:text-blue-400 text-xs mt-2 italic">
                           The selected driver will receive a notification on their mobile app with trip details.
                         </p>
                       </div>
@@ -1061,8 +1092,8 @@ export function TransferRequest() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedDriverId || availableDrivers.length === 0}
-                  className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || availableDrivers.length === 0
+                  disabled={isSubmitting || !selectedDriverId || !selectedAmbulanceId}
+                  className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || !selectedAmbulanceId
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-red-600 hover:bg-red-700'
                     } text-white`}
