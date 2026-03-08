@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft } from "lucide-react";
+import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft, Phone, Mail, Shield } from "lucide-react";
 import { Switch } from "../components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
 import { database } from "../firebase";
-import { ref, onValue, off } from "firebase/database";
+import { ref, onValue, off, get } from "firebase/database";
 
 
 export function HospitalDashboard() {
@@ -13,6 +14,35 @@ export function HospitalDashboard() {
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+
+  // --- STATE: DRIVER INFO POPUP ---
+  const [driverPopupOpen, setDriverPopupOpen] = useState(false);
+  const [driverPopupData, setDriverPopupData] = useState<any>(null);
+  const [driverPopupLoading, setDriverPopupLoading] = useState(false);
+
+  const viewDriverDetails = async (driverId: string) => {
+    if (!driverId || driverId === 'Unknown') {
+      alert('No driver assigned to this request.');
+      return;
+    }
+    setDriverPopupOpen(true);
+    setDriverPopupLoading(true);
+    setDriverPopupData(null);
+    try {
+      const driverRef = ref(database, `driver_locations/${driverId}`);
+      const snapshot = await get(driverRef);
+      if (snapshot.exists()) {
+        setDriverPopupData({ id: driverId, ...snapshot.val() });
+      } else {
+        setDriverPopupData({ id: driverId, notFound: true });
+      }
+    } catch (err) {
+      console.error('Error fetching driver details:', err);
+      setDriverPopupData({ id: driverId, error: true });
+    } finally {
+      setDriverPopupLoading(false);
+    }
+  };
 
   const handleTrackLive = (transfer: any) => {
     if (!transfer.driverId) {
@@ -642,12 +672,12 @@ export function HospitalDashboard() {
                         {transfer.ambulance}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => viewDriverDetails(transfer.driver)}>
                       <Users
                         size={16}
-                        className="text-gray-400"
+                        className="text-blue-500"
                       />
-                      <span className="text-muted-foreground">
+                      <span className="text-blue-600 dark:text-blue-400 underline underline-offset-2">
                         {transfer.driver}
                       </span>
                     </div>
@@ -748,7 +778,10 @@ export function HospitalDashboard() {
                     </span>
                   </p>
                   <div className='flex item-center gap-4'>
-                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    <button
+                      onClick={() => viewDriverDetails(request.driver)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
                       View Driver
                     </button>
                     <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
@@ -905,6 +938,114 @@ export function HospitalDashboard() {
         <Ambulance size={24} />
         <span className="hidden group-hover:block transition-all duration-300">New Request</span>
       </button>
+
+      {/* --- DRIVER INFO POPUP --- */}
+      <Dialog open={driverPopupOpen} onOpenChange={setDriverPopupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              Driver Details
+            </DialogTitle>
+            <DialogDescription>
+              {driverPopupData?.id ? `Driver ID: ${driverPopupData.id}` : 'Loading driver information...'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {driverPopupLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {driverPopupData?.notFound && (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="text-orange-500" size={24} />
+              </div>
+              <p className="text-muted-foreground text-sm">No location data found for this driver.</p>
+              <p className="text-muted-foreground text-xs mt-1">ID: {driverPopupData.id}</p>
+            </div>
+          )}
+
+          {driverPopupData?.error && (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="text-red-500" size={24} />
+              </div>
+              <p className="text-muted-foreground text-sm">Failed to fetch driver details.</p>
+            </div>
+          )}
+
+          {driverPopupData && !driverPopupData.notFound && !driverPopupData.error && !driverPopupLoading && (
+            <div className="space-y-4">
+              {/* Driver Name & Status */}
+              <div className="flex items-center gap-4 p-4 bg-accent/50 rounded-xl">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <User className="text-white" size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-foreground font-semibold text-lg">
+                    {driverPopupData.driverName || 'Unknown Driver'}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                    <span className={`text-xs font-medium ${driverPopupData.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                      {driverPopupData.isOnline ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <MapPin size={12} /> Latitude
+                  </p>
+                  <p className="text-foreground text-sm font-mono">
+                    {driverPopupData.lat?.toFixed(6) || 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <MapPin size={12} /> Longitude
+                  </p>
+                  <p className="text-foreground text-sm font-mono">
+                    {driverPopupData.lng?.toFixed(6) || 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <Shield size={12} /> Accuracy
+                  </p>
+                  <p className="text-foreground text-sm">
+                    {driverPopupData.accuracy ? `${driverPopupData.accuracy.toFixed(1)}m` : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <Clock size={12} /> Last Active
+                  </p>
+                  <p className="text-foreground text-sm">
+                    {driverPopupData.timestamp
+                      ? new Date(driverPopupData.timestamp).toLocaleString()
+                      : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Driver ID */}
+              <div className="p-3 bg-accent/30 rounded-lg">
+                <p className="text-muted-foreground text-xs mb-1">Driver ID</p>
+                <p className="text-foreground text-xs font-mono break-all">{driverPopupData.id}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

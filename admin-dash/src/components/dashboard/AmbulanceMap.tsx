@@ -635,7 +635,24 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           />
         ))}
 
-        {/* Driver Info Window removed as requested */}
+        {/* Online Driver Info Window */}
+        {selectedDriver && (
+          <InfoWindow
+            position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
+            onCloseClick={() => { setSelectedDriver(null); setDirections(null); }}
+            options={{ maxWidth: 180 }}
+          >
+            <div style={{ padding: '4px 2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: '13px', color: '#111827' }}>
+                  {selectedDriver.driverName}
+                </span>
+              </div>
+              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 500 }}>● Online</span>
+            </div>
+          </InfoWindow>
+        )}
 
         {/* Offline Driver Location Markers (grayed out) */}
         {offlineDrivers.map((driver) => (
@@ -655,7 +672,24 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           />
         ))}
 
-        {/* Offline Driver Info Window removed as requested */}
+        {/* Offline Driver Info Window */}
+        {selectedOfflineDriver && (
+          <InfoWindow
+            position={{ lat: selectedOfflineDriver.lat, lng: selectedOfflineDriver.lng }}
+            onCloseClick={() => setSelectedOfflineDriver(null)}
+            options={{ maxWidth: 180 }}
+          >
+            <div style={{ padding: '4px 2px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9ca3af', flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: '13px', color: '#111827' }}>
+                  {selectedOfflineDriver.driverName}
+                </span>
+              </div>
+              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>● Offline · {formatTimeAgo(selectedOfflineDriver.timestamp)}</span>
+            </div>
+          </InfoWindow>
+        )}
       </GoogleMap>
 
       {/* Map Controls */}
