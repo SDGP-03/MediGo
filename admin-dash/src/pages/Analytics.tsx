@@ -132,6 +132,17 @@ export function Analytics() {
                   allowDecimals={false}
                 />
                 <Tooltip
+                  cursor={{ stroke: '#e2e8f0', strokeWidth: 2 }}
+                  contentStyle={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(4px)',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    padding: '8px 12px'
+                  }}
+                  labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
+                  itemStyle={{ color: '#ef4444', fontWeight: 700, padding: 0 }}
                   formatter={(value: number | null) =>
                     value !== null ? [`${value} min`, 'Avg Response Time'] : ['No data', 'Avg Response Time']
                   }
@@ -182,7 +193,17 @@ export function Analytics() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  padding: '8px 12px'
+                }}
+                itemStyle={{ fontWeight: 600 }}
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -222,9 +243,28 @@ export function Analytics() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" />
             <YAxis dataKey="area" type="category" width={160} />
-            <Tooltip />
+            <Tooltip
+              cursor={{ fill: 'rgba(226, 232, 240, 0.4)', radius: 4 }}
+              contentStyle={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                padding: '8px 12px'
+              }}
+              labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
+              itemStyle={{ color: '#22c55e', fontWeight: 700, padding: 0 }}
+            />
             <Legend />
-            <Bar dataKey="requests" fill="#22c55e" name="Transfers Received" />
+            <Bar
+              dataKey="requests"
+              fill="#22c55e"
+              name="Transfers Received"
+              radius={[0, 4, 4, 0]}
+              barSize={24}
+              activeBar={{ fill: '#16a34a', stroke: '#22c55e', strokeWidth: 1 }}
+            />
           </BarChart>
         </ResponsiveContainer>
         {data.demandAreasData.length > 0 && (

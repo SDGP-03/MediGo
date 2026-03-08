@@ -185,7 +185,7 @@ export function AmbulanceFleet() {
   const avgMileagePerAmbulance = ambulances.length > 0 ? Math.round(totalMileage / ambulances.length) : 0;
 
   // bar chart: use the same real average for every day (no hard‑coded ratios)
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const distanceData = days.map(d => ({ day: d, value: avgMileagePerAmbulance }));
 
   // ── Track previous total mileage for a realtime trend percentage ──
@@ -417,9 +417,16 @@ export function AmbulanceFleet() {
               <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} dot={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-                labelStyle={{ color: '#000' }}
-                itemStyle={{ color: '#000' }}
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  padding: '8px 12px'
+                }}
+                labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
+                itemStyle={{ color: '#14b8a6', fontWeight: 700, padding: 0 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -438,12 +445,26 @@ export function AmbulanceFleet() {
           <div className="text-3xl font-bold text-foreground mb-4">{avgMileagePerAmbulance.toLocaleString()} km</div>
           <ResponsiveContainer width="100%" height={110}>
             <BarChart data={distanceData}>
-              <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+              <Bar
+                dataKey="value"
+                fill="#3b82f6"
+                radius={[6, 6, 0, 0]}
+                barSize={30}
+                activeBar={{ fill: '#2563eb', stroke: '#3b82f6', strokeWidth: 1 }}
+              />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
-                labelStyle={{ color: '#000' }}
-                itemStyle={{ color: '#000' }}
+                cursor={{ fill: 'rgba(226, 232, 240, 0.4)', radius: 4 }}
+                contentStyle={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(4px)',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  padding: '8px 12px'
+                }}
+                labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
+                itemStyle={{ color: '#3b82f6', fontWeight: 700, padding: 0 }}
               />
             </BarChart>
           </ResponsiveContainer>
