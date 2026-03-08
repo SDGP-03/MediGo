@@ -360,13 +360,13 @@ export function HospitalDashboard() {
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => setMapView("map")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active:scale-95 ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
             >
               <Layers size={18} />
             </button>
             <button
               onClick={() => setMapView("list")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active:scale-95 ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
             >
               <List size={18} />
             </button>
@@ -696,7 +696,7 @@ export function HospitalDashboard() {
                   </div>
                   <button
                     onClick={() => handleTrackLive(transfer)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     Track Live
                   </button>
@@ -774,11 +774,14 @@ export function HospitalDashboard() {
                   <div className='flex item-center gap-4'>
                     <button
                       onClick={() => viewDriverDetails(request.driver)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
                     >
                       View Driver
                     </button>
-                    <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    <button
+                      onClick={() => alert(`Cancelling transfer request ${request.id}`)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
+                    >
                       Cancel
                     </button>
                   </div>
@@ -801,7 +804,7 @@ export function HospitalDashboard() {
             {incomingRequests.map((request) => (
               <div
                 key={request.id}
-                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
+                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all"
                 onClick={() => setSelectedRequest(request)}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -848,17 +851,24 @@ export function HospitalDashboard() {
                 </div>
 
                 <div className="mt-3 flex justify-end gap-3 pl-8">
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName}`); }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
                     Accept
                   </button>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName}`); }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
                     Decline
                   </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
                     View Details
                   </button>
-
-
                 </div>
               </div>
             ))}
@@ -874,13 +884,14 @@ export function HospitalDashboard() {
             </div>
             <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
           </div>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {resources.map((resource) => (
               <div
                 key={resource.id}
-                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${resource.available
-                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-200 dark:hover:border-emerald-800'
-                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-200 dark:hover:border-red-800'
+                onClick={() => toggleResource(resource.id)}
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer transform hover:scale-[1.02] hover:shadow-md ${resource.available
+                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
+                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
                   }`}
               >
                 <div className="flex items-center gap-4">
@@ -896,9 +907,9 @@ export function HospitalDashboard() {
                     <h4 className="font-semibold text-foreground text-sm tracking-tight">{resource.name}</h4>
                     <div className="flex">
                       <span
-                        className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${resource.available
+                        className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full transition-colors duration-300 ${resource.available
                           ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
-                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900'
+                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
                           }`}
                       >
                         {resource.available ? 'Available' : 'Unavailable'}
@@ -908,11 +919,11 @@ export function HospitalDashboard() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className={`h-8 w-[1px] ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'}`}></div>
+                  <div className={`h-8 w-[1px] transition-colors duration-300 ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'}`}></div>
                   <Switch
                     checked={resource.available}
                     onCheckedChange={() => toggleResource(resource.id)}
-                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-110 shadow-sm"
+                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-110 shadow-sm pointer-events-none"
                   />
                 </div>
               </div>
