@@ -1,18 +1,11 @@
 /**
- * useFleetData — Backend API hook (replaces direct Firebase access)
- *
- * Manages:
- *   /hospitals/{uid}/ambulances/{ambId}
- *   /hospitals/{uid}/drivers/{drvId}
- *   /hospitals/{uid}/pendingTransfers/{tfrId}
- *
- * Uses SSE for real-time updates and REST for mutations.
+ * useFleetData — Direct Firebase hook (reverted from NestJS)
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
-import { createSSE, apiPost, apiPut, apiDelete } from '../api/apiClient';
+import { auth, database } from '../firebase';
+import { ref, onValue, off, push, update, remove, set } from 'firebase/database';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,92 +113,108 @@ export function useFleetData(): UseFleetDataReturn {
         return unsub;
     }, []);
 
-    // ── SSE subscription to backend ──
+    // ── Firebase subscription ──
     useEffect(() => {
-        if (!authResolved) return;
-
-        if (uid === null) {
+        if (!authResolved || !uid) {
             setLoading(false);
             return;
         }
 
-        setLoading(true);
-        setError(null);
+        const hospitalRef = ref(database, `hospitals/${uid}`);
 
-        const cleanup = createSSE(
-            '/fleet/stream',
-            (data) => {
-                if (data.ambulances) setAmbulances(data.ambulances);
-                if (data.drivers) setDrivers(data.drivers);
-                if (data.pendingTransfers) setPendingTransfers(data.pendingTransfers);
-                setLoading(false);
-            },
-            () => {
-                setError('Connection lost. Reconnecting...');
-            },
-        );
+        const unsub = onValue(hospitalRef, (snapshot) => {
+            const data = snapshot.val() || {};
 
-        return cleanup;
+            // Parse Ambulances
+            const ambObj = data.ambulances || {};
+            setAmbulances(Object.entries(ambObj).map(([id, val]: [string, any]) => ({ id, ...val })));
+
+            // Parse Drivers
+            const drvObj = data.drivers || {};
+            setDrivers(Object.entries(drvObj).map(([id, val]: [string, any]) => ({ id, ...val })));
+
+            // Parse Pending Transfers
+            const pndObj = data.pendingTransfers || {};
+            setPendingTransfers(Object.entries(pndObj).map(([id, val]: [string, any]) => ({ id, ...val })));
+
+            setLoading(false);
+            setError(null);
+        }, (err) => {
+            console.error('[FleetData] Firebase error:', err);
+            setError(err.message);
+            setLoading(false);
+        });
+
+        return () => off(hospitalRef, 'value', unsub);
     }, [uid, authResolved]);
 
-    // ── Ambulance CRUD (via backend API) ──
+    // ── Helpers ──
 
     const addAmbulance = useCallback(async (unit: AmbulanceUnit) => {
-        await apiPost('/fleet/ambulances', unit);
-    }, []);
+        if (!uid) return;
+        await set(ref(database, `hospitals/${uid}/ambulances/${unit.id}`), unit);
+    }, [uid]);
 
     const updateAmbulance = useCallback(async (id: string, changes: Partial<AmbulanceUnit>) => {
-        await apiPut(`/fleet/ambulances/${id}`, changes);
-    }, []);
+        if (!uid) return;
+        await update(ref(database, `hospitals/${uid}/ambulances/${id}`), changes);
+    }, [uid]);
 
     const deleteAmbulance = useCallback(async (id: string) => {
-        await apiDelete(`/fleet/ambulances/${id}`);
-    }, []);
-
-    // ── Driver CRUD ──
+        if (!uid) return;
+        await remove(ref(database, `hospitals/${uid}/ambulances/${id}`));
+    }, [uid]);
 
     const addDriver = useCallback(async (driver: Driver) => {
-        await apiPost('/fleet/drivers', driver);
-    }, []);
+        if (!uid) return;
+        await set(ref(database, `hospitals/${uid}/drivers/${driver.id}`), driver);
+    }, [uid]);
 
     const updateDriver = useCallback(async (id: string, changes: Partial<Driver>) => {
-        await apiPut(`/fleet/drivers/${id}`, changes);
-    }, []);
+        if (!uid) return;
+        await update(ref(database, `hospitals/${uid}/drivers/${id}`), changes);
+    }, [uid]);
 
     const deleteDriver = useCallback(async (id: string) => {
-        await apiDelete(`/fleet/drivers/${id}`);
-    }, []);
+        if (!uid) return;
+        await remove(ref(database, `hospitals/${uid}/drivers/${id}`));
+    }, [uid]);
 
-    // ── Assignment helpers ──
+    const assignAmbulanceToTransfer = useCallback(async (ambId: string, transfer: PendingTransfer) => {
+        if (!uid) return;
+        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+            status: 'in_service',
+            currentTransfer: transfer.patient
+        });
+    }, [uid]);
 
-    const assignAmbulanceToTransfer = useCallback(async (
-        ambId: string,
-        transfer: PendingTransfer,
-    ) => {
-        await apiPost(`/fleet/ambulances/${ambId}/assign`, transfer);
-    }, []);
-
-    const scheduleMaintenance = useCallback(async (
-        ambId: string,
-        date: string,
-        notes: string,
-    ) => {
-        await apiPost(`/fleet/ambulances/${ambId}/maintenance`, { date, notes });
-    }, []);
+    const scheduleMaintenance = useCallback(async (ambId: string, date: string, notes: string) => {
+        if (!uid) return;
+        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+            status: 'maintenance',
+            nextServiceDue: date,
+            maintenanceNotes: notes
+        });
+    }, [uid]);
 
     const completeMaintenance = useCallback(async (ambId: string) => {
-        await apiPost(`/fleet/ambulances/${ambId}/complete-maintenance`, {});
-    }, []);
-
-    // ── Pending transfer operations ──
+        if (!uid) return;
+        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+            status: 'available',
+            lastService: new Date().toISOString()
+        });
+    }, [uid]);
 
     const addPendingTransfer = useCallback(async (transfer: Omit<PendingTransfer, 'id'>) => {
-        await apiPost('/fleet/pending-transfers', transfer);
-    }, []);
+        if (!uid) return;
+        const newRef = push(ref(database, `hospitals/${uid}/pendingTransfers`));
+        await set(newRef, transfer);
+    }, [uid]);
 
     const removePendingTransfer = useCallback(async (id: string) => {
-        await apiDelete(`/fleet/pending-transfers/${id}`);
-    }, []);
+        if (!uid) return;
+        await remove(ref(database, `hospitals/${uid}/pendingTransfers/${id}`));
+    }, [uid]);
 
     return {
         ambulances,

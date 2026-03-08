@@ -22,6 +22,7 @@ export class DriversService {
                 'value',
                 (snapshot) => {
                     const data = snapshot.val();
+                    this.logger.debug(`Firebase driver_locations data: ${JSON.stringify(data)}`);
                     if (!data) {
                         subscriber.next({
                             data: JSON.stringify({ online: [], offline: [] }),

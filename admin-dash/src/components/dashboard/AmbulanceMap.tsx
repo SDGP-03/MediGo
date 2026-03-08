@@ -223,11 +223,20 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
     if (bounds && typeof google !== 'undefined') {
-      // Add padding to bounds
-      const padding = 50;
-      map.fitBounds(bounds, padding);
+      map.fitBounds(bounds, 50);
     }
   }, [bounds]);
+
+  // Re-fit bounds when drivers arrive or change (to prevent disappearance from view)
+  useEffect(() => {
+    if (map && bounds && !trackedDriverTrigger) {
+      // Small timeout to ensure markers have rendered
+      const timer = setTimeout(() => {
+        map.fitBounds(bounds, 50);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [map, bounds, trackedDriverTrigger]);
 
   const onUnmount = useCallback(() => {
     setMap(null);

@@ -30,6 +30,8 @@ class _HomePageState extends State<HomePage> {
   Marker? driverMarker;
   Marker? destinationMarker;
 
+  Timer? heartbeatTimer;
+
   String selectedMapStyle = "standard";
   MapType _mapType = MapType.normal;
 
@@ -167,6 +169,15 @@ class _HomePageState extends State<HomePage> {
         Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
             .then((position) => _pushLocationToFirebase(position))
             .catchError((e) => debugPrint('Initial location fetch failed: $e'));
+
+        // Start a periodic heartbeat every 60 seconds to keep driver online
+        // even if they are stationary (stationary distance filter = 10m)
+        heartbeatTimer?.cancel();
+        heartbeatTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+          Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low)
+              .then((position) => _pushLocationToFirebase(position))
+              .catchError((e) => debugPrint('Heartbeat location failed: $e'));
+        });
       }
     }
   }
@@ -868,10 +879,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    positionStream?.cancel();
+    heartbeatTimer?.cancel();
     _assignmentSubscription?.cancel();
-    _connectivitySubscription?.cancel();
     MapStyles.selectedStyleNotifier.removeListener(_onMapStyleChanged);
+    _connectivitySubscription?.cancel();
+    positionStream?.cancel();
     _setDriverOffline();
     super.dispose();
   }

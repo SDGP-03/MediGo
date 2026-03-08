@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText } from 'lucide-react';
-import { createSSE, apiPut, apiPost } from '../api/apiClient';
+import { database } from '../firebase';
+import { ref, onValue, off, set, update, push } from 'firebase/database';
 
 interface PatientTransfer {
   date: string;
@@ -370,19 +371,29 @@ export function PatientRecords() {
   });
 
   useEffect(() => {
-    const cleanup = createSSE(
-      '/patients/stream',
-      (data) => {
-        if (data.transferRequests !== undefined) setTransferRequests(data.transferRequests || {});
-        if (data.patientRecords !== undefined) setPatientOverrides(data.patientRecords || {});
-        setIsLoading(false);
-      },
-      () => {
-        console.warn('[PatientRecords] SSE connection error');
-        setLoadError('Connection lost. Reconnecting...');
-      },
-    );
-    return cleanup;
+    const transfersRef = ref(database, 'transfer_requests');
+    const recordsRef = ref(database, 'patient_records');
+
+    const unsubTransfers = onValue(transfersRef, (snapshot) => {
+      setTransferRequests(snapshot.val() || {});
+      if (recordsRef) setIsLoading(false);
+    }, (err) => {
+      console.error('[PatientRecords] Transfers error:', err);
+      setLoadError('Failed to load transfers');
+    });
+
+    const unsubRecords = onValue(recordsRef, (snapshot) => {
+      setPatientOverrides(snapshot.val() || {});
+      setIsLoading(false);
+    }, (err) => {
+      console.error('[PatientRecords] Records error:', err);
+      setLoadError('Failed to load records');
+    });
+
+    return () => {
+      off(transfersRef);
+      off(recordsRef);
+    };
   }, []);
 
   const patients = useMemo(
@@ -419,7 +430,7 @@ export function PatientRecords() {
     const key = sanitizeKey(record.id);
     setIsSaving(true);
     try {
-      await apiPut(`/patients/${key}`, {
+      await set(ref(database, `patient_records/${key}`), {
         id: record.id,
         name: record.name,
         age: record.age,
@@ -534,13 +545,17 @@ export function PatientRecords() {
       const pdfBlob = await createStyledPdfBlob(patient);
       const reportData = await blobToDataUrl(pdfBlob);
 
-      await apiPost('/transfers', {
+      const transferRef = ref(database, 'transfer_requests');
+      const newTransferRef = push(transferRef);
+
+      await set(newTransferRef, {
         destinationHospital: selectedHospital,
         status: 'sent',
         reportType: 'patient_medical_report',
         fileName: `${sanitizeKey(patient.id)}-report.pdf`,
         fileType: 'application/pdf',
         reportData,
+        createdAt: Date.now(),
         patient: {
           id: patient.id,
           name: patient.name,
@@ -630,8 +645,8 @@ export function PatientRecords() {
                           setEditedPatient(null);
                         }}
                         className={`w-full p-4 text-left hover:bg-accent transition-colors border rounded-lg ${selectedPatient?.id === patient.id
-                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
-                            : 'border-transparent hover:border-border'
+                          ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
+                          : 'border-transparent hover:border-border'
                           } ${!selectedPatient ? 'border-border' : ''}`}
                       >
                         <div className="flex items-center gap-3 mb-2">
@@ -1019,8 +1034,8 @@ export function PatientRecords() {
                           </span>
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${transfer.status.toLowerCase() === 'completed'
-                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                              : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                               }`}
                           >
                             {transfer.status}

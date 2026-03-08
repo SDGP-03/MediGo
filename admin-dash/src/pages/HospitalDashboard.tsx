@@ -5,7 +5,9 @@ import { Switch } from "../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
-import { createSSE, apiFetch } from "../api/apiClient";
+import { database, auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { ref, onValue, off, get } from "firebase/database";
 
 
 export function HospitalDashboard() {
@@ -28,15 +30,20 @@ export function HospitalDashboard() {
     setDriverPopupLoading(true);
     setDriverPopupData(null);
     try {
-      const data = await apiFetch(`/drivers/${driverId}`);
-      setDriverPopupData(data);
-    } catch (err: any) {
-      console.error('Error fetching driver details:', err);
-      if (err.message?.includes('not found')) {
-        setDriverPopupData({ id: driverId, notFound: true });
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+
+      const driverRef = ref(database, `hospitals/${user.uid}/drivers/${driverId}`);
+      const snapshot = await get(driverRef);
+
+      if (snapshot.exists()) {
+        setDriverPopupData({ id: driverId, ...snapshot.val() });
       } else {
-        setDriverPopupData({ id: driverId, error: true });
+        setDriverPopupData({ id: driverId, notFound: true });
       }
+    } catch (err: any) {
+      console.error('Error fetching driver details from Firebase:', err);
+      setDriverPopupData({ id: driverId, error: true });
     } finally {
       setDriverPopupLoading(false);
     }
@@ -69,6 +76,28 @@ export function HospitalDashboard() {
     setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
   };
 
+  // --- STATE: HOSPITAL PROFILE ---
+  const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const adminRef = ref(database, `admin/${user.uid}`);
+          const snapshot = await get(adminRef);
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            setCurrentHospitalName(data.hospitalName || "");
+          }
+        } catch (err) {
+          console.error("Error fetching admin profile:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Live driver data from Firebase
   const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
@@ -76,18 +105,39 @@ export function HospitalDashboard() {
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
 
   useEffect(() => {
-    const cleanup = createSSE(
-      '/transfers/stream',
-      (data) => {
-        if (data.pending) setDbPendingRequests(data.pending);
-        if (data.active) setDbActiveTransfers(data.active);
-      },
-      () => {
-        console.warn('[Dashboard] Transfer stream connection error');
-      },
-    );
-    return cleanup;
-  }, []);
+    const transfersRef = ref(database, 'transfer_requests');
+
+    const unsub = onValue(transfersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+
+      // Filter pending requests: ONLY show if it's for this hospital
+      // If profile not loaded yet, we show all for backward compatibility or wait
+      const pending = allTransfers.filter(t =>
+        t.status === 'pending' &&
+        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName)
+      );
+
+      const active = allTransfers.filter(t =>
+        (t.status === 'dispatched' ||
+          t.status === 'on_way' ||
+          t.status === 'at_pickup' ||
+          t.status === 'patient_loaded' ||
+          t.status === 'in_transit' ||
+          t.status === 'arrived_at_destination') &&
+        (!currentHospitalName ||
+          t.destination?.hospitalName === currentHospitalName ||
+          t.pickup?.hospitalName === currentHospitalName)
+      );
+
+      setDbPendingRequests(pending);
+      setDbActiveTransfers(active);
+    }, (err) => {
+      console.error('[Dashboard] Firebase transfers error:', err);
+    });
+
+    return () => off(transfersRef, 'value', unsub);
+  }, [currentHospitalName]);
 
   // --- DATA: INCOMING EMERGENCIES ---
   const incomingRequests = [
@@ -550,23 +600,23 @@ export function HospitalDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-foreground">
-                        {transfer.patient}
+                        {typeof transfer.patient === 'object' ? transfer.patient.name : transfer.patient}
                       </h3>
                       <span
                         className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(transfer.priority)}`}
                       >
-                        {transfer.priority.toUpperCase()}
+                        {transfer.priority?.toUpperCase()}
                       </span>
                       <span
                         className={`px-3 py-1 rounded-full text-xs ${getStatusColor(transfer.status)}`}
                       >
                         {transfer.status
-                          .replace("_", " ")
+                          ?.replace("_", " ")
                           .toUpperCase()}
                       </span>
                     </div>
                     <p className="text-muted-foreground text-sm mb-3">
-                      {transfer.age} yrs • {transfer.gender} •
+                      {transfer.patient?.age || transfer.age} yrs • {transfer.patient?.gender || transfer.gender} •
                       Transfer ID: {transfer.id}
                     </p>
                   </div>
@@ -578,7 +628,7 @@ export function HospitalDashboard() {
                       FROM
                     </p>
                     <p className="text-foreground text-sm">
-                      {transfer.from}
+                      {transfer.pickup?.hospitalName || transfer.from}
                     </p>
                   </div>
                   <div>
@@ -586,7 +636,7 @@ export function HospitalDashboard() {
                       TO
                     </p>
                     <p className="text-foreground text-sm">
-                      {transfer.to}
+                      {transfer.destination?.hospitalName || transfer.to}
                     </p>
                   </div>
                   <div>
@@ -616,13 +666,13 @@ export function HospitalDashboard() {
                         {transfer.ambulance}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => viewDriverDetails(transfer.driver)}>
+                    <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => viewDriverDetails(transfer.driverId)}>
                       <Users
                         size={16}
                         className="text-blue-500"
                       />
                       <span className="text-blue-600 dark:text-blue-400 underline underline-offset-2">
-                        {transfer.driver}
+                        {transfer.driverName || transfer.driver}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -677,16 +727,16 @@ export function HospitalDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-foreground">
-                        {request.patient}
+                        {typeof request.patient === 'object' ? request.patient.name : request.patient}
                       </h3>
                       <span
                         className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(request.priority)}`}
                       >
-                        {request.priority.toUpperCase()}
+                        {request.priority?.toUpperCase()}
                       </span>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      {request.age} yrs • {request.gender} •{" "}
+                      {request.patient?.age || request.age} yrs • {request.patient?.gender || request.gender} •{" "}
                       {request.id}
                     </p>
                   </div>
@@ -701,7 +751,7 @@ export function HospitalDashboard() {
                       FROM
                     </p>
                     <p className="text-foreground text-sm">
-                      {request.from}
+                      {request.pickup?.hospitalName || request.from}
                     </p>
                   </div>
                   <div>
@@ -709,7 +759,7 @@ export function HospitalDashboard() {
                       TO
                     </p>
                     <p className="text-foreground text-sm">
-                      {request.to}
+                      {request.destination?.hospitalName || request.to}
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
-import { apiPost } from '../api/apiClient';
+import { database } from '../firebase';
+import { ref, push, set } from 'firebase/database';
 import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
@@ -79,12 +80,35 @@ export function TransferRequest() {
 
   const availableAmbulances = ambulances.filter(a => a.status === 'available');
 
-  // Synthesize active drivers: Merge registered drivers with live "online" status
-  const activeDrivers = drivers.filter(d => {
+  // ─── SYNTHESIZE ACTIVE DRIVERS ───
+  // Merge registered drivers with live "online" status, and include any online drivers not in registry.
+  const allKnownDrivers = [...drivers];
+
+  // Add online drivers that aren't in the registry (using their UID as ID)
+  onlineDrivers.forEach(od => {
+    const isAlreadyInRegistry = drivers.some(rd =>
+      rd.id === od.id || rd.name.toLowerCase().trim() === od.driverName.toLowerCase().trim()
+    );
+    if (!isAlreadyInRegistry) {
+      allKnownDrivers.push({
+        id: od.id,
+        name: od.driverName,
+        status: 'active',
+        rating: 5.0,
+        assignedAmbulance: null,
+      } as any);
+    }
+  });
+
+  const activeDrivers = allKnownDrivers.filter(d => {
     // A driver is selectable if they are "online" in real-time OR manually marked "active" in registry
-    // But they must NOT be "busy" (on another trip)
-    const isLiveOnline = onlineDrivers.some(od => od.id === d.id);
-    const isLiveBusy = busyDrivers.some(bd => bd.id === d.id);
+    // But they must NOT be "busy" (on another mission)
+    const isLiveOnline = onlineDrivers.some(od =>
+      od.id === d.id || od.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
+    );
+    const isLiveBusy = busyDrivers.some(bd =>
+      bd.id === d.id || bd.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
+    );
     return (isLiveOnline || d.status === 'active') && !isLiveBusy;
   });
 
@@ -198,10 +222,17 @@ export function TransferRequest() {
       const fromCoords = hospitalCoordinates[formData.fromHospital] || { lat: 0, lng: 0, address: '' };
       const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
 
-      await apiPost('/transfers', {
+      const transferRef = ref(database, 'transfer_requests');
+      const newTransferRef = push(transferRef);
+
+      await set(newTransferRef, {
         driverId: selectedDriverId,
+        driverName: activeDrivers.find(d => d.id === selectedDriverId)?.name || '',
         ambulanceId: selectedAmbulanceId,
+        ambulance: selectedAmbulanceId,
         priority: formData.priority,
+        status: 'pending',
+        createdAt: Date.now(),
 
         patient: {
           name: formData.patientName,
@@ -900,113 +931,133 @@ export function TransferRequest() {
                 </h2>
 
                 <div className="space-y-6">
-                  {/* Ambulance Selection */}
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Truck className="text-green-600 flex-shrink-0 mt-1" size={20} />
+                  {/* Unified Driver & Ambulance Selection */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl shrink-0">
+                        <Users className="text-blue-600 dark:text-blue-400" size={24} />
+                      </div>
                       <div className="w-full">
-                        <p className="text-green-900 dark:text-green-300 mb-1 font-semibold">Select Ambulance</p>
-                        <p className="text-green-700 dark:text-green-400 text-xs mb-3">
-                          {availableAmbulances.length} ambulance{availableAmbulances.length !== 1 ? 's' : ''} currently available
+                        <p className="text-blue-900 dark:text-blue-300 mb-1 font-bold text-lg">Assign Mission Personnel</p>
+                        <p className="text-blue-700 dark:text-blue-400 text-sm mb-4">
+                          Select an active driver. The system will automatically link their assigned ambulance.
                         </p>
-                        {availableAmbulances.length === 0 ? (
-                          <p className="text-orange-600 text-sm">⚠️ No ambulances currently available. Please check back shortly.</p>
+
+                        {activeDrivers.length === 0 ? (
+                          <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                            <p className="text-orange-700 dark:text-orange-400 text-sm flex items-center gap-2">
+                              <AlertTriangle size={16} /> No drivers currently active. Please check fleet status.
+                            </p>
+                          </div>
                         ) : (
-                          <>
-                            <select
-                              value={selectedAmbulanceId}
-                              onChange={(e) => {
-                                setSelectedAmbulanceId(e.target.value);
-                                if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
-                              }}
-                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground ${formErrors.selectedAmbulanceId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
-                                }`}
-                            >
-                              <option value="">Select an ambulance...</option>
-                              {availableAmbulances.map(amb => (
-                                <option key={amb.id} value={amb.id}>
-                                  {amb.id} — {amb.location}{amb.hasVentilator ? ' · Ventilator' : ''}{amb.hasDoctor ? ' · Doctor' : ''}
-                                </option>
-                              ))}
-                            </select>
-                            {formErrors.selectedAmbulanceId && (
-                              <p className="text-red-500 text-xs mt-1">{formErrors.selectedAmbulanceId}</p>
-                            )}
-                            {selectedAmbulanceId && (() => {
-                              const amb = availableAmbulances.find(a => a.id === selectedAmbulanceId);
-                              if (!amb) return null;
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-blue-900 dark:text-blue-300 text-sm font-medium mb-2">Select Driver *</label>
+                              <select
+                                value={selectedDriverId}
+                                onChange={(e) => {
+                                  const drvId = e.target.value;
+                                  setSelectedDriverId(drvId);
+                                  if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
+
+                                  // Auto-link assigned ambulance
+                                  const drvRecord = allKnownDrivers.find(d => d.id === drvId);
+                                  if (drvRecord?.assignedAmbulance) {
+                                    setSelectedAmbulanceId(drvRecord.assignedAmbulance);
+                                    if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
+                                  } else {
+                                    setSelectedAmbulanceId('');
+                                  }
+                                }}
+                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-blue-950/20 text-foreground shadow-sm ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-blue-200 dark:border-blue-800'
+                                  }`}
+                              >
+                                <option value="">Choose a driver...</option>
+                                {activeDrivers.map(driver => {
+                                  const isLive = onlineDrivers.some(od =>
+                                    od.id === driver.id ||
+                                    od.driverName.toLowerCase().trim() === driver.name.toLowerCase().trim()
+                                  );
+                                  return (
+                                    <option key={driver.id} value={driver.id}>
+                                      {driver.name} {isLive ? '🟢 (LIVE ONLINE)' : '⚪ (OFFLINE)'} (Rating: {driver.rating})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              {formErrors.selectedDriverId && (
+                                <p className="text-red-500 text-xs mt-1 font-medium">{formErrors.selectedDriverId}</p>
+                              )}
+                            </div>
+
+                            {selectedDriverId && (() => {
+                              const drv = allKnownDrivers.find(d => d.id === selectedDriverId);
+                              const amb = ambulances.find(a => a.id === (drv?.assignedAmbulance || selectedAmbulanceId));
+                              if (!drv) return null;
+
                               return (
-                                <div className="mt-3 p-3 bg-white dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 text-xs space-y-1">
-                                  <p className="text-green-800 dark:text-green-300 font-medium">{amb.id} — {amb.location}</p>
-                                  <p className="text-green-700 dark:text-green-400">Equipment: {amb.equipment.join(', ') || 'None listed'}</p>
-                                  {(amb.hasDoctor || amb.hasVentilator) && (
-                                    <div className="flex gap-1.5 pt-1">
-                                      {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">Doctor on board</span>}
-                                      {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Ventilator</span>}
+                                <div className="mt-4 p-4 bg-white dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+                                  {/* Manual Ambulance Selection Fallback */}
+                                  {!drv.assignedAmbulance && (
+                                    <div className="mb-4">
+                                      <label className="block text-blue-900 dark:text-blue-300 text-sm font-medium mb-2">Select Ambulance *</label>
+                                      <select
+                                        value={selectedAmbulanceId}
+                                        onChange={(e) => {
+                                          setSelectedAmbulanceId(e.target.value);
+                                          if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
+                                        }}
+                                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-blue-950/20 text-foreground shadow-sm ${formErrors.selectedAmbulanceId ? 'border-red-500 ring-1 ring-red-500' : 'border-blue-200 dark:border-blue-800'}`}
+                                      >
+                                        <option value="">Choose an ambulance...</option>
+                                        {availableAmbulances.map(a => (
+                                          <option key={a.id} value={a.id}>Unit: {a.id}</option>
+                                        ))}
+                                      </select>
+                                      {formErrors.selectedAmbulanceId && (
+                                        <p className="text-red-500 text-xs mt-1 font-medium">{formErrors.selectedAmbulanceId}</p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center justify-between mb-3 border-b border-blue-100 dark:border-blue-900/50 pb-2">
+                                    <div className="flex items-center gap-2">
+                                      <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                                      <span className="text-blue-900 dark:text-blue-100 font-bold">{drv.name}</span>
+                                    </div>
+                                    <span className="text-blue-600 dark:text-blue-400 text-xs font-medium uppercase tracking-wider">{drv.id}</span>
+                                  </div>
+
+                                  {amb ? (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-3 text-blue-800 dark:text-blue-200">
+                                        <Truck size={18} className="text-blue-500" />
+                                        <div>
+                                          <p className="text-sm font-semibold">Assigned: {amb.id}</p>
+                                          <p className="text-[10px] opacity-70">Located at: {amb.location}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-md text-[10px] font-bold">VENTILATOR</span>}
+                                        {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-md text-[10px] font-bold">DOCTOR ON BOARD</span>}
+                                        {amb.equipment.slice(0, 2).map(e => (
+                                          <span key={e} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-md text-[10px] uppercase font-bold">{e}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-xs bg-orange-50 dark:bg-orange-950/30 p-2 rounded-lg">
+                                      <AlertCircle size={14} />
+                                      <span>Warning: This driver has no assigned ambulance.</span>
                                     </div>
                                   )}
                                 </div>
                               );
                             })()}
-                          </>
+                          </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Driver Selection */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Users className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-                      <div className="w-full">
-                        <p className="text-blue-900 dark:text-blue-300 mb-1 font-semibold">Select Driver</p>
-                        <p className="text-blue-700 dark:text-blue-400 text-xs mb-3">
-                          {activeDrivers.length} driver{activeDrivers.length !== 1 ? 's' : ''} currently active
-                        </p>
-                        {activeDrivers.length === 0 ? (
-                          <p className="text-orange-600 text-sm">⚠️ No drivers currently active. Please check back shortly.</p>
-                        ) : (
-                          <>
-                            <select
-                              value={selectedDriverId}
-                              onChange={(e) => {
-                                setSelectedDriverId(e.target.value);
-                                if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
-                              }}
-                              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-input-field-bg text-foreground ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
-                                }`}
-                            >
-                              <option value="">Select a driver...</option>
-                              {activeDrivers.map(driver => {
-                                const isLive = onlineDrivers.some(od => od.id === driver.id);
-                                return (
-                                  <option key={driver.id} value={driver.id}>
-                                    {driver.name} {isLive ? '(LIVE ONLINE)' : ''} — ⭐ {driver.rating}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                            {formErrors.selectedDriverId && (
-                              <p className="text-red-500 text-xs mt-1">{formErrors.selectedDriverId}</p>
-                            )}
-                            {selectedDriverId && (() => {
-                              const drv = activeDrivers.find(d => d.id === selectedDriverId);
-                              if (!drv) return null;
-                              return (
-                                <div className="mt-3 p-3 bg-white dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 text-xs space-y-1">
-                                  <p className="text-blue-800 dark:text-blue-300 font-medium">{drv.name} — {drv.id}</p>
-                                  <div className="flex items-center gap-3 text-blue-700 dark:text-blue-400">
-                                    <span className="flex items-center gap-1"><Star size={11} className="text-yellow-500" /> {drv.rating} rating</span>
-                                    <span>· {drv.totalTrips} trips</span>
-                                    <span>· Avg {drv.avgResponseTime}</span>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-                          </>
-                        )}
-                        <p className="text-blue-600 dark:text-blue-400 text-xs mt-2 italic">
-                          The selected driver will receive a notification on their mobile app with trip details.
+                        <p className="text-blue-600 dark:text-blue-400 text-[10px] mt-4 italic font-medium">
+                          Note: Trip manifest will be dispatched immediately upon submission.
                         </p>
                       </div>
                     </div>
