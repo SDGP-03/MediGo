@@ -1,0 +1,24 @@
+# Root-level ignore
+node_modules/
+dist/
+build/
+.env
+
+# Windows-specific files
+Thumbs.db
+Desktop.ini
+
+# IDE-specific
+.vscode/
+.idea/
+
+# Firebase Service Account Keys (Universal safety)
+serviceAccountKey.json
+*.json.secret
+
+# Sub-project specific catch-all
+**/node_modules/
+**/dist/
+**/.env
+**/.env.local
+**/.firebase/

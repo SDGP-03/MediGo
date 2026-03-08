@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -36,6 +37,7 @@ function ResizableHandle({
   withHandle?: boolean;
 }) {
   return (
+    // @ts-expect-error Property PanelResizeHandle does not exist on ResizablePrimitive.PanelResizeHandle in older versions
     <ResizablePrimitive.PanelResizeHandle
       data-slot="resizable-handle"
       className={cn(

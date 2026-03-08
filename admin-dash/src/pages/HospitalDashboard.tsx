@@ -5,8 +5,7 @@ import { Switch } from "../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
-import { database } from "../firebase";
-import { ref, onValue, off, get } from "firebase/database";
+import { createSSE, apiFetch } from "../api/apiClient";
 
 
 export function HospitalDashboard() {
@@ -29,16 +28,15 @@ export function HospitalDashboard() {
     setDriverPopupLoading(true);
     setDriverPopupData(null);
     try {
-      const driverRef = ref(database, `driver_locations/${driverId}`);
-      const snapshot = await get(driverRef);
-      if (snapshot.exists()) {
-        setDriverPopupData({ id: driverId, ...snapshot.val() });
-      } else {
-        setDriverPopupData({ id: driverId, notFound: true });
-      }
-    } catch (err) {
+      const data = await apiFetch(`/drivers/${driverId}`);
+      setDriverPopupData(data);
+    } catch (err: any) {
       console.error('Error fetching driver details:', err);
-      setDriverPopupData({ id: driverId, error: true });
+      if (err.message?.includes('not found')) {
+        setDriverPopupData({ id: driverId, notFound: true });
+      } else {
+        setDriverPopupData({ id: driverId, error: true });
+      }
     } finally {
       setDriverPopupLoading(false);
     }
@@ -78,71 +76,17 @@ export function HospitalDashboard() {
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
 
   useEffect(() => {
-    const requestsRef = ref(database, 'transfer_requests');
-    const handleData = (snapshot: any) => {
-      const data = snapshot.val();
-      if (!data) {
-        setDbPendingRequests([]);
-        setDbActiveTransfers([]);
-        return;
-      }
-
-      const formatTimeAgo = (timestamp: number) => {
-        if (!timestamp) return 'Just now';
-        const mins = Math.floor((Date.now() - timestamp) / 60000);
-        if (mins < 1) return 'Just now';
-        if (mins < 60) return `${mins} mins ago`;
-        const hours = Math.floor(mins / 60);
-        if (hours < 24) return `${hours} hours ago`;
-        return `${Math.floor(hours / 24)} days ago`;
-      };
-
-      const pending: any[] = [];
-      const active: any[] = [];
-
-      Object.entries(data).forEach(([key, value]: [string, any]) => {
-        const item = {
-          id: key.substring(Math.max(0, key.length - 8)).toUpperCase(),
-          realId: key,
-          patient: value.patient?.name || 'Unknown',
-          age: value.patient?.age || 'N/A',
-          gender: value.patient?.gender || 'N/A',
-          from: value.pickup?.hospitalName || 'Unknown',
-          to: value.destination?.hospitalName || 'Unknown',
-          priority: value.priority || 'standard',
-          requestedBy: 'System',
-          time: formatTimeAgo(value.createdAt),
-
-          // --- ADDED FOR MAP ROUTING ---
-          driverId: value.driverId,
-          destLat: value.destination?.lat,
-          destLng: value.destination?.lng,
-          // -----------------------------
-
-          ambulance: value.ambulanceId || 'Pending',
-          driver: value.driverId || 'Unknown',
-          attendant: value.attendant || 'N/A',
-          status: value.status || 'pending',
-          eta: value.eta || 'Evaluating...',
-          distance: value.distance || '0',
-        };
-
-        if (value.status === 'pending') {
-          pending.push(item);
-        } else if (value.status && value.status !== 'completed' && value.status !== 'cancelled') {
-          active.push(item);
-        }
-      });
-
-      pending.reverse();
-      active.reverse();
-
-      setDbPendingRequests(pending);
-      setDbActiveTransfers(active);
-    };
-
-    onValue(requestsRef, handleData);
-    return () => off(requestsRef);
+    const cleanup = createSSE(
+      '/transfers/stream',
+      (data) => {
+        if (data.pending) setDbPendingRequests(data.pending);
+        if (data.active) setDbActiveTransfers(data.active);
+      },
+      () => {
+        console.warn('[Dashboard] Transfer stream connection error');
+      },
+    );
+    return cleanup;
   }, []);
 
   // --- DATA: INCOMING EMERGENCIES ---

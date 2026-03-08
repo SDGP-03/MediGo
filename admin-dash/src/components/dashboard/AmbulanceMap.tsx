@@ -70,7 +70,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
 
   // Driver locations from Firebase
-  const { driverLocations, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
   const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
@@ -102,7 +102,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   // Listen for trackedDriverTrigger to center map and show route
   useEffect(() => {
     if (trackedDriverTrigger) {
-      const driver = driverLocations.find(d => d.id === trackedDriverTrigger.id);
+      const driver = onlineDrivers.find(d => d.id === trackedDriverTrigger.id);
       if (driver) {
         setSelectedDriver(driver);
         setSelectedOfflineDriver(null);
@@ -136,7 +136,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
         }
       }
     }
-  }, [trackedDriverTrigger, driverLocations, offlineDrivers, activeTransfers, map, fetchDirections]);
+  }, [trackedDriverTrigger, onlineDrivers, offlineDrivers, activeTransfers, map, fetchDirections]);
 
   // Listen for location updates from external tracker app via BroadcastChannel
   useEffect(() => {
@@ -194,7 +194,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
 
   // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation && !trackedDevice && driverLocations.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
+    if ((ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -207,7 +207,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       bounds.extend({ lat: trackedDevice.lat, lng: trackedDevice.lng });
     }
     // Include driver locations in bounds
-    driverLocations.forEach((driver) => {
+    onlineDrivers.forEach((driver) => {
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     // Include offline drivers in bounds
@@ -215,7 +215,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     return bounds;
-  }, [ambulances, userLocation, trackedDevice, driverLocations, offlineDrivers]);
+  }, [ambulances, userLocation, trackedDevice, onlineDrivers, offlineDrivers]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -610,7 +610,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
         )}
 
         {/* Driver Location Markers (from Firebase) */}
-        {driverLocations.map((driver) => (
+        {onlineDrivers.map((driver) => (
           <Marker
             key={driver.id}
             position={{ lat: driver.lat, lng: driver.lng }}
@@ -800,10 +800,10 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
               <span className="text-gray-700">Tracked Device</span>
             </div>
           )}
-          {driverLocations.length > 0 && (
+          {onlineDrivers.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-green-500"></div>
-              <span className="text-gray-700">Active Drivers ({driverLocations.length})</span>
+              <span className="text-gray-700">Active Drivers ({onlineDrivers.length})</span>
             </div>
           )}
           {offlineDrivers.length > 0 && (

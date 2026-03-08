@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
-import { database } from '../firebase';
-import { ref, push, set } from 'firebase/database';
+import { apiPost } from '../api/apiClient';
 import { useFleetData } from '../hooks/useFleetData';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
@@ -184,18 +183,13 @@ export function TransferRequest() {
     setIsSubmitting(true);
 
     try {
-      const requestsRef = ref(database, 'transfer_requests');
-      const newRequestRef = push(requestsRef);
-
       const fromCoords = hospitalCoordinates[formData.fromHospital] || { lat: 0, lng: 0, address: '' };
       const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
 
-      await set(newRequestRef, {
-        status: 'pending',
+      await apiPost('/transfers', {
         driverId: selectedDriverId,
         ambulanceId: selectedAmbulanceId,
         priority: formData.priority,
-        createdAt: Date.now(),
 
         patient: {
           name: formData.patientName,
