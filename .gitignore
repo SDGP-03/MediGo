@@ -2,7 +2,7 @@
 node_modules/
 dist/
 build/
-.env
+# .env
 
 # Windows-specific files
 Thumbs.db
@@ -13,7 +13,7 @@ Desktop.ini
 .idea/
 
 # Firebase Service Account Keys (Universal safety)
-serviceAccountKey.json
+# serviceAccountKey.json
 *.json.secret
 
 # Sub-project specific catch-all
