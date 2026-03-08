@@ -1,20 +1,43 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft, Phone, Mail, Shield } from "lucide-react";
-import { Switch } from "../components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
-import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
-import { useDriverLocations } from "../useDriverLocations";
-import { database, auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, off, get } from "firebase/database";
+import{useState, useEffect}from "react";
+import{useNavigate}from "react-router-dom";
+import {
+  Ambulance,
+  Clock,
+  Users,
+  AlertCircle,
+  TrendingUp,
+  MapPin,
+  Layers,
+  List,
+  Plus,
+  Minus,
+  Navigation,
+  Maximize2,
+  AlertTriangle,
+  Wrench,
+  Activity,
+  CheckCircle,
+  User,
+  ArrowRightLeft,
+  Phone,
+  Mail,
+  Shield,
+  Car
+} from "lucide-react";
+import{Switch}from "../components/ui/switch";
+import{Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription}from "../components/ui/dialog";
+import{AmbulanceMap}from "../components/dashboard/AmbulanceMap";
+import{useDriverLocations}from "../useDriverLocations";
+import{database, auth}from "../firebase";
+import{onAuthStateChanged}from "firebase/auth";
+import{ref, onValue, off, get}from "firebase/database";
 
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number}| null>(null);
 
   // --- STATE: DRIVER INFO POPUP ---
   const [driverPopupOpen, setDriverPopupOpen] = useState(false);
@@ -38,13 +61,13 @@ export function HospitalDashboard() {
 
       if (snapshot.exists()) {
         setDriverPopupData({ id: driverId, ...snapshot.val() });
-      } else {
+     }else {
         setDriverPopupData({ id: driverId, notFound: true });
       }
-    } catch (err: any) {
+   }catch (err: any) {
       console.error('Error fetching driver details from Firebase:', err);
       setDriverPopupData({ id: driverId, error: true });
-    } finally {
+   }finally {
       setDriverPopupLoading(false);
     }
   };
@@ -64,16 +87,16 @@ export function HospitalDashboard() {
 
   // --- STATE: RESOURCE AVAILABILITY ---
   const [resources, setResources] = useState([
-    { id: 'icu', name: 'ICU Bed Availability', available: false },
-    { id: 'nicu', name: 'NICU Bed Availability', available: false },
-    { id: 'picu', name: 'PICU Bed Availability', available: false },
-    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
-    { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
-    { id: 'er', name: 'Emergency Room Availability', available: false },
+   {id: 'icu', name: 'ICU Bed Availability', available: false },
+   {id: 'nicu', name: 'NICU Bed Availability', available: false },
+   {id: 'picu', name: 'PICU Bed Availability', available: false },
+   {id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
+   {id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
+   {id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
   const toggleResource = (id: string) => {
-    setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
+    setResources(resources.map(r => r.id === id ?{...r, available: !r.available}: r));
   };
 
   // --- STATE: HOSPITAL PROFILE ---
@@ -83,13 +106,13 @@ export function HospitalDashboard() {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         try {
-          const adminRef = ref(database, `admin/${user.uid}`);
+          const adminRef = ref(database, `admin/${user.uid} `);
           const snapshot = await get(adminRef);
           if (snapshot.exists()) {
             const data = snapshot.val();
             setCurrentHospitalName(data.hospitalName || "");
           }
-        } catch (err) {
+       }catch (err) {
           console.error("Error fetching admin profile:", err);
         }
       }
@@ -99,7 +122,7 @@ export function HospitalDashboard() {
   }, []);
 
   // Live driver data from Firebase
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const{onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading}= useDriverLocations();
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
@@ -111,16 +134,17 @@ export function HospitalDashboard() {
       const data = snapshot.val() || {};
       const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
 
-      // Filter pending requests: ONLY show if it's for this hospital
-      // If profile not loaded yet, we show all for backward compatibility or wait
+      // Filter pending requests:
+      // 1. 'pending' (waiting for admin to assign driver)
+      // 2. 'dispatched' (waiting for driver to accept)
       const pending = allTransfers.filter(t =>
-        t.status === 'pending' &&
+        (t.status === 'pending' || t.status === 'dispatched') &&
         (!currentHospitalName || t.destination?.hospitalName === currentHospitalName)
       );
 
+      // Active transfers: Driver has accepted and is on the move
       const active = allTransfers.filter(t =>
-        (t.status === 'dispatched' ||
-          t.status === 'on_way' ||
+        (t.status === 'on_way' ||
           t.status === 'at_pickup' ||
           t.status === 'patient_loaded' ||
           t.status === 'in_transit' ||
@@ -202,7 +226,7 @@ export function HospitalDashboard() {
       location: "City General Hospital",
       lat: 6.9271,
       lng: 79.8612,
-      position: { left: "25%", top: "33%" },
+      position:{left: "25%", top: "33%" },
     },
     {
       id: "AMB-003",
@@ -211,7 +235,7 @@ export function HospitalDashboard() {
       location: "Divisional Hospital North",
       lat: 6.9350,
       lng: 79.8700,
-      position: { left: "33%", bottom: "33%" },
+      position:{left: "33%", bottom: "33%" },
     },
     {
       id: "AMB-005",
@@ -220,7 +244,7 @@ export function HospitalDashboard() {
       location: "City General Hospital",
       lat: 6.9200,
       lng: 79.8500,
-      position: { left: "66%", top: "25%" },
+      position:{left: "66%", top: "25%" },
     },
     {
       id: "AMB-002",
@@ -230,7 +254,7 @@ export function HospitalDashboard() {
       eta: "12 mins",
       lat: 6.9150,
       lng: 79.8550,
-      position: { right: "33%", top: "25%" },
+      position:{right: "33%", top: "25%" },
     },
     {
       id: "AMB-006",
@@ -240,7 +264,7 @@ export function HospitalDashboard() {
       eta: "18 mins",
       lat: 6.9400,
       lng: 79.8750,
-      position: { right: "25%", bottom: "25%" },
+      position:{right: "25%", bottom: "25%" },
     },
     {
       id: "AMB-007",
@@ -249,7 +273,7 @@ export function HospitalDashboard() {
       location: "At Central Medical Center",
       lat: 6.9100,
       lng: 79.8600,
-      position: { left: "50%", top: "25%" },
+      position:{left: "50%", top: "25%" },
     },
     {
       id: "AMB-008",
@@ -258,7 +282,7 @@ export function HospitalDashboard() {
       location: "At Specialist Hospital",
       lat: 6.9300,
       lng: 79.8650,
-      position: { right: "33%", bottom: "33%" },
+      position:{right: "33%", bottom: "33%" },
     },
     {
       id: "AMB-009",
@@ -267,7 +291,7 @@ export function HospitalDashboard() {
       location: "Base Station A",
       lat: 6.9250,
       lng: 79.8620,
-      position: { left: "40%", top: "50%" },
+      position:{left: "40%", top: "50%" },
     },
     {
       id: "AMB-010",
@@ -276,7 +300,7 @@ export function HospitalDashboard() {
       location: "Base Station B",
       lat: 6.9280,
       lng: 79.8630,
-      position: { right: "40%", bottom: "40%" },
+      position:{right: "40%", bottom: "40%" },
     },
     {
       id: "AMB-004",
@@ -285,7 +309,7 @@ export function HospitalDashboard() {
       location: "Service Center",
       lat: 6.9000,
       lng: 79.9000,
-      position: { right: "20%", top: "40%" },
+      position:{right: "20%", top: "40%" },
     },
     {
       id: "AMB-011",
@@ -294,7 +318,7 @@ export function HospitalDashboard() {
       location: "Maintenance Bay",
       lat: 6.9500,
       lng: 79.8800,
-      position: { left: "60%", bottom: "20%" },
+      position:{left: "60%", bottom: "20%" },
     },
   ];
 
@@ -360,13 +384,13 @@ export function HospitalDashboard() {
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => setMapView("map")}
-              className={`p-2 rounded-lg transition-all active:scale-95 ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
               <Layers size={18} />
             </button>
             <button
               onClick={() => setMapView("list")}
-              className={`p-2 rounded-lg transition-all active:scale-95 ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
               <List size={18} />
             </button>
@@ -374,7 +398,7 @@ export function HospitalDashboard() {
         </div>
 
         <div className="flex flex-col lg:flex-row">
-          {/* Map / List Area */}
+          {/* Map/List Area */}
           <div className="flex-1 min-w-0">
             {mapView === "map" && (
               <AmbulanceMap ambulances={ambulances.map(amb => ({
@@ -499,7 +523,7 @@ export function HospitalDashboard() {
               </h3>
               <p className="text-red-400 text-sm">
                 {pendingRequests.length} requests waiting for
-                ambulance assignment
+                driver acceptance
               </p>
             </div>
           </div>
@@ -591,205 +615,194 @@ export function HospitalDashboard() {
             <h2 className="text-lg font-bold text-foreground">Active Transfers</h2>
           </div>
           <div className="divide-y divide-border">
-            {activeTransfers.map((transfer) => (
-              <div
-                key={transfer.id}
-                className="p-6 hover:bg-accent transition-colors"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-foreground">
-                        {typeof transfer.patient === 'object' ? transfer.patient.name : transfer.patient}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(transfer.priority)}`}
-                      >
-                        {transfer.priority?.toUpperCase()}
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs ${getStatusColor(transfer.status)}`}
-                      >
-                        {transfer.status
-                          ?.replace("_", " ")
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground text-sm mb-3">
-                      {transfer.patient?.age || transfer.age} yrs • {transfer.patient?.gender || transfer.gender} •
-                      Transfer ID: {transfer.id}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      FROM
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {transfer.pickup?.hospitalName || transfer.from}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      TO
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {transfer.destination?.hospitalName || transfer.to}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      ETA
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Clock
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <p className="text-foreground text-sm">
-                        {transfer.eta}
+            {activeTransfers.length === 0 ? (
+              <div className="p-8 text-center bg-muted/20">
+                <p className="text-muted-foreground italic">No active transfers at this moment.</p>
+              </div>
+            ) : (
+              activeTransfers.map((transfer) => (
+                <div
+                  key={transfer.id}
+                  className="p-6 hover:bg-accent/30 transition-all duration-300"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-foreground">
+                          {typeof transfer.patient === 'object' ? transfer.patient.name : transfer.patient}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase tracking-wider ${getPriorityColor(transfer.priority)} `}
+                        >
+                          {transfer.priority}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(transfer.status)} `}
+                        >
+                          {transfer.status?.replace("_", " ").toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        ID: <span className="text-foreground/70 font-mono">{transfer.id}</span> • {transfer.patient?.age || transfer.age}y • {transfer.patient?.gender || transfer.gender}
                       </p>
                     </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Ambulance
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.ambulance}
-                      </span>
+                    <button
+                      onClick={() => handleTrackLive(transfer)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 active:scale-95 transition-all font-semibold text-sm cursor-pointer whitespace-nowrap self-start md:self-center"
+                    >
+                      <Navigation size={18} fill="currentColor" />
+                      Track Live
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-accent/30 rounded-xl border border-border/50">
+                    <div className="relative pl-6 border-l-2 border-emerald-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Pickup</p>
+                      <p className="text-foreground font-semibold text-sm">{transfer.pickup?.hospitalName || transfer.from}</p>
                     </div>
-                    <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => viewDriverDetails(transfer.driverId)}>
-                      <Users
-                        size={16}
-                        className="text-blue-500"
-                      />
-                      <span className="text-blue-600 dark:text-blue-400 underline underline-offset-2">
-                        {transfer.driverName || transfer.driver}
-                      </span>
+                    <div className="relative pl-6 border-l-2 border-red-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Destination</p>
+                      <p className="text-foreground font-semibold text-sm">{transfer.destination?.hospitalName || transfer.to}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Users
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.attendant}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.distance} km
-                      </span>
+                    <div className="relative pl-6 border-l-2 border-blue-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">ETA Status</p>
+                      <div className="flex items-center gap-2">
+                        <Clock size={16} className="text-blue-500" />
+                        <p className="text-blue-600 dark:text-blue-400 font-bold">{transfer.eta || 'Calculating...'}</p>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleTrackLive(transfer)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    Track Live
-                  </button>
+
+                  <div className="flex flex-wrap items-center gap-y-3 gap-x-6 pt-4 border-t border-border/40">
+                    <div className="flex items-center gap-2 text-sm text-foreground/80">
+                      <Ambulance size={16} className="text-muted-foreground" />
+                      <span className="font-medium">{transfer.ambulance || 'Unit Assigned'}</span>
+                    </div>
+                    <div
+                      className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md transition-colors"
+                      onClick={() => viewDriverDetails(transfer.driverId)}
+                    >
+                      <Users size={16} />
+                      <span className="font-bold underline underline-offset-4">{transfer.driverName || transfer.driver}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-foreground/80">
+                      <Shield size={16} className="text-muted-foreground" />
+                      <span className="font-medium text-xs">Attendant: {transfer.attendant || 'Assigned'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-foreground/80 ml-auto">
+                      <MapPin size={16} className="text-muted-foreground" />
+                      <span className="text-xs font-bold">{transfer.distance || '--'} km</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {/* --- SECTION: PENDING REQUESTS --- */}
-        {/* Transfer requests waiting for assignment */}
-        <div id="pending-requests" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
-          <div className="p-4 border-b border-border flex items-center gap-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <h2 className="text-lg font-bold text-foreground">
-              Pending Transfer Requests
-            </h2>
-          </div>
-          <div className=" divide-y divide-border">
-            {pendingRequests.map((request) => (
-              <div
-                key={request.id}
-                className=" p-6 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-foreground">
-                        {typeof request.patient === 'object' ? request.patient.name : request.patient}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(request.priority)}`}
-                      >
-                        {request.priority?.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {request.patient?.age || request.age} yrs • {request.patient?.gender || request.gender} •{" "}
-                      {request.id}
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground text-sm">
-                    {request.time}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      FROM
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {request.pickup?.hospitalName || request.from}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      TO
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {request.destination?.hospitalName || request.to}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <p className="text-muted-foreground text-sm">
-                    Requested by:{" "}
-                    <span className="text-foreground">
-                      {request.requestedBy}
-                    </span>
-                  </p>
-                  <div className='flex item-center gap-4'>
-                    <button
-                      onClick={() => viewDriverDetails(request.driver)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
-                    >
-                      View Driver
-                    </button>
-                    <button
-                      onClick={() => alert(`Cancelling transfer request ${request.id}`)}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+        {/* Transfer requests waiting for assignment or driver acceptance */}
+        <div id="pending-requests" className="overflow-hidden bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-border">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
-            ))}
+              <h2 className="text-lg font-bold text-foreground">Pending Requests</h2>
+            </div>
+            {pendingRequests.length > 0 && (
+              <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg animate-pulse">
+                ACTION REQUIRED
+              </span>
+            )}
+          </div>
+          <div className="divide-y divide-border">
+            {pendingRequests.length === 0 ? (
+              <div className="p-8 text-center">
+                <CheckCircle className="mx-auto text-emerald-500 mb-2 opacity-20" size={48} />
+                <p className="text-muted-foreground italic">No pending requests to accept.</p>
+              </div>
+            ) : (
+              pendingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="p-6 hover:bg-orange-50/30 dark:hover:bg-orange-950/10 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-foreground font-bold">
+                          {typeof request.patient === 'object' ? request.patient.name : request.patient}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase ${getPriorityColor(request.priority)} `}>
+                          {request.priority}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs font-medium uppercase tracking-tight">
+                        Awaiting {request.status === 'dispatched' ? 'Driver Acceptance' : 'Admin Assignment'}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground text-xs font-mono bg-accent px-2 py-1 rounded">
+                      {request.id}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-950/50">
+                      <p className="text-orange-900/40 dark:text-orange-400/40 text-[9px] uppercase font-bold mb-1">Pickup Point</p>
+                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.pickup?.hospitalName || request.from}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-950/50">
+                      <p className="text-red-900/40 dark:text-red-400/40 text-[9px] uppercase font-bold mb-1">Requested Destination</p>
+                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.destination?.hospitalName || request.to}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                          <User size={14} className="text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold leading-none">Requested By</p>
+                          <p className="text-foreground text-xs font-semibold">{request.requestedBy || 'Staff'}</p>
+                        </div>
+                      </div>
+                      {request.driverId && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                            <Car size={14} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-500 uppercase font-bold leading-none">Assigned Driver</p>
+                            <p className="text-foreground text-xs font-semibold">{request.driverName || 'Unit Assigned'}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className='flex items-center gap-3'>
+                      <button
+                        onClick={() => viewDriverDetails(request.driverId || request.driver)}
+                        className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-accent active:scale-95 transition-all text-xs font-bold"
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => alert(`Cancelling transfer request ${request.id} `)}
+                        className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-foreground rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 transition-all active:scale-95 text-xs font-bold whitespace-nowrap"
+                      >
+                        Cancel Request
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+
 
         {/* --- SECTION: INCOMING EMERGENCY PATIENTS --- */}
         {/* Real-time feed of incoming emergency patients */}
@@ -814,7 +827,8 @@ export function HospitalDashboard() {
                       <span
                         className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
                           request.priority
-                        )}`}
+                        )
+                         }`}
                       >
                         {request.priority.toUpperCase()}
                       </span>
@@ -852,19 +866,19 @@ export function HospitalDashboard() {
 
                 <div className="mt-3 flex justify-end gap-3 pl-8">
                   <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName}`); }}
+                    onClick={(e) =>{e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     Accept
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName}`); }}
+                    onClick={(e) =>{e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     Decline
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
+                    onClick={(e) =>{e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     View Details
@@ -889,17 +903,17 @@ export function HospitalDashboard() {
               <div
                 key={resource.id}
                 onClick={() => toggleResource(resource.id)}
-                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer transform hover:scale-[1.02] hover:shadow-md ${resource.available
-                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
-                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
-                  }`}
+                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer transform hover: scale-[1.02] hover: shadow-md ${resource.available
+                    ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
+                    : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
+                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div
                     className={`p-2.5 rounded-xl shadow-sm transition-colors ${resource.available
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                      }`}
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                     }`}
                   >
                     {resource.available ? <CheckCircle size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
                   </div>
@@ -908,9 +922,9 @@ export function HospitalDashboard() {
                     <div className="flex">
                       <span
                         className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full transition-colors duration-300 ${resource.available
-                          ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
-                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
-                          }`}
+                            ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
+                            : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
+                         }`}
                       >
                         {resource.available ? 'Available' : 'Unavailable'}
                       </span>
@@ -919,7 +933,7 @@ export function HospitalDashboard() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className={`h-8 w-[1px] transition-colors duration-300 ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'}`}></div>
+                  <div className={`h-8 w-[1px] transition-colors duration-300 ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'} `}></div>
                   <Switch
                     checked={resource.available}
                     onCheckedChange={() => toggleResource(resource.id)}
@@ -955,7 +969,7 @@ export function HospitalDashboard() {
               Driver Details
             </DialogTitle>
             <DialogDescription>
-              {driverPopupData?.id ? `Driver ID: ${driverPopupData.id}` : 'Loading driver information...'}
+              {driverPopupData?.id ? `Driver ID: ${driverPopupData.id} ` : 'Loading driver information...'}
             </DialogDescription>
           </DialogHeader>
 
@@ -996,8 +1010,8 @@ export function HospitalDashboard() {
                     {driverPopupData.driverName || 'Unknown Driver'}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-                    <span className={`text-xs font-medium ${driverPopupData.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'} `} />
+                    <span className={`text-xs font-medium ${driverPopupData.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'} `}>
                       {driverPopupData.isOnline ? 'Online' : 'Offline'}
                     </span>
                   </div>
@@ -1027,7 +1041,7 @@ export function HospitalDashboard() {
                     <Shield size={12} /> Accuracy
                   </p>
                   <p className="text-foreground text-sm">
-                    {driverPopupData.accuracy ? `${driverPopupData.accuracy.toFixed(1)}m` : 'N/A'}
+                    {driverPopupData.accuracy ? `${driverPopupData.accuracy.toFixed(1)} m` : 'N/A'}
                   </p>
                 </div>
                 <div className="p-3 bg-accent/30 rounded-lg">
@@ -1057,7 +1071,7 @@ export function HospitalDashboard() {
 
 // --- SUBSIDIARY COMPONENT: QUICK NAVIGATION DOCK ---
 // Renders the floating sidebar navigation for quick access to sections
-function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: number; incomingCount?: number }) {
+function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number; incomingCount?: number }) {
   const [activeSection, setActiveSection] = useState<string>('');
 
   const scrollToSection = (id: string) => {
@@ -1079,21 +1093,21 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
           const rect = element.getBoundingClientRect();
           // Element is considered in view if its top is above the middle of viewport
           // and its bottom is below 100px from the top.
-          if (rect.top <= window.innerHeight / 2 && rect.bottom >= 100) {
+          if (rect.top <= window.innerHeight/2 && rect.bottom >= 100) {
             current = id;
           }
         }
       }
 
       // If user scrolled to the absolute bottom of the page
-      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight - 10) {
-        current = sections[sections.length - 1];
+      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight-10) {
+        current = sections[sections.length-1];
       }
 
       if (current) setActiveSection(current);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll,{passive: true });
     // Initial check after a short delay to ensure rendering is complete
     const timeoutId = setTimeout(handleScroll, 100);
 
@@ -1104,11 +1118,11 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
   }, []);
 
   const navItems = [
-    { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
-    { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
-    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
-    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
-    { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
+   {id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
+   {id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
+   {id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
+   {id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
+   {id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
   return (
@@ -1125,7 +1139,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
               {/* Active Background Glow */}
               <div
                 className={`absolute inset-0 rounded-full transition-all duration-300 ${isActive ? `bg-gradient-to-br ${item.color} ${item.shadow} shadow-lg scale-100 opacity-100` : 'opacity-0 scale-75'
-                  }`}
+                 }`}
               />
 
               {/* Hover Background */}
@@ -1134,7 +1148,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
               <item.icon
                 size={18}
                 className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
-                  }`}
+                 }`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
 
