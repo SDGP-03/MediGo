@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft, Phone, Mail, Shield } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
-import { createSSE, apiFetch } from "../api/apiClient";
+import { database } from "../firebase";
+import { ref, onValue, off, get } from "firebase/database";
 
 
 export function HospitalDashboard() {
@@ -28,15 +29,16 @@ export function HospitalDashboard() {
     setDriverPopupLoading(true);
     setDriverPopupData(null);
     try {
-      const data = await apiFetch(`/drivers/${driverId}`);
-      setDriverPopupData(data);
-    } catch (err: any) {
-      console.error('Error fetching driver details:', err);
-      if (err.message?.includes('not found')) {
-        setDriverPopupData({ id: driverId, notFound: true });
+      const driverRef = ref(database, `driver_locations/${driverId}`);
+      const snapshot = await get(driverRef);
+      if (snapshot.exists()) {
+        setDriverPopupData({ id: driverId, ...snapshot.val() });
       } else {
-        setDriverPopupData({ id: driverId, error: true });
+        setDriverPopupData({ id: driverId, notFound: true });
       }
+    } catch (err) {
+      console.error('Error fetching driver details:', err);
+      setDriverPopupData({ id: driverId, error: true });
     } finally {
       setDriverPopupLoading(false);
     }
@@ -70,23 +72,77 @@ export function HospitalDashboard() {
   };
 
   // Live driver data from Firebase
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
 
   useEffect(() => {
-    const cleanup = createSSE(
-      '/transfers/stream',
-      (data) => {
-        if (data.pending) setDbPendingRequests(data.pending);
-        if (data.active) setDbActiveTransfers(data.active);
-      },
-      () => {
-        console.warn('[Dashboard] Transfer stream connection error');
-      },
-    );
-    return cleanup;
+    const requestsRef = ref(database, 'transfer_requests');
+    const handleData = (snapshot: any) => {
+      const data = snapshot.val();
+      if (!data) {
+        setDbPendingRequests([]);
+        setDbActiveTransfers([]);
+        return;
+      }
+
+      const formatTimeAgo = (timestamp: number) => {
+        if (!timestamp) return 'Just now';
+        const mins = Math.floor((Date.now() - timestamp) / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins} mins ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours} hours ago`;
+        return `${Math.floor(hours / 24)} days ago`;
+      };
+
+      const pending: any[] = [];
+      const active: any[] = [];
+
+      Object.entries(data).forEach(([key, value]: [string, any]) => {
+        const item = {
+          id: key.substring(Math.max(0, key.length - 8)).toUpperCase(),
+          realId: key,
+          patient: value.patient?.name || 'Unknown',
+          age: value.patient?.age || 'N/A',
+          gender: value.patient?.gender || 'N/A',
+          from: value.pickup?.hospitalName || 'Unknown',
+          to: value.destination?.hospitalName || 'Unknown',
+          priority: value.priority || 'standard',
+          requestedBy: 'System',
+          time: formatTimeAgo(value.createdAt),
+
+          // --- ADDED FOR MAP ROUTING ---
+          driverId: value.driverId,
+          destLat: value.destination?.lat,
+          destLng: value.destination?.lng,
+          // -----------------------------
+
+          ambulance: value.ambulanceId || 'Pending',
+          driver: value.driverId || 'Unknown',
+          attendant: value.attendant || 'N/A',
+          status: value.status || 'pending',
+          eta: value.eta || 'Evaluating...',
+          distance: value.distance || '0',
+        };
+
+        if (value.status === 'pending') {
+          pending.push(item);
+        } else if (value.status && value.status !== 'completed' && value.status !== 'cancelled') {
+          active.push(item);
+        }
+      });
+
+      pending.reverse();
+      active.reverse();
+
+      setDbPendingRequests(pending);
+      setDbActiveTransfers(active);
+    };
+
+    onValue(requestsRef, handleData);
+    return () => off(requestsRef);
   }, []);
 
   // --- DATA: INCOMING EMERGENCIES ---
@@ -248,10 +304,10 @@ export function HospitalDashboard() {
     },
   ];
 
-  const liveDriverCount = onlineDrivers.length + busyDrivers.length + offlineDrivers.length;
+  const liveDriverCount = onlineDrivers.length + offlineDrivers.length;
   const statusCounts = {
     available: onlineDrivers.length,
-    busy: busyDrivers.length,
+    busy: ambulances.filter(a => a.status === 'busy').length,
     offline: offlineDrivers.length,
     total: liveDriverCount > 0 ? liveDriverCount : ambulances.length,
   };
@@ -382,7 +438,7 @@ export function HospitalDashboard() {
             )}
           </div>
 
-          {/* Fleet Overview Sidebar — Map Key */}
+          {/* Fleet Overview Sidebar ΓÇö Map Key */}
           <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 shadow-xl overflow-hidden group/sidebar">
             {/* Simple glow effect */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-blue-500/20 transition-all duration-700" />
@@ -566,7 +622,7 @@ export function HospitalDashboard() {
                       </span>
                     </div>
                     <p className="text-muted-foreground text-sm mb-3">
-                      {transfer.age} yrs • {transfer.gender} •
+                      {transfer.age} yrs ΓÇó {transfer.gender} ΓÇó
                       Transfer ID: {transfer.id}
                     </p>
                   </div>
@@ -686,7 +742,7 @@ export function HospitalDashboard() {
                       </span>
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      {request.age} yrs • {request.gender} •{" "}
+                      {request.age} yrs ΓÇó {request.gender} ΓÇó{" "}
                       {request.id}
                     </p>
                   </div>
@@ -768,7 +824,7 @@ export function HospitalDashboard() {
                       <span className="text-muted-foreground text-sm">{request.timestamp}</span>
                     </div>
                     <p className="text-muted-foreground">
-                      {request.age} yrs • {request.gender} • {request.incidentType}
+                      {request.age} yrs ΓÇó {request.gender} ΓÇó {request.incidentType}
                     </p>
                   </div>
                 </div>

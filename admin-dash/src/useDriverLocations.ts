@@ -14,11 +14,12 @@ export interface DriverLocation {
     lng: number;
     accuracy: number;
     timestamp: number;
-    isOnline: boolean;
+    status: 'online' | 'busy' | 'offline';
 }
 
 export function useDriverLocations() {
     const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
+    const [busyDrivers, setBusyDrivers] = useState<DriverLocation[]>([]);
     const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -27,6 +28,7 @@ export function useDriverLocations() {
             '/drivers/locations/stream',
             (data) => {
                 if (data.online) setOnlineDrivers(data.online);
+                if (data.busy) setBusyDrivers(data.busy);
                 if (data.offline) setOfflineDrivers(data.offline);
                 setIsLoading(false);
             },
@@ -38,5 +40,5 @@ export function useDriverLocations() {
         return cleanup;
     }, []);
 
-    return { onlineDrivers, offlineDrivers, isLoading };
+    return { onlineDrivers, busyDrivers, offlineDrivers, isLoading };
 }

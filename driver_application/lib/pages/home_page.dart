@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
       // This runs on Firebase server when client disconnects (even if app crashes)
       if (!_onDisconnectSetup) {
         _driverLocationRef!.onDisconnect().update({
-          'isOnline': false,
+          'status': 'offline',
           'timestamp': ServerValue.timestamp,
         });
         _onDisconnectSetup = true;
@@ -209,7 +209,7 @@ class _HomePageState extends State<HomePage> {
         'lng': position.longitude,
         'accuracy': position.accuracy,
         'timestamp': ServerValue.timestamp,
-        'isOnline': true,
+        'status': currentAssignment != null ? 'busy' : 'online',
         'driverName':
             _cachedDriverName ?? user?.displayName ?? user?.email ?? 'Driver',
       });
@@ -221,7 +221,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _setDriverOffline() async {
     if (_driverLocationRef != null) {
       try {
-        await _driverLocationRef!.update({'isOnline': false});
+        await _driverLocationRef!.update({'status': 'offline'});
       } catch (e) {
         debugPrint('Failed to set driver offline: $e');
       }
@@ -785,6 +785,8 @@ class _HomePageState extends State<HomePage> {
       'acceptedAt': ServerValue.timestamp,
     });
 
+    await _driverLocationRef?.update({'status': 'busy'});
+
     setState(() {
       currentAssignment = assignment;
     });
@@ -803,6 +805,8 @@ class _HomePageState extends State<HomePage> {
       'status': 'cancelled',
       'driverId': null, // Unassign so admin can reassign
     });
+
+    await _driverLocationRef?.update({'status': 'online'});
 
     if (!mounted) return;
     setState(() {
