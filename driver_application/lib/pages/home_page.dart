@@ -162,6 +162,11 @@ class _HomePageState extends State<HomePage> {
         if (_cachedDriverName == null) {
           _fetchDriverName(user.uid);
         }
+
+        // Push an initial online status immediately so dashboard sees driver is active
+        Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+            .then((position) => _pushLocationToFirebase(position))
+            .catchError((e) => debugPrint('Initial location fetch failed: $e'));
       }
     }
   }

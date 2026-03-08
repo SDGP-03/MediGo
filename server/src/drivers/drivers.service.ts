@@ -49,9 +49,7 @@ export class DriversService {
                         (d) => d.isOnline && now - d.timestamp < FIVE_MINUTES,
                     );
                     const offline = allDrivers.filter(
-                        (d) =>
-                            (!d.isOnline || now - d.timestamp >= FIVE_MINUTES) &&
-                            now - d.timestamp < TWENTY_FOUR_HOURS,
+                        (d) => !d.isOnline || (now - d.timestamp >= FIVE_MINUTES),
                     );
 
                     subscriber.next({
