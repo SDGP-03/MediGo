@@ -80,7 +80,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
 
   const fetchDirections = useCallback((originLat: number, originLng: number, destLat: number, destLng: number) => {
-    if (typeof google === 'undefined') return;
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) return;
     const directionsService = new google.maps.DirectionsService();
     directionsService.route(
       {
@@ -196,7 +196,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
 
   // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
+    if (!isLoaded || typeof google === 'undefined' || !google.maps || (ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && offlineDrivers.length === 0)) return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -217,7 +217,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     return bounds;
-  }, [ambulances, userLocation, trackedDevice, onlineDrivers, offlineDrivers]);
+  }, [isLoaded, ambulances, userLocation, trackedDevice, onlineDrivers, offlineDrivers]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
