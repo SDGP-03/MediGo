@@ -248,6 +248,13 @@ class _NavigationPageState extends State<NavigationPage> {
         extra: {'completedAt': ServerValue.timestamp},
       );
 
+      // Reset driver status to online
+      await FirebaseDatabase.instance
+          .ref()
+          .child('driver_locations')
+          .child(uid)
+          .update({'status': 'online'});
+
       await _nav.disposeSession();
       _disposedSession = true;
     } catch (e) {
@@ -373,6 +380,13 @@ class _NavigationPageState extends State<NavigationPage> {
         status: 'cancelled',
         extra: {'cancelledAt': ServerValue.timestamp},
       );
+
+      // Reset driver status to online
+      await FirebaseDatabase.instance
+          .ref()
+          .child('driver_locations')
+          .child(uid)
+          .update({'status': 'online'});
 
       await _nav.disposeSession();
       _disposedSession = true;

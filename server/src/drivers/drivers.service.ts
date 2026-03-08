@@ -34,28 +34,34 @@ export class DriversService {
                     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
                     const allDrivers = Object.entries(data)
-                        .map(([id, value]: [string, any]) => ({
-                            id,
-                            driverName: value.driverName || 'Unknown Driver',
-                            lat: value.lat,
-                            lng: value.lng,
-                            accuracy: value.accuracy || 0,
-                            timestamp: value.timestamp || 0,
-                            isOnline: value.isOnline || false,
-                        }))
+                        .map(([id, value]: [string, any]) => {
+                            const rawStatus = value.status || (value.isOnline ? 'online' : 'offline');
+                            return {
+                                id,
+                                driverName: value.driverName || 'Unknown Driver',
+                                lat: value.lat,
+                                lng: value.lng,
+                                accuracy: value.accuracy || 0,
+                                timestamp: value.timestamp || 0,
+                                status: rawStatus,
+                            };
+                        })
                         .filter((d) => d.lat && d.lng);
 
                     const online = allDrivers.filter(
-                        (d) => d.isOnline && now - d.timestamp < FIVE_MINUTES,
+                        (d) => d.status === 'online' && now - d.timestamp < FIVE_MINUTES,
+                    );
+                    const busy = allDrivers.filter(
+                        (d) => d.status === 'busy' && now - d.timestamp < FIVE_MINUTES,
                     );
                     const offline = allDrivers.filter(
                         (d) =>
-                            (!d.isOnline || now - d.timestamp >= FIVE_MINUTES) &&
-                            now - d.timestamp < TWENTY_FOUR_HOURS,
+                            d.status === 'offline' ||
+                            (d.status !== 'offline' && now - d.timestamp >= FIVE_MINUTES),
                     );
 
                     subscriber.next({
-                        data: JSON.stringify({ online, offline }),
+                        data: JSON.stringify({ online, busy, offline }),
                     } as MessageEvent);
                 },
                 (error: Error) => {

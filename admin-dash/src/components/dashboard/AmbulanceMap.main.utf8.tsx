@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
+﻿import { useMemo, useCallback, useState, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
 import { useDriverLocations, DriverLocation } from '../../useDriverLocations';
@@ -70,7 +70,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
 
   // Driver locations from Firebase
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const { driverLocations, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
   const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
@@ -102,9 +102,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   // Listen for trackedDriverTrigger to center map and show route
   useEffect(() => {
     if (trackedDriverTrigger) {
-      let driver = onlineDrivers.find(d => d.id === trackedDriverTrigger.id);
-      if (!driver) driver = busyDrivers.find(d => d.id === trackedDriverTrigger.id);
-
+      const driver = driverLocations.find(d => d.id === trackedDriverTrigger.id);
       if (driver) {
         setSelectedDriver(driver);
         setSelectedOfflineDriver(null);
@@ -138,7 +136,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
         }
       }
     }
-  }, [trackedDriverTrigger, onlineDrivers, offlineDrivers, activeTransfers, map, fetchDirections]);
+  }, [trackedDriverTrigger, driverLocations, offlineDrivers, activeTransfers, map, fetchDirections]);
 
   // Listen for location updates from external tracker app via BroadcastChannel
   useEffect(() => {
@@ -196,7 +194,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
 
   // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if ((ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
+    if ((ambulances.length === 0 && !userLocation && !trackedDevice && driverLocations.length === 0 && offlineDrivers.length === 0) || typeof google === 'undefined') return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -209,7 +207,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       bounds.extend({ lat: trackedDevice.lat, lng: trackedDevice.lng });
     }
     // Include driver locations in bounds
-    onlineDrivers.forEach((driver) => {
+    driverLocations.forEach((driver) => {
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     // Include offline drivers in bounds
@@ -217,7 +215,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     return bounds;
-  }, [ambulances, userLocation, trackedDevice, onlineDrivers, offlineDrivers]);
+  }, [ambulances, userLocation, trackedDevice, driverLocations, offlineDrivers]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -431,21 +429,6 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
     } as google.maps.Symbol;
   }, [isLoaded]);
 
-  // Create busy driver icon (orange for drivers on a trip)
-  const getBusyDriverIcon = useCallback(() => {
-    if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
-
-    return {
-      path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-      fillColor: '#f97316', // orange-500
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 2,
-      scale: 6,
-      rotation: 0,
-    } as google.maps.Symbol;
-  }, [isLoaded]);
-
   // Create offline driver marker icon (gray for offline drivers)
   const getOfflineDriverIcon = useCallback(() => {
     if (!isLoaded || typeof google === 'undefined' || !google.maps) return undefined;
@@ -576,11 +559,11 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
               </p>
               {userLocation.accuracy && (
                 <p className="text-gray-500 text-xs mb-1">
-                  Accuracy: ±{Math.round(userLocation.accuracy)}m
+                  Accuracy: ┬▒{Math.round(userLocation.accuracy)}m
                 </p>
               )}
               {isTracking && (
-                <p className="text-green-600 text-xs">📍 Live Tracking Active</p>
+                <p className="text-green-600 text-xs">≡ƒôì Live Tracking Active</p>
               )}
             </div>
           </InfoWindow>
@@ -619,15 +602,15 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
                 {trackedDevice.lat.toFixed(6)}, {trackedDevice.lng.toFixed(6)}
               </p>
               <p className="text-gray-500 text-xs mb-1">
-                Accuracy: ±{Math.round(trackedDevice.accuracy)}m
+                Accuracy: ┬▒{Math.round(trackedDevice.accuracy)}m
               </p>
-              <p className="text-violet-600 text-xs">📡 Live Tracking</p>
+              <p className="text-violet-600 text-xs">≡ƒôí Live Tracking</p>
             </div>
           </InfoWindow>
         )}
 
         {/* Driver Location Markers (from Firebase) */}
-        {onlineDrivers.map((driver) => (
+        {driverLocations.map((driver) => (
           <Marker
             key={driver.id}
             position={{ lat: driver.lat, lng: driver.lng }}
@@ -652,31 +635,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           />
         ))}
 
-        {/* Busy Driver Location Markers */}
-        {busyDrivers.map((driver) => (
-          <Marker
-            key={`busy-${driver.id}`}
-            position={{ lat: driver.lat, lng: driver.lng }}
-            icon={getBusyDriverIcon()}
-            title={`${driver.driverName} (Busy)`}
-            zIndex={999}
-            onClick={() => {
-              setSelectedDriver(driver);
-              setSelectedAmbulance(null);
-              setShowUserLocationInfo(false);
-              setShowTrackedDeviceInfo(false);
-
-              const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
-              if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
-                fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
-              } else {
-                setDirections(null);
-              }
-            }}
-          />
-        ))}
-
-        {/* Driver Info Window (for both Online and Busy) */}
+        {/* Online Driver Info Window */}
         {selectedDriver && (
           <InfoWindow
             position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
@@ -685,24 +644,12 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
           >
             <div style={{ padding: '4px 2px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: selectedDriver.status === 'busy' ? '#f97316' : '#22c55e',
-                  flexShrink: 0
-                }} />
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0 }} />
                 <span style={{ fontWeight: 600, fontSize: '13px', color: '#111827' }}>
                   {selectedDriver.driverName}
                 </span>
               </div>
-              <span style={{
-                fontSize: '11px',
-                color: selectedDriver.status === 'busy' ? '#f97316' : '#16a34a',
-                fontWeight: 500
-              }}>
-                ● {selectedDriver.status === 'busy' ? 'Busy' : 'Online'}
-              </span>
+              <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 500 }}>ΓùÅ Online</span>
             </div>
           </InfoWindow>
         )}
@@ -739,7 +686,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
                   {selectedOfflineDriver.driverName}
                 </span>
               </div>
-              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>● Offline · {formatTimeAgo(selectedOfflineDriver.timestamp)}</span>
+              <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>ΓùÅ Offline ┬╖ {formatTimeAgo(selectedOfflineDriver.timestamp)}</span>
             </div>
           </InfoWindow>
         )}
@@ -853,10 +800,10 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
               <span className="text-gray-700">Tracked Device</span>
             </div>
           )}
-          {onlineDrivers.length > 0 && (
+          {driverLocations.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-green-500"></div>
-              <span className="text-gray-700">Active Drivers ({onlineDrivers.length})</span>
+              <span className="text-gray-700">Active Drivers ({driverLocations.length})</span>
             </div>
           )}
           {offlineDrivers.length > 0 && (

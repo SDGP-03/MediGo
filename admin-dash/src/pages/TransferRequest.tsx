@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
 import { apiPost } from '../api/apiClient';
+import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
+import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
@@ -73,8 +75,18 @@ export function TransferRequest() {
 
   // Fleet data from Firebase (ambulances + drivers)
   const { ambulances, drivers } = useFleetData();
+  const { onlineDrivers, busyDrivers } = useDriverLocations();
+
   const availableAmbulances = ambulances.filter(a => a.status === 'available');
-  const activeDrivers = drivers.filter(d => d.status === 'active');
+
+  // Synthesize active drivers: Merge registered drivers with live "online" status
+  const activeDrivers = drivers.filter(d => {
+    // A driver is selectable if they are "online" in real-time OR manually marked "active" in registry
+    // But they must NOT be "busy" (on another trip)
+    const isLiveOnline = onlineDrivers.some(od => od.id === d.id);
+    const isLiveBusy = busyDrivers.some(bd => bd.id === d.id);
+    return (isLiveOnline || d.status === 'active') && !isLiveBusy;
+  });
 
   // Autocomplete state for patient name
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -965,11 +977,14 @@ export function TransferRequest() {
                                 }`}
                             >
                               <option value="">Select a driver...</option>
-                              {activeDrivers.map(driver => (
-                                <option key={driver.id} value={driver.id}>
-                                  {driver.name} ({driver.gender}) — ⭐ {driver.rating} · Avg {driver.avgResponseTime}
-                                </option>
-                              ))}
+                              {activeDrivers.map(driver => {
+                                const isLive = onlineDrivers.some(od => od.id === driver.id);
+                                return (
+                                  <option key={driver.id} value={driver.id}>
+                                    {driver.name} {isLive ? '(LIVE ONLINE)' : ''} — ⭐ {driver.rating}
+                                  </option>
+                                );
+                              })}
                             </select>
                             {formErrors.selectedDriverId && (
                               <p className="text-red-500 text-xs mt-1">{formErrors.selectedDriverId}</p>

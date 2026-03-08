@@ -1,0 +1,700 @@
+Time: 2026-03-08T14:42:25.878Z, now: 1772980945878, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:42:25.879Z, now: 1772980945879, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:42:26.968Z, now: 1772980946968, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:42:26.976Z, now: 1772980946976, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:42:29.763Z, now: 1772980949763, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:42:29.887Z, now: 1772980949887, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421071,
+    "lng": 79.9128592,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772980911285,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:44:37.396Z, now: 1772981077396, FIVE_MINUTES: 300000
+Found 1 online, 4 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981078949,
+    "isOnline": true
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:44:37.397Z, now: 1772981077397, FIVE_MINUTES: 300000
+Found 1 online, 4 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981078949,
+    "isOnline": true
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:44:37.397Z, now: 1772981077397, FIVE_MINUTES: 300000
+Found 1 online, 4 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981078949,
+    "isOnline": true
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:44:37.397Z, now: 1772981077397, FIVE_MINUTES: 300000
+Found 1 online, 4 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981078949,
+    "isOnline": true
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:45:10.120Z, now: 1772981110120, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981111660,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:45:10.121Z, now: 1772981110121, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981111660,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:45:10.122Z, now: 1772981110122, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981111660,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
+Time: 2026-03-08T14:45:10.122Z, now: 1772981110122, FIVE_MINUTES: 300000
+Found 0 online, 5 offline drivers.
+All drivers: [
+  {
+    "id": "8zLT9qNNXkcZuO62MNWxQuImvDI3",
+    "driverName": "Driver 01",
+    "lat": 6.8649067,
+    "lng": 79.8996783,
+    "accuracy": 5,
+    "timestamp": 1772870791562,
+    "isOnline": false
+  },
+  {
+    "id": "cgiIb9bNslZ5k3Zxk7OS1Q7PQjJ3",
+    "driverName": "Anupa (Leader)",
+    "lat": 6.8421067,
+    "lng": 79.9128644,
+    "accuracy": 60,
+    "timestamp": 1772980258704,
+    "isOnline": false
+  },
+  {
+    "id": "gqqZPk3VAjOue25Az51hoP1HvK53",
+    "driverName": "Driver4",
+    "lat": 6.8382775,
+    "lng": 80.114274,
+    "accuracy": 36.900001525878906,
+    "timestamp": 1772790682516,
+    "isOnline": false
+  },
+  {
+    "id": "lVcy03rh66WtwHeI69LfbHeLCWA3",
+    "driverName": "Driver 02",
+    "lat": 6.8421057,
+    "lng": 79.9128595,
+    "accuracy": 20.899999618530273,
+    "timestamp": 1772981111660,
+    "isOnline": false
+  },
+  {
+    "id": "mock_driver_1",
+    "driverName": "John Doe",
+    "lat": 6.9271,
+    "lng": 79.8612,
+    "accuracy": 0,
+    "timestamp": 1772453640966,
+    "isOnline": true
+  }
+]
+
