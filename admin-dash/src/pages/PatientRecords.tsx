@@ -630,8 +630,8 @@ export function PatientRecords() {
                           setEditedPatient(null);
                         }}
                         className={`w-full p-4 text-left hover:bg-accent transition-colors border rounded-lg ${selectedPatient?.id === patient.id
-                            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
-                            : 'border-transparent hover:border-border'
+                          ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900'
+                          : 'border-transparent hover:border-border'
                           } ${!selectedPatient ? 'border-border' : ''}`}
                       >
                         <div className="flex items-center gap-3 mb-2">
@@ -1019,8 +1019,8 @@ export function PatientRecords() {
                           </span>
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${transfer.status.toLowerCase() === 'completed'
-                                ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                              ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                              : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                               }`}
                           >
                             {transfer.status}
