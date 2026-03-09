@@ -2,9 +2,9 @@ name: MediGo CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "nest-implem" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "nest-implem" ]
 
 jobs:
   server-ci:
