@@ -96,6 +96,21 @@ export class TransfersService {
         return { id, ...snapshot.val() };
     }
 
+    /** Cancel a transfer request */
+    async cancelTransfer(id: string): Promise<void> {
+        const requestRef = this.firebase.ref(`transfer_requests/${id}`);
+        const snapshot = await requestRef.get();
+        if (!snapshot.exists()) {
+            throw new Error(`Transfer ${id} not found`);
+        }
+        await requestRef.update({
+            status: 'cancelled',
+            cancelledAt: Date.now(),
+            cancelledBy: 'Hospital Admin'
+        });
+        this.logger.log(`Transfer cancelled: ${id}`);
+    }
+
     /** Get raw transfer requests data (for patient records) */
     async getRawTransfers(): Promise<Record<string, any>> {
         const snapshot = await this.firebase.ref('transfer_requests').get();

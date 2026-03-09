@@ -1,5 +1,5 @@
-import{useState, useEffect}from "react";
-import{useNavigate}from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Ambulance,
   Clock,
@@ -24,20 +24,21 @@ import {
   Shield,
   Car
 } from "lucide-react";
-import{Switch}from "../components/ui/switch";
-import{Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription}from "../components/ui/dialog";
-import{AmbulanceMap}from "../components/dashboard/AmbulanceMap";
-import{useDriverLocations}from "../useDriverLocations";
-import{database, auth}from "../firebase";
-import{onAuthStateChanged}from "firebase/auth";
-import{ref, onValue, off, get}from "firebase/database";
+import { Switch } from "../components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
+import { useDriverLocations } from "../useDriverLocations";
+import { apiFetch } from "../api/apiClient";
+import { database, auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { ref, onValue, off, get } from "firebase/database";
 
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number}| null>(null);
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
 
   // --- STATE: DRIVER INFO POPUP ---
   const [driverPopupOpen, setDriverPopupOpen] = useState(false);
@@ -61,13 +62,13 @@ export function HospitalDashboard() {
 
       if (snapshot.exists()) {
         setDriverPopupData({ id: driverId, ...snapshot.val() });
-     }else {
+      } else {
         setDriverPopupData({ id: driverId, notFound: true });
       }
-   }catch (err: any) {
+    } catch (err: any) {
       console.error('Error fetching driver details from Firebase:', err);
       setDriverPopupData({ id: driverId, error: true });
-   }finally {
+    } finally {
       setDriverPopupLoading(false);
     }
   };
@@ -87,16 +88,34 @@ export function HospitalDashboard() {
 
   // --- STATE: RESOURCE AVAILABILITY ---
   const [resources, setResources] = useState([
-   {id: 'icu', name: 'ICU Bed Availability', available: false },
-   {id: 'nicu', name: 'NICU Bed Availability', available: false },
-   {id: 'picu', name: 'PICU Bed Availability', available: false },
-   {id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
-   {id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
-   {id: 'er', name: 'Emergency Room Availability', available: false },
+    { id: 'icu', name: 'ICU Bed Availability', available: false },
+    { id: 'nicu', name: 'NICU Bed Availability', available: false },
+    { id: 'picu', name: 'PICU Bed Availability', available: false },
+    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
+    { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
+    { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
   const toggleResource = (id: string) => {
-    setResources(resources.map(r => r.id === id ?{...r, available: !r.available}: r));
+    setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
+  };
+
+  const handleCancelRequest = async (requestId: string) => {
+    if (!requestId) return;
+
+    if (window.confirm("Are you sure you want to cancel this transfer request?")) {
+      try {
+        await apiFetch(`/transfers/${requestId}/cancel`, {
+          method: 'PATCH'
+        });
+        // Optimistic UI update: Remove from local state immediately
+        setDbPendingRequests(prev => prev.filter(req => req.id !== requestId));
+        setDbActiveTransfers(prev => prev.filter(req => req.id !== requestId));
+      } catch (error) {
+        console.error("Error cancelling request:", error);
+        alert("Failed to cancel request. Please try again.");
+      }
+    }
   };
 
   // --- STATE: HOSPITAL PROFILE ---
@@ -106,13 +125,13 @@ export function HospitalDashboard() {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         try {
-          const adminRef = ref(database, `admin/${user.uid} `);
+          const adminRef = ref(database, `admin/${user.uid}`);
           const snapshot = await get(adminRef);
           if (snapshot.exists()) {
             const data = snapshot.val();
             setCurrentHospitalName(data.hospitalName || "");
           }
-       }catch (err) {
+        } catch (err) {
           console.error("Error fetching admin profile:", err);
         }
       }
@@ -122,7 +141,7 @@ export function HospitalDashboard() {
   }, []);
 
   // Live driver data from Firebase
-  const{onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading}= useDriverLocations();
+  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
@@ -138,12 +157,16 @@ export function HospitalDashboard() {
       // 1. 'pending' (waiting for admin to assign driver)
       // 2. 'dispatched' (waiting for driver to accept)
       const pending = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
         (t.status === 'pending' || t.status === 'dispatched') &&
         (!currentHospitalName || t.destination?.hospitalName === currentHospitalName)
       );
 
       // Active transfers: Driver has accepted and is on the move
       const active = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
         (t.status === 'on_way' ||
           t.status === 'at_pickup' ||
           t.status === 'patient_loaded' ||
@@ -226,7 +249,7 @@ export function HospitalDashboard() {
       location: "City General Hospital",
       lat: 6.9271,
       lng: 79.8612,
-      position:{left: "25%", top: "33%" },
+      position: { left: "25%", top: "33%" },
     },
     {
       id: "AMB-003",
@@ -235,7 +258,7 @@ export function HospitalDashboard() {
       location: "Divisional Hospital North",
       lat: 6.9350,
       lng: 79.8700,
-      position:{left: "33%", bottom: "33%" },
+      position: { left: "33%", bottom: "33%" },
     },
     {
       id: "AMB-005",
@@ -244,7 +267,7 @@ export function HospitalDashboard() {
       location: "City General Hospital",
       lat: 6.9200,
       lng: 79.8500,
-      position:{left: "66%", top: "25%" },
+      position: { left: "66%", top: "25%" },
     },
     {
       id: "AMB-002",
@@ -254,7 +277,7 @@ export function HospitalDashboard() {
       eta: "12 mins",
       lat: 6.9150,
       lng: 79.8550,
-      position:{right: "33%", top: "25%" },
+      position: { right: "33%", top: "25%" },
     },
     {
       id: "AMB-006",
@@ -264,7 +287,7 @@ export function HospitalDashboard() {
       eta: "18 mins",
       lat: 6.9400,
       lng: 79.8750,
-      position:{right: "25%", bottom: "25%" },
+      position: { right: "25%", bottom: "25%" },
     },
     {
       id: "AMB-007",
@@ -273,7 +296,7 @@ export function HospitalDashboard() {
       location: "At Central Medical Center",
       lat: 6.9100,
       lng: 79.8600,
-      position:{left: "50%", top: "25%" },
+      position: { left: "50%", top: "25%" },
     },
     {
       id: "AMB-008",
@@ -282,7 +305,7 @@ export function HospitalDashboard() {
       location: "At Specialist Hospital",
       lat: 6.9300,
       lng: 79.8650,
-      position:{right: "33%", bottom: "33%" },
+      position: { right: "33%", bottom: "33%" },
     },
     {
       id: "AMB-009",
@@ -291,7 +314,7 @@ export function HospitalDashboard() {
       location: "Base Station A",
       lat: 6.9250,
       lng: 79.8620,
-      position:{left: "40%", top: "50%" },
+      position: { left: "40%", top: "50%" },
     },
     {
       id: "AMB-010",
@@ -300,7 +323,7 @@ export function HospitalDashboard() {
       location: "Base Station B",
       lat: 6.9280,
       lng: 79.8630,
-      position:{right: "40%", bottom: "40%" },
+      position: { right: "40%", bottom: "40%" },
     },
     {
       id: "AMB-004",
@@ -309,7 +332,7 @@ export function HospitalDashboard() {
       location: "Service Center",
       lat: 6.9000,
       lng: 79.9000,
-      position:{right: "20%", top: "40%" },
+      position: { right: "20%", top: "40%" },
     },
     {
       id: "AMB-011",
@@ -318,7 +341,7 @@ export function HospitalDashboard() {
       location: "Maintenance Bay",
       lat: 6.9500,
       lng: 79.8800,
-      position:{left: "60%", bottom: "20%" },
+      position: { left: "60%", bottom: "20%" },
     },
   ];
 
@@ -411,6 +434,9 @@ export function HospitalDashboard() {
                 lng: amb.lng,
               }))}
                 activeTransfers={dbActiveTransfers}
+                onlineDrivers={onlineDrivers}
+                busyDrivers={busyDrivers}
+                offlineDrivers={offlineDrivers}
                 height="650px"
                 trackedDriverTrigger={trackedDriverTrigger}
               />
@@ -790,7 +816,7 @@ export function HospitalDashboard() {
                         Details
                       </button>
                       <button
-                        onClick={() => alert(`Cancelling transfer request ${request.id} `)}
+                        onClick={() => handleCancelRequest(request.id)}
                         className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-foreground rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 transition-all active:scale-95 text-xs font-bold whitespace-nowrap"
                       >
                         Cancel Request
@@ -828,7 +854,7 @@ export function HospitalDashboard() {
                         className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
                           request.priority
                         )
-                         }`}
+                          }`}
                       >
                         {request.priority.toUpperCase()}
                       </span>
@@ -866,19 +892,19 @@ export function HospitalDashboard() {
 
                 <div className="mt-3 flex justify-end gap-3 pl-8">
                   <button
-                    onClick={(e) =>{e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
+                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     Accept
                   </button>
                   <button
-                    onClick={(e) =>{e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
+                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     Decline
                   </button>
                   <button
-                    onClick={(e) =>{e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
+                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
                   >
                     View Details
@@ -904,16 +930,16 @@ export function HospitalDashboard() {
                 key={resource.id}
                 onClick={() => toggleResource(resource.id)}
                 className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer transform hover: scale-[1.02] hover: shadow-md ${resource.available
-                    ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
-                    : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
-                 }`}
+                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
+                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
+                  }`}
               >
                 <div className="flex items-center gap-4">
                   <div
                     className={`p-2.5 rounded-xl shadow-sm transition-colors ${resource.available
-                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                     }`}
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                      }`}
                   >
                     {resource.available ? <CheckCircle size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
                   </div>
@@ -922,9 +948,9 @@ export function HospitalDashboard() {
                     <div className="flex">
                       <span
                         className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full transition-colors duration-300 ${resource.available
-                            ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
-                            : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
-                         }`}
+                          ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
+                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
+                          }`}
                       >
                         {resource.available ? 'Available' : 'Unavailable'}
                       </span>
@@ -1071,7 +1097,7 @@ export function HospitalDashboard() {
 
 // --- SUBSIDIARY COMPONENT: QUICK NAVIGATION DOCK ---
 // Renders the floating sidebar navigation for quick access to sections
-function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number; incomingCount?: number }) {
+function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: number; incomingCount?: number }) {
   const [activeSection, setActiveSection] = useState<string>('');
 
   const scrollToSection = (id: string) => {
@@ -1093,21 +1119,21 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number
           const rect = element.getBoundingClientRect();
           // Element is considered in view if its top is above the middle of viewport
           // and its bottom is below 100px from the top.
-          if (rect.top <= window.innerHeight/2 && rect.bottom >= 100) {
+          if (rect.top <= window.innerHeight / 2 && rect.bottom >= 100) {
             current = id;
           }
         }
       }
 
       // If user scrolled to the absolute bottom of the page
-      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight-10) {
-        current = sections[sections.length-1];
+      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight - 10) {
+        current = sections[sections.length - 1];
       }
 
       if (current) setActiveSection(current);
     };
 
-    window.addEventListener('scroll', handleScroll,{passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     // Initial check after a short delay to ensure rendering is complete
     const timeoutId = setTimeout(handleScroll, 100);
 
@@ -1118,11 +1144,11 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number
   }, []);
 
   const navItems = [
-   {id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
-   {id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
-   {id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
-   {id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
-   {id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
+    { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
+    { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
+    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
+    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
+    { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
   return (
@@ -1139,7 +1165,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number
               {/* Active Background Glow */}
               <div
                 className={`absolute inset-0 rounded-full transition-all duration-300 ${isActive ? `bg-gradient-to-br ${item.color} ${item.shadow} shadow-lg scale-100 opacity-100` : 'opacity-0 scale-75'
-                 }`}
+                  }`}
               />
 
               {/* Hover Background */}
@@ -1148,7 +1174,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }:{pendingCount?: number
               <item.icon
                 size={18}
                 className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
-                 }`}
+                  }`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
 

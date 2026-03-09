@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
-import { useDriverLocations, DriverLocation } from '../../useDriverLocations';
+import { DriverLocation } from '../../useDriverLocations';
 
 interface AmbulanceLocation {
   id: string;
@@ -27,6 +27,9 @@ interface TrackedDevice {
 interface AmbulanceMapProps {
   ambulances: AmbulanceLocation[];
   activeTransfers?: any[];
+  onlineDrivers?: DriverLocation[];
+  busyDrivers?: DriverLocation[];
+  offlineDrivers?: DriverLocation[];
   height?: string;
   trackedDriverTrigger?: { id: string; timestamp: number } | null;
 }
@@ -57,7 +60,15 @@ const getMarkerColor = (status: string): string => {
   }
 };
 
-export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px', trackedDriverTrigger = null }: AmbulanceMapProps) {
+export function AmbulanceMap({
+  ambulances,
+  activeTransfers = [],
+  onlineDrivers = [],
+  busyDrivers = [],
+  offlineDrivers = [],
+  height = '384px',
+  trackedDriverTrigger = null
+}: AmbulanceMapProps) {
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
@@ -69,8 +80,7 @@ export function AmbulanceMap({ ambulances, activeTransfers = [], height = '384px
   // State for external tracked device
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
 
-  // Driver locations from Firebase
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  // Driver locations come from props now
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
   const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);

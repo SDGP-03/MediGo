@@ -4,6 +4,7 @@ import {
     Post,
     Param,
     Body,
+    Patch,
     Sse,
     UseGuards,
     NotFoundException,
@@ -37,5 +38,11 @@ export class TransfersController {
             throw new NotFoundException(`Transfer ${id} not found`);
         }
         return transfer;
+    }
+
+    /** Cancel a transfer request */
+    @Patch(':id/cancel')
+    async cancelTransfer(@Param('id') id: string) {
+        return this.transfersService.cancelTransfer(id);
     }
 }
