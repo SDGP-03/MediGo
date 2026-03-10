@@ -14,15 +14,18 @@ export class AnalyticsService {
 
     /** Get aggregated analytics data */
     async getAnalytics(): Promise<any> {
+        this.logger.log('Starting getAnalytics() calculation...');
         const [transferSnap, driverSnap] = await Promise.all([
             this.firebase.ref('transfer_requests').get(),
             this.firebase.ref('driver_locations').get(),
         ]);
+        this.logger.log('Firebase fetch complete.');
 
         const transfers: any[] = transferSnap.exists()
             ? Object.values(transferSnap.val())
             : [];
         const driverData = driverSnap.exists() ? driverSnap.val() : {};
+        this.logger.log(`Fetched ${transfers.length} transfers.`);
 
         // Total requests
         const totalRequests = transfers.length;
@@ -173,6 +176,8 @@ export class AnalyticsService {
             color: hospitalColors[i]?.c || 'bg-gray-500',
             borderColor: hospitalColors[i]?.bc || 'border-gray-500',
         }));
+
+        this.logger.log('Finished getAnalytics() calculation.');
 
         return {
             isLoading: false,

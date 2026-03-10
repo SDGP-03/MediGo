@@ -6,6 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '../api/apiClient';
+import { auth } from '../firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 // This is the shape of the data our hook will return to the Analytics page
 export interface AnalyticsData {
@@ -47,8 +49,10 @@ export function useAnalyticsData(): AnalyticsData {
 
     useEffect(() => {
         let cancelled = false;
+        let interval: NodeJS.Timeout;
 
         const fetchData = async () => {
+            if (!auth.currentUser) return; // safeguard
             try {
                 const result = await apiFetch('/analytics');
                 if (!cancelled) {
@@ -62,14 +66,22 @@ export function useAnalyticsData(): AnalyticsData {
             }
         };
 
-        fetchData();
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user && !cancelled) {
+                fetchData();
 
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchData, 30000);
+                // Clear any existing interval before setting a new one
+                if (interval) clearInterval(interval);
+
+                // Refresh every 30 seconds
+                interval = setInterval(fetchData, 30000);
+            }
+        });
 
         return () => {
             cancelled = true;
-            clearInterval(interval);
+            unsubscribe();
+            if (interval) clearInterval(interval);
         };
     }, []);
 
