@@ -171,11 +171,14 @@ export function HospitalDashboard() {
           t.status === 'at_pickup' ||
           t.status === 'patient_loaded' ||
           t.status === 'in_transit' ||
-          t.status === 'arrived_at_destination') &&
-        (!currentHospitalName ||
-          t.destination?.hospitalName === currentHospitalName ||
-          t.pickup?.hospitalName === currentHospitalName)
+          t.status === 'arrived_at_destination')
       );
+
+      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}`);
+      if (allTransfers.length > 0) {
+        const sample = allTransfers[allTransfers.length - 1]; // look at newest
+        console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
+      }
 
       setDbPendingRequests(pending);
       setDbActiveTransfers(active);
