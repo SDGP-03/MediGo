@@ -21,7 +21,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   GoogleMapViewController? controllerGoogleMap;
 
   StreamSubscription<Position>? positionStream;
@@ -56,9 +56,29 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLanguage();
     _initConnectivityListener();
     MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground: explicitly kick off an online location update
+      // so the admin dashboard immediately sees the driver as online again.
+      if (_isOnline) {
+        Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+            .then((position) => _pushLocationToFirebase(position))
+            .catchError(
+              (e) => debugPrint('Lifecycle resume location fetch failed: $e'),
+            );
+      }
+    } else if (state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      // Driver might have closed the app, the Firebase onDisconnect usually handles this
+      // but we can try to eagerly write offline status if we have time.
+    }
   }
 
   Future<void> _loadLanguage() async {
@@ -879,6 +899,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     heartbeatTimer?.cancel();
     _assignmentSubscription?.cancel();
     MapStyles.selectedStyleNotifier.removeListener(_onMapStyleChanged);

@@ -26,6 +26,12 @@ export function useDriverLocations() {
 
     useEffect(() => {
         const driversRef = ref(database, 'driver_locations');
+        const offsetRef = ref(database, '.info/serverTimeOffset');
+        let serverTimeOffset = 0;
+
+        const offsetUnsubscribe = onValue(offsetRef, (snapshot) => {
+            serverTimeOffset = snapshot.val() || 0;
+        });
 
         const unsubscribe = onValue(driversRef, (snapshot) => {
             const data = snapshot.val();
@@ -37,12 +43,19 @@ export function useDriverLocations() {
                 return;
             }
 
-            const now = Date.now();
+            // Use the offset to get the true server time, even if the PC clock is wrong
+            const now = Date.now() + serverTimeOffset;
             const TEN_MINUTES = 10 * 60 * 1000;
 
             const allDrivers: DriverLocation[] = Object.entries(data)
                 .map(([id, value]: [string, any]) => {
                     const status = value.status || (value.isOnline ? 'online' : 'offline');
+
+                    // DEBUG: Log the raw Firebase timestamp vs calculated server time
+                    console.log(`[DEBUG] Driver ${value.driverName} - Raw Timestamp:`, value.timestamp, new Date(value.timestamp).toISOString());
+                    console.log(`[DEBUG] Current Calculated true Google Server Time:`, now, new Date(now).toISOString());
+                    console.warn(`[DEBUG] Difference: ${Math.round((now - value.timestamp) / 60000)} minutes`);
+
                     return {
                         id,
                         driverName: value.driverName || 'Unknown Driver',
@@ -75,7 +88,10 @@ export function useDriverLocations() {
             setIsLoading(false);
         });
 
-        return () => off(driversRef, 'value', unsubscribe);
+        return () => {
+            off(driversRef, 'value', unsubscribe);
+            off(offsetRef, 'value', offsetUnsubscribe);
+        };
     }, []);
 
     return { onlineDrivers, busyDrivers, offlineDrivers, isLoading };
