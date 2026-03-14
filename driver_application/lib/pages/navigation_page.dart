@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:driver_application/models/assignment.dart';
+import 'package:driver_application/core/platform/maps_config.dart';
 import 'package:driver_application/services/navigation_service.dart';
 import 'package:driver_application/services/trip_history_service.dart';
 import 'package:driver_application/widgets/navigation_preview_card.dart';
@@ -49,6 +50,11 @@ class _NavigationPageState extends State<NavigationPage> {
     });
 
     try {
+      final mapsOk = await MapsConfig.isGmsApiKeyConfigured();
+      if (!mapsOk) {
+        throw StateError('Maps API key is not configured for iOS.');
+      }
+
       final permissionOk = await _ensureLocationPermission();
       if (!permissionOk) {
         throw StateError('Location permission is required for navigation.');

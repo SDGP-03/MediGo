@@ -1,9 +1,11 @@
-﻿import 'dart:io';
+﻿import 'dart:async';
+import 'dart:io';
 import '../authentication/login_screen.dart';
 import 'privacy_policy_page.dart';
 import 'faq_page.dart';
 import 'contact_support_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -51,6 +53,16 @@ class _SettingsPageState extends State<SettingsPage> {
     return en;
   }
 
+  Timer? _topicRetryTimer;
+  bool? _pendingTopicEnabled;
+  int _topicRetryAttempts = 0;
+
+  @override
+  void dispose() {
+    _topicRetryTimer?.cancel();
+    super.dispose();
+  }
+
   String _mapStyleLabel(String value) {
     switch (value) {
       case "standard":
@@ -77,9 +89,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _initializeSettings() async {
+    // Notification permission + topic subscription must be sequenced on iOS
+    // (APNS token may not be ready immediately).
+    await requestNotificationPermission();
+    await loadNotificationSetting();
+
     await Future.wait([
-      requestNotificationPermission(),
-      loadNotificationSetting(),
       loadMapStyle(),
       loadPreferences(),
       loadAppVersion(),
@@ -176,6 +191,29 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<String?> _getApnsTokenIfAvailable() async {
+    try {
+      return await FirebaseMessaging.instance.getAPNSToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _scheduleTopicRetry(bool enabled) {
+    _pendingTopicEnabled = enabled;
+    if (_topicRetryTimer?.isActive ?? false) return;
+
+    // Cap retries to avoid spamming on simulators where APNS token may never arrive.
+    if (_topicRetryAttempts >= 10) return;
+    _topicRetryAttempts++;
+
+    _topicRetryTimer = Timer(const Duration(seconds: 2), () async {
+      final desired = _pendingTopicEnabled;
+      if (desired == null) return;
+      await _updateDriversTopic(desired);
+    });
+  }
+
   Future<void> savePreference(String key, dynamic value) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -183,6 +221,44 @@ class _SettingsPageState extends State<SettingsPage> {
       await prefs.setBool(key, value);
     } else if (value is String) {
       await prefs.setString(key, value);
+    }
+  }
+
+  Future<bool> _updateDriversTopic(bool enabled) async {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.setAutoInitEnabled(true);
+
+    // Trigger token generation (helps APNS registration on iOS).
+    try {
+      await messaging.getToken();
+    } catch (_) {}
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      final apns = await _getApnsTokenIfAvailable();
+      if (apns == null || apns.isEmpty) {
+        _scheduleTopicRetry(enabled);
+        return false;
+      }
+    }
+
+    try {
+      if (enabled) {
+        await messaging.subscribeToTopic("drivers");
+      } else {
+        await messaging.unsubscribeFromTopic("drivers");
+      }
+      _topicRetryAttempts = 0;
+      return true;
+    } catch (e) {
+      final msg = e.toString();
+      final isApnsNotReady = (!kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.iOS &&
+          msg.contains('apns-token-not-set'));
+      if (isApnsNotReady) {
+        _scheduleTopicRetry(enabled);
+        return false;
+      }
+      rethrow;
     }
   }
 
@@ -224,13 +300,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     try {
-      if (enabled) {
-        await FirebaseMessaging.instance.subscribeToTopic("drivers");
-      } else {
-        await FirebaseMessaging.instance.unsubscribeFromTopic("drivers");
-      }
+      await _updateDriversTopic(enabled);
     } catch (e) {
-      debugPrint('Error managing notification topic: $e');
+      final msg = e.toString();
+      final isApnsNotReady = (!kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.iOS &&
+          msg.contains('apns-token-not-set'));
+      if (!isApnsNotReady) {
+        debugPrint('Error managing notification topic: $e');
+      }
     }
   }
 
@@ -412,14 +490,26 @@ class _SettingsPageState extends State<SettingsPage> {
                   setState(() => notificationsEnabled = value);
                   await savePreference('notifications', value);
 
-                  if (value) {
-                    await FirebaseMessaging.instance.subscribeToTopic(
-                      "drivers",
-                    );
-                  } else {
-                    await FirebaseMessaging.instance.unsubscribeFromTopic(
-                      "drivers",
-                    );
+                  try {
+                    await _updateDriversTopic(value);
+                  } catch (e) {
+                    final msg = e.toString();
+                    final isApnsNotReady = (!kIsWeb &&
+                        defaultTargetPlatform == TargetPlatform.iOS &&
+                        msg.contains('apns-token-not-set'));
+                    if (!isApnsNotReady) {
+                      debugPrint('Error managing notification topic: $e');
+                    }
+                    if (mounted) {
+                      _showSnackBar(
+                        t(
+                          "Notification setup failed",
+                          "දැනුම්දීම් සකස් කිරීමට බැරි වුණා",
+                          "அறிவிப்பு அமைப்பு தோல்வியடைந்தது",
+                        ),
+                        isError: true,
+                      );
+                    }
                   }
                 },
               ),
@@ -941,6 +1031,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-
-
-

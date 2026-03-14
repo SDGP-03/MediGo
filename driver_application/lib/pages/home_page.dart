@@ -13,6 +13,8 @@ import 'package:driver_application/global/global_var.dart';
 import '../widgets/side_menu.dart';
 import 'package:driver_application/pages/navigation_page.dart';
 import 'package:driver_application/services/trip_history_service.dart';
+import 'package:driver_application/core/platform/maps_config.dart';
+import 'package:flutter/foundation.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,6 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   GoogleMapViewController? controllerGoogleMap;
+  late final Future<bool> _isMapsConfigured = MapsConfig.isGmsApiKeyConfigured();
 
   StreamSubscription<Position>? positionStream;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -1112,34 +1115,95 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(18),
                   child: Stack(
                     children: [
-                      GoogleMapsMapView(
-                        initialMapType: _mapType,
-                        initialZoomControlsEnabled: false,
-                        initialCameraPosition: googlePlexInitialPosition,
-                        onViewCreated: (controller) async {
-                          controllerGoogleMap = controller;
-
-                          await controller.setMyLocationEnabled(true);
-                          await controller.settings.setMyLocationButtonEnabled(
-                            false,
-                          );
-                          try {
-                            await controller.settings.setZoomControlsEnabled(
-                              false,
-                            );
-                          } catch (_) {}
-
-                          await loadMapStyle();
-                          applyMapStyle();
-                          checkLocationPermission();
-
-                          final assignment = currentAssignment;
-                          if (assignment != null) {
-                            await _upsertDestinationMarker(
-                              assignment.dropLatLng,
-                              assignment.dropName,
+                      FutureBuilder<bool>(
+                        future: _isMapsConfigured,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState !=
+                              ConnectionState.done) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
                             );
                           }
+
+                          final configured = snapshot.data == true;
+
+                          if (!configured) {
+                            return Container(
+                              color: Colors.white,
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.all(22),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.map_outlined,
+                                    size: 42,
+                                    color: Colors.red.shade700,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    t(
+                                      'Maps API key not configured',
+                                      'සිතියම් API යතුර සකසා නැහැ',
+                                      'வரைபட API விசை அமைக்கப்படவில்லை',
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    t(
+                                      'Set GMS_API_KEY for iOS to use the live map.',
+                                      'සජීවී සිතියම සඳහා iOS එකට GMS_API_KEY සකස් කරන්න.',
+                                      'நேரடி வரைபடத்தை பயன்படுத்த iOS-க்கு GMS_API_KEY அமைக்கவும்.',
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return GoogleMapsMapView(
+                            initialMapType: _mapType,
+                            initialZoomControlsEnabled: false,
+                            initialCameraPosition: googlePlexInitialPosition,
+                            onViewCreated: (controller) async {
+                              controllerGoogleMap = controller;
+
+                              try {
+                                await controller.setMyLocationEnabled(true);
+                                await controller.settings
+                                    .setMyLocationButtonEnabled(false);
+                                if (!kIsWeb &&
+                                    defaultTargetPlatform ==
+                                        TargetPlatform.android) {
+                                  await controller.settings
+                                      .setZoomControlsEnabled(false);
+                                }
+                              } catch (e) {
+                                debugPrint('Map controller setup failed: $e');
+                              }
+
+                              await loadMapStyle();
+                              applyMapStyle();
+                              checkLocationPermission();
+
+                              final assignment = currentAssignment;
+                              if (assignment != null) {
+                                await _upsertDestinationMarker(
+                                  assignment.dropLatLng,
+                                  assignment.dropName,
+                                );
+                              }
+                            },
+                          );
                         },
                       ),
                       Positioned(
