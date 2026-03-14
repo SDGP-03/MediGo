@@ -31,7 +31,7 @@ class _NavigationPageState extends State<NavigationPage> {
   bool _initializing = true;
   String? _initError;
 
-  bool get _isReady => _nav.sessionReady && _nav.hasLocationFix;
+  bool get _isReady => _nav.canStartNavigation;
 
   StreamSubscription<OnArrivalEvent>? _arrivalSub;
   bool _arrivalSheetOpen = false;
@@ -440,12 +440,29 @@ class _NavigationPageState extends State<NavigationPage> {
                     isLoading: _initializing || !_nav.sessionReady,
                     primaryCtaLabel: _initError != null
                         ? 'Retry'
-                        : (_isReady ? 'Start Navigation' : 'Getting GPS…'),
+                        : (_nav.isStartingNavigation
+                              ? 'Starting…'
+                              : (_isReady
+                                    ? 'Start Navigation'
+                                    : (_nav.hasLocationFix
+                                          ? 'Preparing route…'
+                                          : 'Getting GPS…'))),
                     onPrimaryCta: (_initError != null)
                         ? _boot
                         : (_isReady
                               ? () async {
-                                  await _nav.startNavigation();
+                                  try {
+                                    await _nav.startNavigation();
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to start navigation: $e',
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
                               : null),
                   ),

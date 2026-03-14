@@ -52,6 +52,6 @@
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>We use your location to provide navigation even when the app is in use.</string>
 		<key>GMSApiKey</key>
-		<string>$(GMS_API_KEY)</string>
+		<string>AIzaSyA20MQOEJR8-I_-9FDzaLDGXkTSazEUtwY</string>
 	</dict>
 </plist>
