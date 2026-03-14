@@ -74,9 +74,9 @@ class _PrivacyPolicyPageState extends State<PrivacyPolicyPage> {
               iconColor: Colors.blue,
               title: t('1. Information We Collect', '1. අපි එකතු කරන දත්ත', '1. நாம் சேகரிக்கும் தகவல்'),
               content: t(
-                'We collect your name, email, phone number, vehicle details, and profile photo when you register and use the app.',
-                'ඔබ ලියාපදිංචි වන විට සහ යෙදුම භාවිතා කරන විට නම, ඊමේල්, දුරකථන අංකය, වාහන තොරතුරු සහ පැතිකඩ පින්තූරය එකතු කරනවා.',
-                'நீங்கள் பதிவு செய்து செயலியை பயன்படுத்தும் போது பெயர், மின்னஞ்சல், தொலைபேசி எண், வாகன விவரங்கள் மற்றும் சுயவிவரப் படம் சேகரிக்கிறோம்.',
+                'We collect your name, email, phone number, and profile photo when you register and use the app.',
+                'ඔබ ලියාපදිංචි වන විට සහ යෙදුම භාවිතා කරන විට නම, ඊමේල්, දුරකථන අංකය සහ පැතිකඩ පින්තූරය එකතු කරනවා.',
+                'நீங்கள் பதிவு செய்து செயலியை பயன்படுத்தும் போது பெயர், மின்னஞ்சல், தொலைபேசி எண் மற்றும் சுயவிவரப் படம் சேகரிக்கிறோம்.',
               ),
             ),
             _buildExpandableSection(
