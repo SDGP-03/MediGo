@@ -9,9 +9,9 @@ import 'package:driver_application/widgets/navigation_preview_card.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_navigation_flutter/google_navigation_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 enum NavigationExitResult { completed, cancelled }
 
@@ -98,8 +98,19 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<bool> _ensureLocationPermission() async {
-    final status = await Permission.locationWhenInUse.request();
-    return status.isGranted;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // No system prompt will appear again; user must enable in Settings.
+      await Geolocator.openAppSettings();
+      return false;
+    }
+
+    return permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
   }
 
   String? _distanceText() {

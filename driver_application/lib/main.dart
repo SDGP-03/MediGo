@@ -4,7 +4,6 @@ import 'package:driver_application/screens/start_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'pages/privacy_policy_page.dart';
 import 'pages/edit_profile_page.dart';
 import 'pages/settings_page.dart';
@@ -16,11 +15,6 @@ import 'pages/feedback_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await Permission.locationWhenInUse.isDenied.then((valueOfPermission) {
-    if (valueOfPermission) {
-      Permission.locationWhenInUse.request();
-    }
-  });
   runApp(const MyApp());
 }
 

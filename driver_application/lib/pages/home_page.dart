@@ -235,7 +235,27 @@ class _HomePageState extends State<HomePage> {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.deniedForever) return;
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            t(
+              'Location permission is turned off. Enable it in Settings.',
+              'ස්ථාන අවසරය අක්‍රීය කර ඇත. Settings වලින් සක්‍රීය කරන්න.',
+              'இட அனுமதி அணைக்கப்பட்டுள்ளது. Settings-இல் இயக்கவும்.',
+            ),
+          ),
+          action: SnackBarAction(
+            label: t('Open', 'විවෘත කරන්න', 'திற'),
+            onPressed: () {
+              Geolocator.openAppSettings();
+            },
+          ),
+        ),
+      );
+      return;
+    }
 
     startLiveLocationUpdates();
   }
