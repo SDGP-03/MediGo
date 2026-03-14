@@ -384,6 +384,9 @@ class _HomePageState extends State<HomePage> {
 
     final patientAge = assignment.patientAge?.toString() ?? '?';
     final patientGender = assignment.patientGender ?? '?';
+    final assignedAmbulanceId = assignment.ambulanceId?.trim();
+    final hasAssignedAmbulance =
+        assignedAmbulanceId != null && assignedAmbulanceId.isNotEmpty;
     final hasRequirements =
         assignment.requiresDoctor ||
         assignment.requiresVentilator ||
@@ -565,6 +568,61 @@ class _HomePageState extends State<HomePage> {
                                         ),
                                       ],
                                     ),
+
+                                    if (hasAssignedAmbulance) ...[
+                                      const SizedBox(height: 14),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: priorityColor.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: priorityColor.withValues(
+                                              alpha: 0.18,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.airport_shuttle_outlined,
+                                              size: 18,
+                                              color: priorityColor,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                t(
+                                                  'Assigned Ambulance',
+                                                  'නියමිත ඇම්බියුලන්ස්',
+                                                  'ஒதுக்கப்பட்ட ஆம்புலன்ஸ்',
+                                                ),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              assignedAmbulanceId,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 13,
+                                                color: priorityColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
 
                                     const SizedBox(height: 24),
 
