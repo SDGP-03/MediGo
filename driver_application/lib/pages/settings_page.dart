@@ -1,11 +1,9 @@
-﻿import 'dart:async';
-import 'dart:io';
+﻿import 'dart:io';
 import '../authentication/login_screen.dart';
 import 'privacy_policy_page.dart';
 import 'faq_page.dart';
 import 'contact_support_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -53,16 +51,6 @@ class _SettingsPageState extends State<SettingsPage> {
     return en;
   }
 
-  Timer? _topicRetryTimer;
-  bool? _pendingTopicEnabled;
-  int _topicRetryAttempts = 0;
-
-  @override
-  void dispose() {
-    _topicRetryTimer?.cancel();
-    super.dispose();
-  }
-
   String _mapStyleLabel(String value) {
     switch (value) {
       case "standard":
@@ -89,12 +77,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _initializeSettings() async {
-    // Notification permission + topic subscription must be sequenced on iOS
-    // (APNS token may not be ready immediately).
-    await requestNotificationPermission();
-    await loadNotificationSetting();
-
     await Future.wait([
+      requestNotificationPermission(),
+      loadNotificationSetting(),
       loadMapStyle(),
       loadPreferences(),
       loadAppVersion(),
@@ -191,29 +176,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<String?> _getApnsTokenIfAvailable() async {
-    try {
-      return await FirebaseMessaging.instance.getAPNSToken();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  void _scheduleTopicRetry(bool enabled) {
-    _pendingTopicEnabled = enabled;
-    if (_topicRetryTimer?.isActive ?? false) return;
-
-    // Cap retries to avoid spamming on simulators where APNS token may never arrive.
-    if (_topicRetryAttempts >= 10) return;
-    _topicRetryAttempts++;
-
-    _topicRetryTimer = Timer(const Duration(seconds: 2), () async {
-      final desired = _pendingTopicEnabled;
-      if (desired == null) return;
-      await _updateDriversTopic(desired);
-    });
-  }
-
   Future<void> savePreference(String key, dynamic value) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -221,44 +183,6 @@ class _SettingsPageState extends State<SettingsPage> {
       await prefs.setBool(key, value);
     } else if (value is String) {
       await prefs.setString(key, value);
-    }
-  }
-
-  Future<bool> _updateDriversTopic(bool enabled) async {
-    final messaging = FirebaseMessaging.instance;
-    await messaging.setAutoInitEnabled(true);
-
-    // Trigger token generation (helps APNS registration on iOS).
-    try {
-      await messaging.getToken();
-    } catch (_) {}
-
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      final apns = await _getApnsTokenIfAvailable();
-      if (apns == null || apns.isEmpty) {
-        _scheduleTopicRetry(enabled);
-        return false;
-      }
-    }
-
-    try {
-      if (enabled) {
-        await messaging.subscribeToTopic("drivers");
-      } else {
-        await messaging.unsubscribeFromTopic("drivers");
-      }
-      _topicRetryAttempts = 0;
-      return true;
-    } catch (e) {
-      final msg = e.toString();
-      final isApnsNotReady = (!kIsWeb &&
-          defaultTargetPlatform == TargetPlatform.iOS &&
-          msg.contains('apns-token-not-set'));
-      if (isApnsNotReady) {
-        _scheduleTopicRetry(enabled);
-        return false;
-      }
-      rethrow;
     }
   }
 
@@ -300,15 +224,13 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     try {
-      await _updateDriversTopic(enabled);
-    } catch (e) {
-      final msg = e.toString();
-      final isApnsNotReady = (!kIsWeb &&
-          defaultTargetPlatform == TargetPlatform.iOS &&
-          msg.contains('apns-token-not-set'));
-      if (!isApnsNotReady) {
-        debugPrint('Error managing notification topic: $e');
+      if (enabled) {
+        await FirebaseMessaging.instance.subscribeToTopic("drivers");
+      } else {
+        await FirebaseMessaging.instance.unsubscribeFromTopic("drivers");
       }
+    } catch (e) {
+      debugPrint('Error managing notification topic: $e');
     }
   }
 
@@ -362,7 +284,11 @@ class _SettingsPageState extends State<SettingsPage> {
       debugPrint('Error clearing cache: $e');
       if (mounted) {
         _showSnackBar(
-          t("Failed to clear cache", "කැෂේ ඉවත් කිරීමට බැරි වුණා", "கேச் நீக்க முடியவில்லை"),
+          t(
+            "Failed to clear cache",
+            "කැෂේ ඉවත් කිරීමට බැරි වුණා",
+            "கேச் நீக்க முடியவில்லை",
+          ),
           isError: true,
         );
       }
@@ -384,11 +310,7 @@ class _SettingsPageState extends State<SettingsPage> {
       debugPrint('Error logging out: $e');
       if (mounted) {
         _showSnackBar(
-          t(
-            "Failed to logout",
-            "ඉවත් වීමට බැරි වුණා",
-            "வெளியேற முடியவில்லை",
-          ),
+          t("Failed to logout", "ඉවත් වීමට බැරි වුණා", "வெளியேற முடியவில்லை"),
           isError: true,
         );
       }
@@ -456,13 +378,21 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.person_outline,
                 iconColor: Colors.blue,
-                title: t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"),
+                title: t(
+                  "Edit Profile",
+                  "පැතිකඩ වෙනස් කරන්න",
+                  "சுயவிவரம் திருத்து",
+                ),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
                 icon: Icons.lock_outline,
                 iconColor: Colors.orange,
-                title: t("Change Password", "මුරපදය වෙනස් කරන්න", "கடவுச்சொல் மாற்று"),
+                title: t(
+                  "Change Password",
+                  "මුරපදය වෙනස් කරන්න",
+                  "கடவுச்சொல் மாற்று",
+                ),
                 onTap: () => Navigator.pushNamed(context, '/edit-profile'),
               ),
               _buildSettingsTile(
@@ -484,32 +414,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.notifications_outlined,
                 iconColor: Colors.red,
                 title: t("Notifications", "දැනුම්දීම්", "அறிவிப்புகள்"),
-                subtitle: t("Receive trip alerts", "ගමන් දැනුම්දීම් ලබාගන්න", "பயண அறிவிப்புகள் பெறுங்கள்"),
+                subtitle: t(
+                  "Receive trip alerts",
+                  "ගමන් දැනුම්දීම් ලබාගන්න",
+                  "பயண அறிவிப்புகள் பெறுங்கள்",
+                ),
                 value: notificationsEnabled,
                 onChanged: (value) async {
                   setState(() => notificationsEnabled = value);
                   await savePreference('notifications', value);
 
-                  try {
-                    await _updateDriversTopic(value);
-                  } catch (e) {
-                    final msg = e.toString();
-                    final isApnsNotReady = (!kIsWeb &&
-                        defaultTargetPlatform == TargetPlatform.iOS &&
-                        msg.contains('apns-token-not-set'));
-                    if (!isApnsNotReady) {
-                      debugPrint('Error managing notification topic: $e');
-                    }
-                    if (mounted) {
-                      _showSnackBar(
-                        t(
-                          "Notification setup failed",
-                          "දැනුම්දීම් සකස් කිරීමට බැරි වුණා",
-                          "அறிவிப்பு அமைப்பு தோல்வியடைந்தது",
-                        ),
-                        isError: true,
-                      );
-                    }
+                  if (value) {
+                    await FirebaseMessaging.instance.subscribeToTopic(
+                      "drivers",
+                    );
+                  } else {
+                    await FirebaseMessaging.instance.unsubscribeFromTopic(
+                      "drivers",
+                    );
                   }
                 },
               ),
@@ -559,7 +481,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.info_outline,
                 iconColor: Colors.blue,
                 title: t("About App", "යෙදුම ගැන", "செயலி பற்றி"),
-                subtitle: t("Version $appVersion", "සංස්කරණය $appVersion", "பதிப்பு $appVersion"),
+                subtitle: t(
+                  "Version $appVersion",
+                  "සංස්කරණය $appVersion",
+                  "பதிப்பு $appVersion",
+                ),
                 onTap: () {
                   showAboutDialog(
                     context: context,
@@ -596,7 +522,11 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.support_agent,
                 iconColor: Colors.teal,
-                title: t("Contact Support", "සහාය අමතන්න", "உதவியை தொடர்பு கொள்ளுங்கள்"),
+                title: t(
+                  "Contact Support",
+                  "සහාය අමතන්න",
+                  "உதவியை தொடர்பு கொள்ளுங்கள்",
+                ),
                 subtitle: t("Get help", "උදව් ලබාගන්න", "உதவி பெறுங்கள்"),
                 onTap: () {
                   Navigator.push(
@@ -611,7 +541,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: Icons.help_outline,
                 iconColor: Colors.indigo,
                 title: "FAQ",
-                subtitle: t("Frequently asked questions", "නිතර අහන ප්‍රශ්න", "அடிக்கடி கேட்கப்படும் கேள்விகள்"),
+                subtitle: t(
+                  "Frequently asked questions",
+                  "නිතර අහන ප්‍රශ්න",
+                  "அடிக்கடி கேட்கப்படும் கேள்விகள்",
+                ),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -622,7 +556,11 @@ class _SettingsPageState extends State<SettingsPage> {
               _buildSettingsTile(
                 icon: Icons.privacy_tip_outlined,
                 iconColor: Colors.grey,
-                title: t("Privacy Policy", "පෞද්ගලිකතා ප්‍රතිපත්තිය", "தனியுரிமைக் கொள்கை"),
+                title: t(
+                  "Privacy Policy",
+                  "පෞද්ගලිකතා ප්‍රතිපත්තිය",
+                  "தனியுரிமைக் கொள்கை",
+                ),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -641,7 +579,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: Text(t("Clear Cache", "කැෂේ ඉවත් කරන්න", "கேச் நீக்கு")),
+                      title: Text(
+                        t("Clear Cache", "කැෂේ ඉවත් කරන්න", "கேச் நீக்கு"),
+                      ),
                       content: Text(
                         t(
                           "This will remove $cacheSize of temporary files and cached images. "
@@ -653,7 +593,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: Text(t("Cancel", "අවලංගු කරන්න", "ரத்து செய்")),
+                          child: Text(
+                            t("Cancel", "අවලංගු කරන්න", "ரத்து செய்"),
+                          ),
                         ),
                         TextButton(
                           onPressed: () {
@@ -934,12 +876,30 @@ class _SettingsPageState extends State<SettingsPage> {
           );
         },
         items: [
-          DropdownMenuItem(value: "standard", child: Text(t("Standard", "සාමාන්‍ය", "சாதாரணம்"))),
-          DropdownMenuItem(value: "silver", child: Text(t("Silver", "සිල්වර්", "சில்வர்"))),
-          DropdownMenuItem(value: "retro", child: Text(t("Retro", "රෙට්‍රෝ", "ரெட்ரோ"))),
-          DropdownMenuItem(value: "dark", child: Text(t("Dark", "අඳුරු", "இருள்"))),
-          DropdownMenuItem(value: "night", child: Text(t("Night", "රාත්‍රී", "இரவு"))),
-          DropdownMenuItem(value: "aubergine", child: Text(t("Aubergine", "ඕබර්ජීන්", "ஊபர்ஜீன்"))),
+          DropdownMenuItem(
+            value: "standard",
+            child: Text(t("Standard", "සාමාන්‍ය", "சாதாரணம்")),
+          ),
+          DropdownMenuItem(
+            value: "silver",
+            child: Text(t("Silver", "සිල්වර්", "சில்வர்")),
+          ),
+          DropdownMenuItem(
+            value: "retro",
+            child: Text(t("Retro", "රෙට්‍රෝ", "ரெட்ரோ")),
+          ),
+          DropdownMenuItem(
+            value: "dark",
+            child: Text(t("Dark", "අඳුරු", "இருள்")),
+          ),
+          DropdownMenuItem(
+            value: "night",
+            child: Text(t("Night", "රාත්‍රී", "இரவு")),
+          ),
+          DropdownMenuItem(
+            value: "aubergine",
+            child: Text(t("Aubergine", "ඕබර්ජීන්", "ஊபர்ஜீன்")),
+          ),
         ],
       ),
     );
@@ -1024,8 +984,14 @@ class _SettingsPageState extends State<SettingsPage> {
           savePreference('distanceUnit', value);
         },
         items: [
-          DropdownMenuItem(value: "km", child: Text(t("Kilometers", "කිලෝමීටර්", "கிலோமீட்டர்"))),
-          DropdownMenuItem(value: "mi", child: Text(t("Miles", "සැතපුම්", "மைல்கள்"))),
+          DropdownMenuItem(
+            value: "km",
+            child: Text(t("Kilometers", "කිලෝමීටර්", "கிலோமீட்டர்")),
+          ),
+          DropdownMenuItem(
+            value: "mi",
+            child: Text(t("Miles", "සැතපුම්", "மைல்கள்")),
+          ),
         ],
       ),
     );

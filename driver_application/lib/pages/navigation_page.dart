@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:driver_application/models/assignment.dart';
-import 'package:driver_application/core/platform/maps_config.dart';
 import 'package:driver_application/services/navigation_service.dart';
 import 'package:driver_application/services/trip_history_service.dart';
 import 'package:driver_application/widgets/navigation_preview_card.dart';
@@ -30,8 +29,9 @@ class _NavigationPageState extends State<NavigationPage> {
 
   bool _initializing = true;
   String? _initError;
+  String? _permissionError;
 
-  bool get _isReady => _nav.canStartNavigation;
+  bool get _isReady => _nav.sessionReady && _nav.hasLocationFix;
 
   StreamSubscription<OnArrivalEvent>? _arrivalSub;
   bool _arrivalSheetOpen = false;
@@ -50,14 +50,11 @@ class _NavigationPageState extends State<NavigationPage> {
     });
 
     try {
-      final mapsOk = await MapsConfig.isGmsApiKeyConfigured();
-      if (!mapsOk) {
-        throw StateError('Maps API key is not configured for iOS.');
-      }
-
       final permissionOk = await _ensureLocationPermission();
       if (!permissionOk) {
-        throw StateError('Location permission is required for navigation.');
+        throw StateError(
+          _permissionError ?? 'Location permission is required for navigation.',
+        );
       }
 
       final accepted = await GoogleMapsNavigator.showTermsAndConditionsDialog(
@@ -98,19 +95,31 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<bool> _ensureLocationPermission() async {
+    _permissionError = null;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _permissionError =
+          'Location Services are turned off. Please enable them to start navigation.';
+      return false;
+    }
+
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // No system prompt will appear again; user must enable in Settings.
-      await Geolocator.openAppSettings();
+      _permissionError =
+          'Location permission is permanently denied. Enable it in iOS Settings to start navigation.';
+      return false;
+    }
+    if (permission == LocationPermission.denied) {
+      _permissionError =
+          'Location permission was denied. Please allow location access to start navigation.';
       return false;
     }
 
-    return permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always;
+    return true;
   }
 
   String? _distanceText() {
@@ -440,29 +449,12 @@ class _NavigationPageState extends State<NavigationPage> {
                     isLoading: _initializing || !_nav.sessionReady,
                     primaryCtaLabel: _initError != null
                         ? 'Retry'
-                        : (_nav.isStartingNavigation
-                              ? 'Starting…'
-                              : (_isReady
-                                    ? 'Start Navigation'
-                                    : (_nav.hasLocationFix
-                                          ? 'Preparing route…'
-                                          : 'Getting GPS…'))),
+                        : (_isReady ? 'Start Navigation' : 'Getting GPS…'),
                     onPrimaryCta: (_initError != null)
                         ? _boot
                         : (_isReady
                               ? () async {
-                                  try {
-                                    await _nav.startNavigation();
-                                  } catch (e) {
-                                    if (!mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to start navigation: $e',
-                                        ),
-                                      ),
-                                    );
-                                  }
+                                  await _nav.startNavigation();
                                 }
                               : null),
                   ),
