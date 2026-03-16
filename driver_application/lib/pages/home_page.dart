@@ -262,6 +262,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   // ================= PERMISSION HANDLER =================
 
   Future<void> checkLocationPermission() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
     LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
@@ -275,6 +278,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _goToCurrentLocation() async {
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              t(
+                'Location services are disabled',
+                'ස්ථාන සේවාව අක්‍රීයයි',
+                'இட சேவைகள் முடக்கப்பட்டுள்ளன',
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
 
       if (permission == LocationPermission.denied) {
@@ -420,6 +440,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     final patientAge = assignment.patientAge?.toString() ?? '?';
     final patientGender = assignment.patientGender ?? '?';
+    final assignedAmbulanceId = assignment.ambulanceId?.trim();
+    final hasAssignedAmbulance =
+        assignedAmbulanceId != null && assignedAmbulanceId.isNotEmpty;
     final hasRequirements =
         assignment.requiresDoctor ||
         assignment.requiresVentilator ||
@@ -601,6 +624,61 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ),
                                       ],
                                     ),
+
+                                    if (hasAssignedAmbulance) ...[
+                                      const SizedBox(height: 14),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: priorityColor.withValues(
+                                            alpha: 0.08,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          border: Border.all(
+                                            color: priorityColor.withValues(
+                                              alpha: 0.18,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.airport_shuttle_outlined,
+                                              size: 18,
+                                              color: priorityColor,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                t(
+                                                  'Assigned Ambulance',
+                                                  'නියමිත ඇම්බියුලන්ස්',
+                                                  'ஒதுக்கப்பட்ட ஆம்புலன்ஸ்',
+                                                ),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              assignedAmbulanceId,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 13,
+                                                color: priorityColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
 
                                     const SizedBox(height: 24),
 

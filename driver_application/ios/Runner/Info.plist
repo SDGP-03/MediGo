@@ -47,11 +47,10 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>We use your location to provide turn-by-turn navigation to the destination.</string>
+		<string>MediGo needs your location to show your position and navigate to patient pickups and drop-offs.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-		<string>We use your location to provide navigation even when the app is in use.</string>
-		<key>GMSApiKey</key>
-		<string>$(GMS_API_KEY)</string>
+		<string>MediGo needs your location to provide turn-by-turn navigation during assignments.</string>
 	</dict>
 </plist>

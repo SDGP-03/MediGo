@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "529396803085",
+    "firebase_url": "https://medigo-cs03-default-rtdb.firebaseio.com",
     "project_id": "medigo-cs03",
     "storage_bucket": "medigo-cs03.firebasestorage.app"
   },

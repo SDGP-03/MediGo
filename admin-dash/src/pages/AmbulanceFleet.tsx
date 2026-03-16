@@ -13,7 +13,6 @@ import {
 } from '../components/ui/dialog';
 import { useFleetData } from '../hooks/useFleetData';
 import type { AmbulanceUnit } from '../hooks/useFleetData';
-import { initialDrivers } from './DriverProfiles';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -59,6 +58,7 @@ export function AmbulanceFleet() {
   // All CRUD operations write directly to /hospitals/{uid}/ambulances/.
   const {
     ambulances,
+    drivers,
     pendingTransfers,
     loading,
     error,
@@ -875,15 +875,15 @@ export function AmbulanceFleet() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-foreground mb-1.5">Driver Name *</label>
-                <select value={initialDrivers.find(d => d.name === addForm.driver)?.id ?? ''}
+                <select value={drivers.find(d => d.name === addForm.driver)?.id ?? ''}
                   onChange={e => {
                     const id = e.target.value;
-                    const drv = initialDrivers.find(d => d.id === id);
+                    const drv = drivers.find(d => d.id === id);
                     setAddForm(f => ({ ...f, driver: drv ? drv.name : '', driverGender: drv ? drv.gender : f.driverGender }));
                   }}
                   className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
                   <option value="">Select driver</option>
-                  {initialDrivers.map(d => (
+                  {drivers.map(d => (
                     <option key={d.id} value={d.id}>{d.name} — {d.id}</option>
                   ))}
                 </select>

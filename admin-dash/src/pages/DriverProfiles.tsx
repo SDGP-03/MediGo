@@ -2,97 +2,10 @@ import { useState } from 'react';
 import {
     User, Star, Phone, Clock, Car, Search,
     ChevronDown, ChevronUp, AlertTriangle, TrendingUp,
-    X, CreditCard, Calendar, Mail, Ambulance, Trash2, Pencil
+    X, CreditCard, Calendar, Mail, Ambulance, Trash2, Pencil, Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type DriverStatus = 'active' | 'off_duty' | 'on_leave';
-
-interface Driver {
-    id: string;
-    name: string;
-    gender: 'Male' | 'Female' | 'Other';
-    phone: string;
-    email: string;
-    licenseNumber: string;
-    licenseExpiry: string;
-    joinDate: string;
-    status: DriverStatus;
-    assignedAmbulance: string | null;
-    rating: number;
-    totalTrips: number;
-    totalKm: number;
-    avgResponseTime: string;
-    incidentReports: number;
-    baseSalary: number;
-    overtimeHours: number;
-    overtimeRate: number;
-    tripsBonus: number;
-    attendanceDays: number;
-    leaveDays: number;
-    fuelEfficiencyScore: number;
-}
-
-// ─── Sample Data ──────────────────────────────────────────────────────────────
-
-export const initialDrivers: Driver[] = [
-    {
-        id: 'DRV-001', name: 'John Smith', gender: 'Male',
-        phone: '+91 98765 43210', email: 'john.smith@medigo.com',
-        licenseNumber: 'TN-2019-0045231', licenseExpiry: '2027-06-30',
-        joinDate: '2021-03-15', status: 'active', assignedAmbulance: 'AMB-001',
-        rating: 4.7, totalTrips: 312, totalKm: 18540, avgResponseTime: '7 mins',
-        incidentReports: 0, baseSalary: 28000, overtimeHours: 14, overtimeRate: 150,
-        tripsBonus: 50, attendanceDays: 24, leaveDays: 2, fuelEfficiencyScore: 82,
-    },
-    {
-        id: 'DRV-002', name: 'Sarah Lee', gender: 'Female',
-        phone: '+91 87654 32109', email: 'sarah.lee@medigo.com',
-        licenseNumber: 'TN-2020-0067452', licenseExpiry: '2026-03-15',
-        joinDate: '2022-07-01', status: 'active', assignedAmbulance: 'AMB-002',
-        rating: 4.9, totalTrips: 287, totalKm: 16230, avgResponseTime: '6 mins',
-        incidentReports: 0, baseSalary: 30000, overtimeHours: 20, overtimeRate: 160,
-        tripsBonus: 50, attendanceDays: 26, leaveDays: 0, fuelEfficiencyScore: 91,
-    },
-    {
-        id: 'DRV-003', name: 'Mike Chen', gender: 'Male',
-        phone: '+91 76543 21098', email: 'mike.chen@medigo.com',
-        licenseNumber: 'TN-2018-0034521', licenseExpiry: '2025-11-30',
-        joinDate: '2020-01-10', status: 'active', assignedAmbulance: 'AMB-003',
-        rating: 4.2, totalTrips: 401, totalKm: 22100, avgResponseTime: '9 mins',
-        incidentReports: 1, baseSalary: 27000, overtimeHours: 8, overtimeRate: 140,
-        tripsBonus: 40, attendanceDays: 22, leaveDays: 4, fuelEfficiencyScore: 74,
-    },
-    {
-        id: 'DRV-004', name: 'David Kumar', gender: 'Male',
-        phone: '+91 65432 10987', email: 'david.kumar@medigo.com',
-        licenseNumber: 'TN-2021-0089654', licenseExpiry: '2028-09-20',
-        joinDate: '2023-02-20', status: 'off_duty', assignedAmbulance: 'AMB-004',
-        rating: 3.8, totalTrips: 145, totalKm: 8970, avgResponseTime: '11 mins',
-        incidentReports: 2, baseSalary: 25000, overtimeHours: 0, overtimeRate: 130,
-        tripsBonus: 40, attendanceDays: 18, leaveDays: 8, fuelEfficiencyScore: 65,
-    },
-    {
-        id: 'DRV-005', name: 'Emily Davis', gender: 'Female',
-        phone: '+91 54321 09876', email: 'emily.davis@medigo.com',
-        licenseNumber: 'TN-2020-0054123', licenseExpiry: '2026-12-01',
-        joinDate: '2021-09-05', status: 'active', assignedAmbulance: 'AMB-005',
-        rating: 4.5, totalTrips: 268, totalKm: 15400, avgResponseTime: '8 mins',
-        incidentReports: 0, baseSalary: 29000, overtimeHours: 12, overtimeRate: 155,
-        tripsBonus: 50, attendanceDays: 25, leaveDays: 1, fuelEfficiencyScore: 88,
-    },
-    {
-        id: 'DRV-006', name: 'Robert Taylor', gender: 'Male',
-        phone: '+91 43210 98765', email: 'robert.taylor@medigo.com',
-        licenseNumber: 'TN-2022-0012345', licenseExpiry: '2029-04-10',
-        joinDate: '2023-06-01', status: 'on_leave', assignedAmbulance: 'AMB-006',
-        rating: 4.0, totalTrips: 98, totalKm: 5600, avgResponseTime: '10 mins',
-        incidentReports: 1, baseSalary: 24000, overtimeHours: 0, overtimeRate: 120,
-        tripsBonus: 40, attendanceDays: 14, leaveDays: 12, fuelEfficiencyScore: 70,
-    },
-];
+import { useFleetData, Driver, DriverStatus } from '../hooks/useFleetData';
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -165,7 +78,7 @@ function Field({
 
 interface RegisterModalProps {
     onClose: () => void;
-    onRegister: (driver: Driver) => void;
+    onRegister: (driver: Driver) => Promise<void>;
 }
 
 function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
@@ -175,6 +88,7 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
         baseSalary: '', overtimeRate: '', tripsBonus: '',
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
 
     const set = (key: string, value: string) =>
         setForm(f => ({ ...f, [key]: value }));
@@ -190,29 +104,36 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
         return e;
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         const e = validate();
         if (Object.keys(e).length > 0) { setErrors(e); return; }
-        onRegister({
-            id: `DRV-${String(Date.now()).slice(-3).padStart(3, '0')}`,
-            name: form.name,
-            gender: form.gender as 'Male' | 'Female' | 'Other',
-            phone: form.phone,
-            email: form.email,
-            licenseNumber: form.licenseNumber,
-            licenseExpiry: form.licenseExpiry,
-            joinDate: form.joinDate,
-            status: 'active',
-            assignedAmbulance: null,
-            rating: 0, totalTrips: 0, totalKm: 0,
-            avgResponseTime: 'N/A', incidentReports: 0,
-            baseSalary: Number(form.baseSalary),
-            overtimeHours: 0,
-            overtimeRate: Number(form.overtimeRate) || 0,
-            tripsBonus: Number(form.tripsBonus) || 0,
-            attendanceDays: 0, leaveDays: 0, fuelEfficiencyScore: 0,
-        });
-        onClose();
+        setSaving(true);
+        try {
+            await onRegister({
+                id: `DRV-${Date.now()}`,
+                name: form.name,
+                gender: form.gender as 'Male' | 'Female' | 'Other',
+                phone: form.phone,
+                email: form.email,
+                licenseNumber: form.licenseNumber,
+                licenseExpiry: form.licenseExpiry,
+                joinDate: form.joinDate,
+                status: 'active',
+                assignedAmbulance: null,
+                rating: 0, totalTrips: 0, totalKm: 0,
+                avgResponseTime: 'N/A', incidentReports: 0,
+                baseSalary: Number(form.baseSalary),
+                overtimeHours: 0,
+                overtimeRate: Number(form.overtimeRate) || 0,
+                tripsBonus: Number(form.tripsBonus) || 0,
+                attendanceDays: 0, leaveDays: 0, fuelEfficiencyScore: 0,
+            });
+            onClose();
+        } catch (err) {
+            console.error('Failed to register driver:', err);
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -344,9 +265,11 @@ function RegisterDriverModal({ onClose, onRegister }: RegisterModalProps) {
                     </button>
                     <button
                         onClick={handleSubmit}
-                        className="flex-1 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                        disabled={saving}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Register Driver
+                        {saving && <Loader2 size={14} className="animate-spin" />}
+                        {saving ? 'Saving…' : 'Register Driver'}
                     </button>
                 </div>
             </div>
@@ -405,7 +328,7 @@ function DeleteConfirmModal({
 interface EditModalProps {
     driver: Driver;
     onClose: () => void;
-    onSave: (updated: Driver) => void;
+    onSave: (updated: Driver) => Promise<void>;
 }
 
 function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
@@ -558,7 +481,7 @@ function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
                 </div>
                 <div className="flex gap-3 p-5 border-t border-border">
                     <button onClick={onClose} className="flex-1 px-4 py-2.5 text-sm border border-border rounded-lg text-foreground hover:bg-accent transition-colors">Cancel</button>
-                    <button onClick={handleSubmit} className="flex-1 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">Save Changes</button>
+                    <button onClick={handleSubmit} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -661,7 +584,17 @@ function DriverDetailPanel({ driver }: { driver: Driver }) {
 
 export function DriverProfiles() {
     const navigate = useNavigate();
-    const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+
+    // ── Firebase backend via useFleetData hook ──
+    const {
+        drivers,
+        loading,
+        error,
+        addDriver,
+        updateDriver,
+        deleteDriver,
+    } = useFleetData();
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | DriverStatus>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -669,14 +602,21 @@ export function DriverProfiles() {
     const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
     const [editTarget, setEditTarget] = useState<Driver | null>(null);
 
-    const handleEditSave = (updated: Driver) => {
-        setDrivers(prev => prev.map(d => d.id === updated.id ? updated : d));
+    // ── Firebase CRUD handlers ──
+
+    const handleRegister = async (driver: Driver) => {
+        await addDriver(driver);
+    };
+
+    const handleEditSave = async (updated: Driver) => {
+        const { id, ...changes } = updated;
+        await updateDriver(id, changes);
         setEditTarget(null);
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (!deleteTarget) return;
-        setDrivers(prev => prev.filter(d => d.id !== deleteTarget.id));
+        await deleteDriver(deleteTarget.id);
         if (expandedId === deleteTarget.id) setExpandedId(null);
         setDeleteTarget(null);
     };
@@ -698,6 +638,27 @@ export function DriverProfiles() {
             : '0.0',
         totalOvertime: drivers.reduce((s, d) => s + d.overtimeHours, 0),
     };
+
+    // ── Loading state ──
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-muted-foreground">
+                <Loader2 size={40} className="animate-spin text-red-500" />
+                <p className="text-sm">Loading drivers from Firebase…</p>
+            </div>
+        );
+    }
+
+    // ── Error state ──
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <AlertTriangle size={40} className="text-red-500" />
+                <p className="text-foreground font-medium">Failed to load driver data</p>
+                <p className="text-muted-foreground text-sm">{error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 pt-2 px-6 pb-6">
@@ -840,7 +801,7 @@ export function DriverProfiles() {
             {showRegisterModal && (
                 <RegisterDriverModal
                     onClose={() => setShowRegisterModal(false)}
-                    onRegister={driver => setDrivers(prev => [driver, ...prev])}
+                    onRegister={handleRegister}
                 />
             )}
 

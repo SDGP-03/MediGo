@@ -109,27 +109,6 @@ class Validators {
     return null;
   }
 
-  /// Validates vehicle number
-  /// - Must not be empty
-  /// - Should match common vehicle number patterns
-  static String? validateVehicleNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Vehicle number is required';
-    }
-
-    final normalized = value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
-    final compact = normalized.replaceAll(RegExp(r'[\s-]'), '');
-
-    // Common formats:
-    // ABC-1234, ABC1234, WP CAA-1234, WPCAA1234
-    final matchesCommonPattern = RegExp(r'^[A-Z]{2,5}\d{4}$').hasMatch(compact);
-    if (matchesCommonPattern) {
-      return null;
-    }
-
-    return 'Please enter a valid vehicle number (e.g., ABC-1234)';
-  }
-
   /// Validates current password when changing password
   /// - Required only if new password is provided
   static String? validateCurrentPassword(

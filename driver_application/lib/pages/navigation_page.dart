@@ -8,9 +8,9 @@ import 'package:driver_application/widgets/navigation_preview_card.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_navigation_flutter/google_navigation_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 enum NavigationExitResult { completed, cancelled }
 
@@ -29,6 +29,7 @@ class _NavigationPageState extends State<NavigationPage> {
 
   bool _initializing = true;
   String? _initError;
+  String? _permissionError;
 
   bool get _isReady => _nav.sessionReady && _nav.hasLocationFix;
 
@@ -51,7 +52,9 @@ class _NavigationPageState extends State<NavigationPage> {
     try {
       final permissionOk = await _ensureLocationPermission();
       if (!permissionOk) {
-        throw StateError('Location permission is required for navigation.');
+        throw StateError(
+          _permissionError ?? 'Location permission is required for navigation.',
+        );
       }
 
       final accepted = await GoogleMapsNavigator.showTermsAndConditionsDialog(
@@ -92,8 +95,31 @@ class _NavigationPageState extends State<NavigationPage> {
   }
 
   Future<bool> _ensureLocationPermission() async {
-    final status = await Permission.locationWhenInUse.request();
-    return status.isGranted;
+    _permissionError = null;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _permissionError =
+          'Location Services are turned off. Please enable them to start navigation.';
+      return false;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _permissionError =
+          'Location permission is permanently denied. Enable it in iOS Settings to start navigation.';
+      return false;
+    }
+    if (permission == LocationPermission.denied) {
+      _permissionError =
+          'Location permission was denied. Please allow location access to start navigation.';
+      return false;
+    }
+
+    return true;
   }
 
   String? _distanceText() {

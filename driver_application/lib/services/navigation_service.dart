@@ -9,20 +9,33 @@ class NavigationService extends ChangeNotifier {
 
   bool _sessionReady = false;
   bool _isNavigating = false;
+  bool _isStartingNavigation = false;
   bool _hasLocationFix = false;
+  bool _hasRoute = false;
   bool _routeOverviewShown = false;
 
   NavigationWaypoint? _destination;
   NavInfo? _navInfo;
+  NavigationRouteStatus? _routeStatus;
 
   StreamSubscription<RoadSnappedLocationUpdatedEvent>? _roadSnappedSub;
   StreamSubscription<NavInfoEvent>? _navInfoSub;
+  StreamSubscription<void>? _routeChangedSub;
 
   bool get sessionReady => _sessionReady;
   bool get isNavigating => _isNavigating;
+  bool get isStartingNavigation => _isStartingNavigation;
   bool get hasLocationFix => _hasLocationFix;
+  bool get hasRoute => _hasRoute;
+  bool get canStartNavigation =>
+      _sessionReady &&
+      _hasLocationFix &&
+      _hasRoute &&
+      !_isNavigating &&
+      !_isStartingNavigation;
 
   NavInfo? get navInfo => _navInfo;
+  NavigationRouteStatus? get routeStatus => _routeStatus;
 
   Future<void> showRouteOverview() => _maybeShowRouteOverview(force: true);
 
@@ -78,6 +91,13 @@ class NavigationService extends ChangeNotifier {
       ),
     );
 
+    await _routeChangedSub?.cancel();
+    _routeChangedSub = GoogleMapsNavigator.setOnRouteChangedListener(() {
+      _hasRoute = true;
+      unawaited(_maybeShowRouteOverview(force: true));
+      notifyListeners();
+    });
+
     notifyListeners();
   }
 
@@ -91,13 +111,21 @@ class NavigationService extends ChangeNotifier {
       target: target,
     );
 
+    _hasRoute = false;
+    _routeStatus = null;
     _routeOverviewShown = false;
-    await GoogleMapsNavigator.setDestinations(
+    final status = await GoogleMapsNavigator.setDestinations(
       Destinations(
         waypoints: [_destination!],
         displayOptions: NavigationDisplayOptions(showDestinationMarkers: true),
       ),
     );
+
+    _routeStatus = status;
+    if (status != NavigationRouteStatus.statusOk) {
+      throw StateError('Route could not be prepared: $status');
+    }
+
     unawaited(_maybeShowRouteOverview());
     notifyListeners();
   }
@@ -125,12 +153,25 @@ class NavigationService extends ChangeNotifier {
     if (_destination == null) {
       throw StateError('Destination not set.');
     }
+    if (!_hasRoute) {
+      throw StateError('Route is still loading. Please wait a moment.');
+    }
+    if (_isStartingNavigation || _isNavigating) {
+      return;
+    }
 
-    await GoogleMapsNavigator.startGuidance();
-    await _controller?.setNavigationUIEnabled(true);
-
-    _isNavigating = true;
+    _isStartingNavigation = true;
     notifyListeners();
+
+    try {
+      await GoogleMapsNavigator.startGuidance();
+      await _controller?.setNavigationUIEnabled(true);
+
+      _isNavigating = true;
+    } finally {
+      _isStartingNavigation = false;
+      notifyListeners();
+    }
   }
 
   Future<void> stopNavigation() async {
@@ -151,15 +192,20 @@ class NavigationService extends ChangeNotifier {
       _roadSnappedSub = null;
       await _navInfoSub?.cancel();
       _navInfoSub = null;
+      await _routeChangedSub?.cancel();
+      _routeChangedSub = null;
       await GoogleMapsNavigator.cleanup();
     } finally {
       _controller = null;
       _sessionReady = false;
       _isNavigating = false;
+      _isStartingNavigation = false;
       _hasLocationFix = false;
+      _hasRoute = false;
       _routeOverviewShown = false;
       _destination = null;
       _navInfo = null;
+      _routeStatus = null;
     }
   }
 }

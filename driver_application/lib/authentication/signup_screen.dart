@@ -22,8 +22,6 @@ class _SignupScreenState extends State<SignupScreen> {
   TextEditingController userNameTextEditingController = TextEditingController();
   TextEditingController userPhoneTextEditingController =
       TextEditingController();
-  TextEditingController userVehicleNumberEditingController =
-      TextEditingController();
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   TextEditingController confirmPasswordTextEditingController =
@@ -60,7 +58,6 @@ class _SignupScreenState extends State<SignupScreen> {
   void dispose() {
     userNameTextEditingController.dispose();
     userPhoneTextEditingController.dispose();
-    userVehicleNumberEditingController.dispose();
     emailTextEditingController.dispose();
     passwordTextEditingController.dispose();
     confirmPasswordTextEditingController.dispose();
@@ -189,7 +186,6 @@ class _SignupScreenState extends State<SignupScreen> {
         "id": uid,
         "name": userNameTextEditingController.text.trim(),
         "phone": userPhoneTextEditingController.text.trim(),
-        "vehicleNumber": userVehicleNumberEditingController.text.trim(),
         "email": emailTextEditingController.text.trim(),
         "profileImage": imageUrl ?? "",
         "blockStatus": "unblocked",
@@ -418,35 +414,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                 "உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்",
                               ),
                               prefixIcon: const Icon(Icons.phone_outlined),
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          Text(
-                            t("Vehicle Number", "වාහන අංකය", "வாகன எண்"),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          TextField(
-                            controller: userVehicleNumberEditingController,
-                            keyboardType: TextInputType.text,
-                            decoration: InputDecoration(
-                              hintText: t(
-                                "Enter your vehicle number",
-                                "ඔබගේ වාහන අංකය ඇතුල් කරන්න",
-                                "உங்கள் வாகன எண்ணை உள்ளிடவும்",
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.directions_car_outlined,
-                              ),
                               border: const OutlineInputBorder(
                                 borderRadius: BorderRadius.all(
                                   Radius.circular(12),

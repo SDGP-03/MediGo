@@ -24,7 +24,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController vehicleController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
 
   final TextEditingController currentPasswordController =
@@ -80,7 +79,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Properly dispose all controllers
     nameController.dispose();
     phoneController.dispose();
-    vehicleController.dispose();
     emailController.dispose();
     currentPasswordController.dispose();
     newPasswordController.dispose();
@@ -112,7 +110,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             networkProfileImage = data["profileImage"];
             nameController.text = data["name"] ?? "";
             phoneController.text = data["phone"] ?? "";
-            vehicleController.text = data["vehicleNumber"] ?? "";
             emailController.text = data["email"] ?? user.email ?? "";
           });
         }
@@ -288,7 +285,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       Map<String, dynamic> updates = {
         "name": nameController.text.trim(),
         "phone": phoneController.text.trim(),
-        "vehicleNumber": vehicleController.text.trim(),
       };
 
       if (imageUrl != null) {
@@ -595,13 +591,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
 
                   const SizedBox(height: 16),
-
-                  buildInput(
-                    controller: vehicleController,
-                    hint: t("Vehicle Number (e.g., ABC-1234)", "වාහන අංකය (උදා: ABC-1234)", "வாகன எண் (உ.தா.: ABC-1234)"),
-                    icon: Icons.directions_car_outlined,
-                    validator: Validators.validateVehicleNumber,
-                  ),
 
                   const SizedBox(height: 30),
 

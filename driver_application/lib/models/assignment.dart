@@ -5,6 +5,9 @@ class Assignment {
   final String status; // pending, accepted, in_progress, completed, cancelled
   final String priority; // critical, urgent, standard
 
+  // Assigned resources
+  final String? ambulanceId;
+
   // Patient info
   final String patientName;
   final String? patientAge;
@@ -30,6 +33,7 @@ class Assignment {
     required this.requestId,
     required this.status,
     required this.priority,
+    this.ambulanceId,
     required this.patientName,
     this.patientAge,
     this.patientGender,
@@ -56,6 +60,7 @@ class Assignment {
       requestId: id,
       status: json['status'] ?? 'pending',
       priority: json['priority'] ?? 'standard',
+      ambulanceId: json['ambulanceId'],
       patientName: patient['name'] ?? 'Unknown Patient',
       patientAge: patient['age']?.toString(),
       patientGender: patient['gender'],

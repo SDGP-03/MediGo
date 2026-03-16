@@ -31,7 +31,7 @@ class _FaqPageState extends State<FaqPage> {
         'answer':
             'You can create an account by downloading the MediGo Driver app, '
             'tapping "Sign Up", and completing the registration form with your '
-            'email, phone number, and vehicle details. You need to verify '
+            'email and phone number. You need to verify '
             'your email and upload required documents for approval.',
       },
       {
@@ -74,7 +74,7 @@ class _FaqPageState extends State<FaqPage> {
         'question': 'How can I change my profile information?',
         'answer':
             'Go to Settings -> Edit Profile to update personal information, '
-            'vehicle details, profile photo, and contact information.',
+            'profile photo, and contact information.',
       },
       {
         'question': 'How do I change my password?',
@@ -150,7 +150,7 @@ class _FaqPageState extends State<FaqPage> {
         'question': 'MediGo Driver ගිණුමක් හදන්නේ කොහොමද?',
         'answer':
             'MediGo Driver app එක download කර "Sign Up" ඔබා ලියාපදිංචි පෝරමය '
-            'පුරවන්න. ඊමේල්, දුරකථන අංකය සහ වාහන තොරතුරු දාන්න. '
+            'පුරවන්න. ඊමේල් සහ දුරකථන අංකය දාන්න. '
             'ඊමේල් තහවුරු කර අවශ්‍ය ලේඛන upload කළාම අනුමැතිය ලැබේ.',
       },
       {
@@ -191,7 +191,7 @@ class _FaqPageState extends State<FaqPage> {
       {
         'question': 'මගේ profile තොරතුරු වෙනස් කරන්නේ කොහොමද?',
         'answer':
-            'Settings -> Edit Profile වෙත ගිහින් පුද්ගලික තොරතුරු, වාහන තොරතුරු, '
+            'Settings -> Edit Profile වෙත ගිහින් පුද්ගලික තොරතුරු, '
             'පැතිකඩ පින්තූරය සහ සම්බන්ධතා තොරතුරු යාවත්කාලීන කරන්න.',
       },
       {
