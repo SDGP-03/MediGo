@@ -68,7 +68,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // App came back to foreground: explicitly kick off an online location update
       // so the admin dashboard immediately sees the driver as online again.
       if (_isOnline) {
-        Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+        Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+              ),
+            )
             .then((position) => _pushLocationToFirebase(position))
             .catchError(
               (e) => debugPrint('Lifecycle resume location fetch failed: $e'),
@@ -186,7 +190,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
 
         // Push an initial online status immediately so dashboard sees driver is active
-        Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+        Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+              ),
+            )
             .then((position) => _pushLocationToFirebase(position))
             .catchError((e) => debugPrint('Initial location fetch failed: $e'));
 
@@ -194,7 +202,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         // even if they are stationary (stationary distance filter = 10m)
         heartbeatTimer?.cancel();
         heartbeatTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-          Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low)
+          Geolocator.getCurrentPosition(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.low,
+                ),
+              )
               .then((position) => _pushLocationToFirebase(position))
               .catchError((e) => debugPrint('Heartbeat location failed: $e'));
         });
@@ -321,7 +333,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       startLiveLocationUpdates();
 
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       final target = LatLng(
