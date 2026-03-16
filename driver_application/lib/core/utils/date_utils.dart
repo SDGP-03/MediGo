@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 /// Utility class for date and time formatting
 class AppDateUtils {
   /// Get relative time string (e.g., "2 hours ago", "Yesterday")
-  static String getRelativeTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  static String getRelativeTime(DateTime dateTime, {DateTime? now}) {
+    final reference = now ?? DateTime.now();
+    final difference = reference.difference(dateTime);
     final isFuture = difference.isNegative;
     final duration = difference.abs();
 
@@ -26,7 +26,9 @@ class AppDateUtils {
     } else if (isFuture && duration.inDays == 1) {
       return 'Tomorrow';
     } else if (duration.inDays < 7) {
-      return isFuture ? 'in ${duration.inDays} days' : '${duration.inDays} days ago';
+      return isFuture
+          ? 'in ${duration.inDays} days'
+          : '${duration.inDays} days ago';
     } else if (duration.inDays < 30) {
       final weeks = (duration.inDays / 7).floor();
       return isFuture
@@ -57,22 +59,22 @@ class AppDateUtils {
 
   /// Format date and time (e.g., "Jan 15, 2024 at 02:30 PM")
   static String formatDateTime(DateTime dateTime) {
-    return DateFormat('MMM dd, yyyy \'at\' hh:mm a').format(dateTime);
+    return DateFormat("MMM dd, yyyy 'at' hh:mm a").format(dateTime);
   }
 
   /// Get day label (Today, Yesterday, or formatted date)
-  static String getDayLabel(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  static String getDayLabel(DateTime dateTime, {DateTime? now}) {
+    final reference = now ?? DateTime.now();
+    final today = startOfDay(reference);
     final yesterday = today.subtract(const Duration(days: 1));
-    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final dateOnly = startOfDay(dateTime);
 
-    if (date == today) {
+    if (dateOnly == today) {
       return 'Today';
-    } else if (date == yesterday) {
+    } else if (dateOnly == yesterday) {
       return 'Yesterday';
-    } else if (now.difference(date).inDays < 7) {
-      return DateFormat('EEEE').format(dateTime); // Day name (e.g., "Monday")
+    } else if (reference.difference(dateOnly).inDays < 7) {
+      return DateFormat('EEEE').format(dateTime); // e.g. "Monday"
     } else {
       return formatDate(dateTime);
     }
@@ -104,15 +106,15 @@ class AppDateUtils {
   }
 
   /// Check if date is today
-  static bool isToday(DateTime dateTime) {
-    final now = DateTime.now();
-    return isSameDay(dateTime, now);
+  static bool isToday(DateTime dateTime, {DateTime? now}) {
+    final reference = now ?? DateTime.now();
+    return isSameDay(dateTime, reference);
   }
 
   /// Check if date is yesterday
-  static bool isYesterday(DateTime dateTime) {
-    final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    return isSameDay(dateTime, yesterday);
+  static bool isYesterday(DateTime dateTime, {DateTime? now}) {
+    final reference = now ?? DateTime.now();
+    return isSameDay(dateTime, reference.subtract(const Duration(days: 1)));
   }
 
   /// Get month name
