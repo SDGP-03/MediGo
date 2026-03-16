@@ -145,7 +145,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       await driversRef.set(driverMap);
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       Navigator.pop(context); // close loading dialog
 
       Navigator.pushReplacement(
@@ -153,7 +153,7 @@ class _SignupScreenState extends State<SignupScreen> {
         MaterialPageRoute(builder: (_) => HomePage()),
       );
     } on FirebaseAuthException catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       Navigator.pop(context);
 
       String errorMessage = t(
@@ -198,7 +198,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
       cMethods.displaySnackBar(errorMessage, context);
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
         cMethods.displaySnackBar(
           t(

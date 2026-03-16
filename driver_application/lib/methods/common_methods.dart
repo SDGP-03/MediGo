@@ -103,7 +103,7 @@ class CommonMethods {
     var connectionResult = await Connectivity().checkConnectivity();
 
     // No network at all
-    if (connectionResult == ConnectivityResult.none) {
+    if (!connectionResult.any((result) => result != ConnectivityResult.none)) {
       if (!context.mounted) return false;
       displaySnackBar(
         "No network connection. Please turn on Wi-Fi or mobile data.",

@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       DatabaseEvent event = await driversRef.once();
 
-      if (!context.mounted) return;
+      if (!mounted) return;
       Navigator.pop(context); // close loading dialog
 
       if (event.snapshot.value == null) {
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => HomePage()),
       );
     } on FirebaseAuthException catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       Navigator.pop(context);
 
       String errorMessage = t(
@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       cMethods.displaySnackBar(errorMessage, context);
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
         cMethods.displaySnackBar(
           t(

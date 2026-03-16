@@ -88,7 +88,7 @@ class _SideMenuState extends State<SideMenu> {
           width: 80,
           height: 80,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _defaultAvatar(),
+          errorBuilder: (context, error, stackTrace) => _defaultAvatar(),
         ),
       );
     }
@@ -102,7 +102,7 @@ class _SideMenuState extends State<SideMenu> {
       height: 84,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
       ),
       child: const Icon(Icons.person, color: Colors.white, size: 32),
     );
@@ -152,7 +152,7 @@ class _SideMenuState extends State<SideMenu> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -177,7 +177,7 @@ class _SideMenuState extends State<SideMenu> {
       trailing: const Icon(Icons.chevron_right, size: 20),
       selected: selected,
       selectedColor: Colors.black87,
-      selectedTileColor: Colors.red.withOpacity(0.08),
+      selectedTileColor: Colors.red.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       onTap: onTap,
@@ -362,7 +362,7 @@ class _SideMenuState extends State<SideMenu> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              tileColor: Colors.red.withOpacity(0.06),
+              tileColor: Colors.red.withValues(alpha: 0.06),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
