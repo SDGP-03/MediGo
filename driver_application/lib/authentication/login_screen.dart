@@ -1,4 +1,5 @@
 import 'package:driver_application/authentication/signup_screen.dart';
+import 'package:driver_application/core/utils/validators.dart';
 import 'package:driver_application/methods/common_methods.dart';
 import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/widgets/loading_dialog.dart';
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   TextEditingController emailTextEditingController = TextEditingController();
   TextEditingController passwordTextEditingController = TextEditingController();
   CommonMethods cMethods = CommonMethods();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String _language = 'English';
   bool get _isSinhala => _language == 'Sinhala';
   bool get _isTamil => _language == 'Tamil';
@@ -52,31 +54,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
     if (ok) {
-      signInFormValidation();
-    }
-  }
-
-  void signInFormValidation() {
-    if (!emailTextEditingController.text.contains("@medigo.lk")) {
-      cMethods.displaySnackBar(
-        t(
-          "Please write valid email.",
-          "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
-          "சரியான மின்னஞ்சலை உள்ளிடுங்கள்.",
-        ),
-        context,
-      );
-    } else if (passwordTextEditingController.text.trim().length < 6) {
-      cMethods.displaySnackBar(
-        t(
-          "Your password must be atleast 6 or more characters.",
-          "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
-          "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.",
-        ),
-        context,
-      );
-    } else {
-      signInUser();
+      if (_formKey.currentState!.validate()) {
+        signInUser();
+      }
     }
   }
 
@@ -300,19 +280,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
 
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
 
-                        TextField(
+                          TextFormField(
                           controller: emailTextEditingController,
                           keyboardType: TextInputType.emailAddress,
+                          validator: Validators.validateEmail,
                           decoration: InputDecoration(
                             hintText: "driver@medigo.lk",
                             prefixIcon: Icon(Icons.email_outlined),
@@ -333,10 +316,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 8),
 
-                        TextField(
+                        TextFormField(
                           controller: passwordTextEditingController,
                           obscureText: true,
                           keyboardType: TextInputType.visiblePassword,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Password is required';
+                            }
+                            return null;
+                          },
                           decoration: InputDecoration(
                             hintText: t(
                               "Enter your password",
@@ -378,7 +367,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 

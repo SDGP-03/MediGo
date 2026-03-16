@@ -15,10 +15,6 @@ class Validators {
       return 'Name must be at least 2 characters';
     }
 
-    if (!RegExp(r"^[a-zA-Z][a-zA-Z\s\.\-']+$").hasMatch(trimmed)) {
-      return 'Name contains invalid characters';
-    }
-
     return null;
   }
 
@@ -30,9 +26,9 @@ class Validators {
       return 'Email is required';
     }
 
-    // Standard email regex pattern
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
-      return 'Please enter a valid email address';
+    // Only allow emails ending with @medigo.lk
+    if (!RegExp(r'^[\w\.-]+@medigo\.lk$').hasMatch(value.trim())) {
+      return 'Please enter a valid @medigo.lk email address';
     }
 
     return null;

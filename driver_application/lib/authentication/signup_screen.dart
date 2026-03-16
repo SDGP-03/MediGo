@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:driver_application/authentication/login_screen.dart';
+import 'package:driver_application/core/utils/validators.dart';
 import 'package:driver_application/methods/common_methods.dart';
 import 'package:driver_application/pages/home_page.dart';
 import 'package:driver_application/widgets/loading_dialog.dart';
@@ -33,6 +34,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool get _isTamil => _language == 'Tamil';
 
   CommonMethods cMethods = CommonMethods();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   String t(String en, String si, [String? ta]) {
     if (_isSinhala) return si;
@@ -95,59 +97,9 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> checkIfNetworkIsAvailable() async {
     bool ok = await cMethods.checkConnectivity(context);
     if (ok) {
-      signUpFormValidation();
-    }
-  }
-
-  void signUpFormValidation() {
-    if (userNameTextEditingController.text.trim().length < 4) {
-      cMethods.displaySnackBar(
-        t(
-          "Your name must be atleast 4 or more characters.",
-          "නම අකුරු 4කට වැඩි විය යුතුයි.",
-          "பெயர் குறைந்தது 4 எழுத்துகள் இருக்க வேண்டும்.",
-        ),
-        context,
-      );
-    } else if (userPhoneTextEditingController.text.trim().length < 10) {
-      cMethods.displaySnackBar(
-        t(
-          "Your phone number must be atleast 10 or more characters.",
-          "දුරකථන අංකය අංක 10ක් විය යුතුයි.",
-          "தொலைபேசி எண் குறைந்தது 10 இலக்கங்கள் இருக்க வேண்டும்.",
-        ),
-        context,
-      );
-    } else if (!emailTextEditingController.text.contains("@medigo.lk")) {
-      cMethods.displaySnackBar(
-        t(
-          "Please write valid email.",
-          "කරුණාකර වලංගු විද්‍යුත් තැපෑලක් ඇතුල් කරන්න.",
-          "சரியான மின்னஞ்சலை உள்ளிடுங்கள்.",
-        ),
-        context,
-      );
-    } else if (passwordTextEditingController.text.trim().length < 6) {
-      cMethods.displaySnackBar(
-        t(
-          "Your password must be atleast 6 or more characters.",
-          "මුරපදය අකුරු 6කට වැඩි විය යුතුයි.",
-          "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்.",
-        ),
-        context,
-      );
-    } else if (confirmPasswordTextEditingController.text.trim() !=
-        passwordTextEditingController.text.trim()) {
-      cMethods.displaySnackBar(
-        t(
-          "Passwords do not match.",
-          "මුරපද දෙක එකිනෙකට නොගැලපේ.",
-          "கடவுச்சொற்கள் பொருந்தவில்லை.",
-        ),
-        context,
-      );
-    } else {
-      registerNewUser();
+      if (_formKey.currentState!.validate()) {
+        registerNewUser();
+      }
     }
   }
 
@@ -367,171 +319,188 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     Padding(
                       padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            t("Username", "පරිශීලක නම", "பெயர்"),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t("Username", "පරිශීලක නම", "பெயர்"),
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
 
-                          const SizedBox(height: 8),
+                            const SizedBox(height: 8),
 
-                          TextField(
-                            controller: userNameTextEditingController,
-                            keyboardType: TextInputType.text,
-                            decoration: InputDecoration(
-                              hintText: t(
-                                "Enter your user name",
-                                "ඔබගේ නම ඇතුල් කරන්න",
-                                "உங்கள் பெயரை உள்ளிடவும்",
-                              ),
-                              prefixIcon: const Icon(Icons.person_outline),
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                            TextFormField(
+                              controller: userNameTextEditingController,
+                              keyboardType: TextInputType.text,
+                              validator: Validators.validateName,
+                              decoration: InputDecoration(
+                                hintText: t(
+                                  "Enter your user name",
+                                  "ඔබගේ නම ඇතුල් කරන්න",
+                                  "உங்கள் பெயரை உள்ளிடவும்",
+                                ),
+                                prefixIcon: const Icon(Icons.person_outline),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          Text(
-                            t("Phone Number", "දුරකථන අංකය", "தொலைபேசி எண்"),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
+                            Text(
+                              t("Phone Number", "දුරකථන අංකය", "தொலைபேசி எண்"),
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
 
-                          const SizedBox(height: 8),
+                            const SizedBox(height: 8),
 
-                          TextField(
-                            controller: userPhoneTextEditingController,
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              hintText: t(
-                                "Enter your phone number",
-                                "ඔබගේ දුරකථන අංකය ඇතුල් කරන්න",
-                                "உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்",
-                              ),
-                              prefixIcon: const Icon(Icons.phone_outlined),
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                            TextFormField(
+                              controller: userPhoneTextEditingController,
+                              keyboardType: TextInputType.phone,
+                              validator: Validators.validatePhone,
+                              decoration: InputDecoration(
+                                hintText: t(
+                                  "Enter your phone number",
+                                  "ඔබගේ දුරකථන අංකය ඇතුල් කරන්න",
+                                  "உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்",
+                                ),
+                                prefixIcon: const Icon(Icons.phone_outlined),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          Text(
-                            t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
+                            Text(
+                              t("Email Address", "විද්‍යුත් තැපෑල", "மின்னஞ்சல்"),
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
 
-                          const SizedBox(height: 8),
+                            const SizedBox(height: 8),
 
-                          TextField(
-                            controller: emailTextEditingController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: "driver@medigo.lk",
-                              prefixIcon: Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                            TextFormField(
+                              controller: emailTextEditingController,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: Validators.validateEmail,
+                              decoration: InputDecoration(
+                                hintText: "driver@medigo.lk",
+                                prefixIcon: Icon(Icons.email_outlined),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-                          Text(
-                            t("Password", "මුරපදය", "கடவுச்சொல்"),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          TextField(
-                            controller: passwordTextEditingController,
-                            obscureText: true,
-                            keyboardType: TextInputType.visiblePassword,
-                            decoration: InputDecoration(
-                              hintText: t(
-                                "Enter your password",
-                                "ඔබගේ මුරපදය ඇතුල් කරන්න",
-                                "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
-                              ),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
+                            Text(
+                              t("Password", "මුරපදය", "கடவுச்சொல்"),
+                              style: TextStyle(fontWeight: FontWeight.w500),
                             ),
-                          ),
 
-                          const SizedBox(height: 16),
+                            const SizedBox(height: 8),
 
-                          Text(
-                            t(
-                              "Confirm Password",
-                              "මුරපදය තහවුරු කරන්න",
-                              "கடவுச்சொல்லை உறுதி செய்யவும்",
-                            ),
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          TextField(
-                            controller: confirmPasswordTextEditingController,
-                            obscureText: true,
-                            keyboardType: TextInputType.visiblePassword,
-                            decoration: InputDecoration(
-                              hintText: t(
-                                "Re-enter your password",
-                                "මුරපදය නැවත ඇතුල් කරන්න",
-                                "கடவுச்சொல்லை மீண்டும் உள்ளிடவும்",
-                              ),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 33),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.shade700,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-
-                              onPressed: () {
-                                checkIfNetworkIsAvailable();
+                            TextFormField(
+                              controller: passwordTextEditingController,
+                              obscureText: true,
+                              keyboardType: TextInputType.visiblePassword,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Password is required';
+                                }
+                                return Validators.validatePassword(value);
                               },
-
-                              child: Text(
-                                t("Sign Up", "ලියාපදිංචි වන්න", "பதிவு செய்யவும்"),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
+                              decoration: InputDecoration(
+                                hintText: t(
+                                  "Enter your password",
+                                  "ඔබගේ මුරපදය ඇතුල් කරන්න",
+                                  "உங்கள் கடவுச்சொல்லை உள்ளிடவும்",
+                                ),
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+
+                            const SizedBox(height: 16),
+
+                            Text(
+                              t(
+                                "Confirm Password",
+                                "මුරපදය තහවුරු කරන්න",
+                                "கடவுச்சொல்லை உறுதி செய்யவும்",
+                              ),
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            TextFormField(
+                              controller: confirmPasswordTextEditingController,
+                              obscureText: true,
+                              keyboardType: TextInputType.visiblePassword,
+                              validator: (value) =>
+                                  Validators.validatePasswordConfirmation(
+                                value,
+                                passwordTextEditingController.text,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: t(
+                                  "Re-enter your password",
+                                  "මුරපදය නැවත ඇතුල් කරන්න",
+                                  "கடவுச்சொல்லை மீண்டும் உள்ளிடவும்",
+                                ),
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 33),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+
+                                onPressed: () {
+                                  checkIfNetworkIsAvailable();
+                                },
+
+                                child: Text(
+                                  t("Sign Up", "ලියාපදිංචි වන්න", "பதிவு செய்யவும்"),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
