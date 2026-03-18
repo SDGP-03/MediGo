@@ -257,7 +257,7 @@ class _FaqPageState extends State<FaqPage> {
       {
         'question': 'app එකෙන් logout වෙන්නේ කොහොමද?',
         'answer':
-            'Settings විවෘත කර පහලින් "Logout" ඔබන්න. පසුව confirm කරන්න.',
+            'Settings පහලින් විවෘත කර "Logout" ඔබන්න. පසුව confirm කරන්න.',
       },
     ],
   };
@@ -312,8 +312,11 @@ class _FaqPageState extends State<FaqPage> {
     ],
   };
 
-  Map<String, List<Map<String, String>>> get faqData =>
-      _isSinhala ? faqDataSinhala : _isTamil ? faqDataTamil : faqDataEnglish;
+  Map<String, List<Map<String, String>>> get faqData => _isSinhala
+      ? faqDataSinhala
+      : _isTamil
+      ? faqDataTamil
+      : faqDataEnglish;
 
   @override
   void initState() {
@@ -438,7 +441,11 @@ class _FaqPageState extends State<FaqPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  t("Frequently Asked Questions", "නිතර අහන ප්‍රශ්න", "அடிக்கடி கேட்கப்படும் கேள்விகள்"),
+                  t(
+                    "Frequently Asked Questions",
+                    "නිතර අහන ප්‍රශ්න",
+                    "அடிக்கடி கேட்கப்படும் கேள்விகள்",
+                  ),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -468,7 +475,11 @@ class _FaqPageState extends State<FaqPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: t('Search FAQs...', 'ප්‍රශ්න සොයන්න...', 'கேள்விகளை தேடுங்கள்...'),
+          hintText: t(
+            'Search FAQs...',
+            'ප්‍රශ්න සොයන්න...',
+            'கேள்விகளை தேடுங்கள்...',
+          ),
           prefixIcon: const Icon(Icons.search),
           suffixIcon: searchQuery.isNotEmpty
               ? IconButton(
@@ -524,7 +535,11 @@ class _FaqPageState extends State<FaqPage> {
             t('Payments', 'ගෙවීම්', 'கட்டணங்கள்'),
             Icons.payments,
           ),
-          _buildCategoryChip('troubleshooting', t('Help', 'උදව්', 'உதவி'), Icons.help),
+          _buildCategoryChip(
+            'troubleshooting',
+            t('Help', 'උදව්', 'உதவி'),
+            Icons.help,
+          ),
         ],
       ),
     );
@@ -637,7 +652,11 @@ class _FaqPageState extends State<FaqPage> {
             Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
-              t('No FAQs found', 'ප්‍රශ්න හමු වුණේ නැහැ', 'கேள்விகள் எதுவும் கிடைக்கவில்லை'),
+              t(
+                'No FAQs found',
+                'ප්‍රශ්න හමු වුණේ නැහැ',
+                'கேள்விகள் எதுவும் கிடைக்கவில்லை',
+              ),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -686,7 +705,11 @@ class _FaqPageState extends State<FaqPage> {
           ),
           icon: const Icon(Icons.contact_support),
           label: Text(
-            t("Still Need Help? Contact Support", "තව උදව් ඕනේද? සහාය අමතන්න", "இன்னும் உதவி வேண்டுமா? ஆதரவை தொடர்பு கொள்ளுங்கள்"),
+            t(
+              "Still Need Help? Contact Support",
+              "තව උදව් ඕනේද? සහාය අමතන්න",
+              "இன்னும் உதவி வேண்டுமா? ஆதரவை தொடர்பு கொள்ளுங்கள்",
+            ),
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           onPressed: () {
