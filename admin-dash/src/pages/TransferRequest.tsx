@@ -1,42 +1,166 @@
-import { useState, useEffect } from 'react';
-import { User, MapPin, AlertCircle, FileText, Users, Clock, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2 } from 'lucide-react';
-import { database } from '../firebase';
-import { ref, push, set, onValue, off } from 'firebase/database';
+import { useState, useEffect, useRef } from 'react';
+import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
+import { database, auth } from '../firebase';
+import { ref, push, set, get } from 'firebase/database';
+import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
+import { useDriverLocations } from '../useDriverLocations';
+import { useFleetData } from '../hooks/useFleetData';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
 const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
-  'City General Hospital': { lat: 6.9271, lng: 79.8612, address: 'Colombo 07, Sri Lanka' },
-  'Central Medical Center': { lat: 6.9344, lng: 79.8428, address: 'Union Place, Colombo' },
-  'Specialist Care Hospital': { lat: 6.9167, lng: 79.8778, address: 'Narahenpita, Colombo' },
-  'Regional Base Hospital': { lat: 6.9147, lng: 79.9727, address: 'Homagama' },
-  'Teaching Hospital East': { lat: 6.9108, lng: 79.8541, address: 'Wellawatte, Colombo' },
-  'Metro Hospital': { lat: 6.8867, lng: 79.8593, address: 'Dehiwala' },
+  'General Hospital O P D': { lat: 6.918955913694652, lng: 79.86611697073118, address: 'WV98+HC9, EW Perera Mawatha, Colombo 01000, Sri Lanka' },
+  'Lady Ridgeway Hospital for Children (LRH)': { lat: 6.918381526890345, lng: 79.8759550393045, address: 'Dr Danister De Silva Mawatha, Colombo 00800, Sri Lanka' },
 };
 
-interface AvailableDriver {
+// Patient records (mirrored from PatientRecords page)
+interface PatientRecord {
   id: string;
-  driverName: string;
-  lat: number;
-  lng: number;
+  name: string;
+  age: number;
+  gender: string;
+  bloodGroup: string;
+  allergies: string;
+  medicalHistory: string;
+}
+
+const patientRecords: PatientRecord[] = [
+  {
+    id: 'PT-20251',
+    name: 'Sarah Johnson',
+    age: 45,
+    gender: 'Female',
+    bloodGroup: 'A+',
+    allergies: 'Penicillin',
+    medicalHistory: 'Hypertension, Diabetes Type 2',
+  },
+  {
+    id: 'PT-20252',
+    name: 'David Miller',
+    age: 62,
+    gender: 'Male',
+    bloodGroup: 'O+',
+    allergies: 'None',
+    medicalHistory: 'Coronary Artery Disease, Previous MI',
+  },
+  {
+    id: 'PT-20253',
+    name: 'Emma Davis',
+    age: 28,
+    gender: 'Female',
+    bloodGroup: 'B+',
+    allergies: 'Latex, Shellfish',
+    medicalHistory: 'Asthma, Seasonal Allergies',
+  },
+];
+
+// Compute the next patient ID based on the highest existing numeric suffix
+function getNextPatientId(): string {
+  const maxNum = patientRecords.reduce((max, p) => {
+    const match = p.id.match(/PT-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return num > max ? num : max;
+    }
+    return max;
+  }, 20250);
+  return `PT-${maxNum + 1}`;
 }
 
 export function TransferRequest() {
   const [step, setStep] = useState<'patient' | 'transfer' | 'ambulance'>('patient');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableDrivers, setAvailableDrivers] = useState<AvailableDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+
+  // Fleet data from Firebase (ambulances + drivers)
+  const { ambulances, drivers } = useFleetData();
+  const { onlineDrivers, busyDrivers } = useDriverLocations();
+
+  const availableAmbulances = ambulances.filter(a => a.status === 'available');
+
+  // ─── SYNTHESIZE ACTIVE DRIVERS ───
+  // Merge registered drivers with live "online" status, and include any online drivers not in registry.
+  const allKnownDrivers = [...drivers];
+
+  // Add online drivers that aren't in the registry (using their UID as ID)
+  onlineDrivers.forEach(od => {
+    const isAlreadyInRegistry = drivers.some(rd =>
+      rd.id === od.id || rd.name.toLowerCase().trim() === od.driverName.toLowerCase().trim()
+    );
+    if (!isAlreadyInRegistry) {
+      allKnownDrivers.push({
+        id: od.id,
+        name: od.driverName,
+        status: 'active',
+        rating: 5.0,
+        assignedAmbulance: null,
+      } as any);
+    }
+  });
+
+  const activeDrivers = allKnownDrivers.filter(d => {
+    // A driver is selectable if they are "online" in real-time OR manually marked "active" in registry
+    // But they must NOT be "busy" (on another mission)
+    const isLiveOnline = onlineDrivers.some(od =>
+      od.id === d.id || od.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
+    );
+    const isLiveBusy = busyDrivers.some(bd =>
+      bd.id === d.id || bd.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
+    );
+    return (isLiveOnline || d.status === 'active') && !isLiveBusy;
+  });
+
+  // Autocomplete state for patient name
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nameSuggestions, setNameSuggestions] = useState<PatientRecord[]>([]);
+  const [isNewPatient, setIsNewPatient] = useState(false);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // --- AUTOMATION: FETCH ADMIN'S HOSPITAL ---
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const adminRef = ref(database, `admin/${user.uid}`);
+          const snapshot = await get(adminRef);
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            const hospitalName = data.hospitalName || "";
+            setFormData(prev => ({ ...prev, fromHospital: hospitalName }));
+          }
+        } catch (err) {
+          console.error("Error fetching admin profile in TransferRequest:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [formData, setFormData] = useState({
     // Patient Info
     patientName: '',
-    patientAge: '',
+    patientAge: '0',
     patientGender: '',
     patientId: '',
     bloodGroup: '',
     allergies: '',
 
     // Transfer Info
-    fromHospital: 'City General Hospital',
+    fromHospital: '',
     toHospital: '',
     reason: '',
     priority: 'standard',
@@ -52,40 +176,9 @@ export function TransferRequest() {
     attendantGender: '',
   });
 
-  // Fetch available drivers from Firebase
-  useEffect(() => {
-    const driversRef = ref(database, 'driver_locations');
-    const now = Date.now();
-    const FIVE_MINUTES = 5 * 60 * 1000;
-
-    const handleData = (snapshot: any) => {
-      const data = snapshot.val();
-      if (!data) {
-        setAvailableDrivers([]);
-        return;
-      }
-
-      const drivers: AvailableDriver[] = Object.entries(data)
-        .map(([id, value]: [string, any]) => ({
-          id,
-          driverName: value.driverName || 'Unknown Driver',
-          lat: value.lat,
-          lng: value.lng,
-          isOnline: value.isOnline || false,
-          timestamp: value.timestamp || 0,
-        }))
-        .filter((d: any) => d.isOnline && d.lat && d.lng && (Date.now() - d.timestamp) < FIVE_MINUTES);
-
-      setAvailableDrivers(drivers);
-    };
-
-    onValue(driversRef, handleData);
-    return () => off(driversRef);
-  }, []);
-
   const hospitals = [
-    'Central Medical Center',
-    'Specialist Care Hospital',
+    'General Hospital O P D',
+    'Lady Ridgeway Hospital for Children (LRH)',
     'Regional Base Hospital',
     'Teaching Hospital East',
     'Metro Hospital',
@@ -101,42 +194,65 @@ export function TransferRequest() {
   ];
 
   const validatePatientStep = () => {
-    if (!formData.patientName || !formData.patientId || !formData.patientAge || !formData.patientGender) {
-      alert('Please fill in all mandatory patient information fields.');
+    const errors: Record<string, string> = {};
+    if (!formData.patientName) errors.patientName = 'Patient Name is required';
+    if (!formData.patientId) errors.patientId = 'Patient ID is required';
+    if (!formData.patientAge) errors.patientAge = 'Age is required';
+    if (!formData.patientGender) errors.patientGender = 'Gender is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return false;
     }
+
+    setFormErrors({});
     return true;
   };
 
   const validateTransferStep = () => {
-    if (!formData.toHospital || !formData.priority || !formData.reason) {
-      alert('Please fill in all mandatory transfer details fields.');
+    const errors: Record<string, string> = {};
+    if (!formData.toHospital) errors.toHospital = 'Destination hospital is required';
+    if (!formData.priority) errors.priority = 'Priority level is required';
+    if (!formData.reason) errors.reason = 'Reason for transfer is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return false;
     }
+
+    setFormErrors({});
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedDriverId) {
-      alert('Please select a driver to assign this transfer request.');
+    const errors: Record<string, string> = {};
+    if (!selectedAmbulanceId) errors.selectedAmbulanceId = 'Please select an ambulance for this transfer.';
+    if (!selectedDriverId) errors.selectedDriverId = 'Please select a driver for this transfer.';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
+
+    setFormErrors({});
 
     setIsSubmitting(true);
 
     try {
-      const requestsRef = ref(database, 'transfer_requests');
-      const newRequestRef = push(requestsRef);
-
       const fromCoords = hospitalCoordinates[formData.fromHospital] || { lat: 0, lng: 0, address: '' };
       const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
 
-      await set(newRequestRef, {
-        status: 'pending',
+      const transferRef = ref(database, 'transfer_requests');
+      const newTransferRef = push(transferRef);
+
+      await set(newTransferRef, {
         driverId: selectedDriverId,
+        driverName: activeDrivers.find(d => d.id === selectedDriverId)?.name || '',
+        ambulanceId: selectedAmbulanceId,
+        ambulance: selectedAmbulanceId,
         priority: formData.priority,
+        status: 'pending',
         createdAt: Date.now(),
 
         patient: {
@@ -171,10 +287,21 @@ export function TransferRequest() {
           equipment: formData.requiredEquipment,
         },
 
+        attachedDocuments: (() => {
+          const stored = localStorage.getItem('patientFiles');
+          const allFiles: Record<string, { name: string; size: number; type: string }[]> = stored ? JSON.parse(stored) : {};
+          const patientFiles = allFiles[formData.patientId] || [];
+          return selectedDocumentIndices.map(i => ({
+            name: patientFiles[i]?.name || '',
+            type: patientFiles[i]?.type || '',
+            size: patientFiles[i]?.size || 0,
+          })).filter(d => d.name);
+        })(),
+
         reason: formData.reason,
       });
 
-      alert('Transfer request sent to driver! They will receive a notification shortly.');
+      setFormErrors({ submitSuccess: 'Transfer request sent to driver! They will receive a notification shortly.' });
 
       // Reset form
       setStep('patient');
@@ -185,7 +312,7 @@ export function TransferRequest() {
         patientId: '',
         bloodGroup: '',
         allergies: '',
-        fromHospital: 'City General Hospital',
+        fromHospital: formData.fromHospital, // Keep the fetched hospital name
         toHospital: '',
         reason: '',
         priority: 'standard',
@@ -199,16 +326,56 @@ export function TransferRequest() {
         attendantGender: '',
       });
       setSelectedDriverId('');
+      setSelectedAmbulanceId('');
+      setSelectedDocumentIndices([]);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.submitSuccess;
+          return newErrors;
+        });
+      }, 5000);
+
     } catch (error) {
       console.error('Error submitting transfer request:', error);
-      alert('Failed to submit transfer request. Please try again.');
+      setFormErrors({ submitError: 'Failed to submit transfer request. Please try again.' });
+      // Clear error message after 5 seconds
+      setTimeout(() => {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.submitError;
+          return newErrors;
+        });
+      }, 5000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto relative">
+      {/* Success Notification */}
+      {formErrors.submitSuccess && (
+        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3 px-6 py-4 bg-green-50 border border-green-200 text-green-700 rounded-lg shadow-lg">
+            <CheckCircle2 size={24} className="text-green-600" />
+            <p className="font-medium text-green-900">{formErrors.submitSuccess}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {formErrors.submitError && (
+        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3 px-6 py-4 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow-lg">
+            <XCircle size={24} className="text-red-600" />
+            <p className="font-medium text-red-900">{formErrors.submitError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Progress Steps */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
         <div className="flex items-center justify-between">
@@ -249,28 +416,118 @@ export function TransferRequest() {
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                {/* Patient Name with Autocomplete */}
+                <div ref={autocompleteRef} className="relative">
                   <label className="block text-foreground mb-2">Patient Name *</label>
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     value={formData.patientName}
-                    onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
-                    placeholder="Full name"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, patientName: val });
+                      if (formErrors.patientName) setFormErrors({ ...formErrors, patientName: '' });
+                      if (val.trim().length > 0) {
+                        const matches = patientRecords.filter(p =>
+                          p.name.toLowerCase().includes(val.toLowerCase())
+                        );
+                        setNameSuggestions(matches);
+                        setShowSuggestions(matches.length > 0);
+                        // New (unregistered) patient – suggest next ID
+                        if (matches.length === 0) {
+                          const nextId = getNextPatientId();
+                          setFormData(prev => ({ ...prev, patientName: val, patientId: nextId }));
+                          setIsNewPatient(true);
+                        } else {
+                          setIsNewPatient(false);
+                        }
+                      } else {
+                        setShowSuggestions(false);
+                        setIsNewPatient(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (formData.patientName.trim().length > 0 && nameSuggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientName ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
+                    placeholder="Start typing a patient name..."
                   />
+                  {formErrors.patientName && <p className="text-red-500 text-xs mt-1">{formErrors.patientName}</p>}
+
+                  {/* Autocomplete Dropdown */}
+                  {showSuggestions && (
+                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {nameSuggestions.map((patient) => (
+                        <button
+                          key={patient.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormData(prev => ({
+                              ...prev,
+                              patientName: patient.name,
+                              patientAge: String(patient.age),
+                              patientId: patient.id,
+                              bloodGroup: patient.bloodGroup || prev.bloodGroup,
+                              allergies: patient.allergies || prev.allergies,
+                              medicalHistory: patient.medicalHistory || prev.medicalHistory,
+                              patientGender: patient.gender || prev.patientGender,
+                              attendantGender: patient.gender || prev.attendantGender,
+                            }));
+                            setFormErrors(prev => ({ ...prev, patientName: '', patientId: '', patientAge: '' }));
+                            setIsNewPatient(false);
+                            setShowSuggestions(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left border-b border-border last:border-b-0"
+                        >
+                          <div className="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center shrink-0">
+                            <User size={15} className="text-red-600" />
+                          </div>
+                          <div>
+                            <p className="text-foreground font-medium text-sm">{patient.name}</p>
+                            <p className="text-muted-foreground text-xs">{patient.id} • {patient.age} yrs • {patient.gender}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-foreground mb-2">Patient ID *</label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-foreground">Patient ID *</label>
+                    {isNewPatient && (
+                      <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded-full font-medium">
+                        New Patient – ID suggested
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
                     value={formData.patientId}
-                    onChange={(e) => setFormData({ ...formData, patientId: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientId: e.target.value });
+                      if (formErrors.patientId) setFormErrors({ ...formErrors, patientId: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientId
+                      ? 'border-red-500 ring-1 ring-red-500'
+                      : isNewPatient
+                        ? 'border-amber-400 ring-1 ring-amber-300'
+                        : 'border-input'
+                      }`}
                     placeholder="Hospital patient ID"
                   />
+                  {isNewPatient && (
+                    <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
+                      Auto-generated for new patient. Edit if needed.
+                    </p>
+                  )}
+                  {formErrors.patientId && <p className="text-red-500 text-xs mt-1">{formErrors.patientId}</p>}
                 </div>
 
                 <div>
@@ -279,10 +536,15 @@ export function TransferRequest() {
                     type="number"
                     required
                     value={formData.patientAge}
-                    onChange={(e) => setFormData({ ...formData, patientAge: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientAge: e.target.value });
+                      if (formErrors.patientAge) setFormErrors({ ...formErrors, patientAge: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientAge ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                     placeholder="Age in years"
                   />
+                  {formErrors.patientAge && <p className="text-red-500 text-xs mt-1">{formErrors.patientAge}</p>}
                 </div>
 
                 <div>
@@ -290,14 +552,19 @@ export function TransferRequest() {
                   <select
                     required
                     value={formData.patientGender}
-                    onChange={(e) => setFormData({ ...formData, patientGender: e.target.value, attendantGender: e.target.value })}
-                    className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                    onChange={(e) => {
+                      setFormData({ ...formData, patientGender: e.target.value, attendantGender: e.target.value });
+                      if (formErrors.patientGender) setFormErrors({ ...formErrors, patientGender: '' });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientGender ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                      }`}
                   >
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
+                  {formErrors.patientGender && <p className="text-red-500 text-xs mt-1">{formErrors.patientGender}</p>}
                 </div>
 
                 <div>
@@ -384,14 +651,19 @@ export function TransferRequest() {
                       <select
                         required
                         value={formData.toHospital}
-                        onChange={(e) => setFormData({ ...formData, toHospital: e.target.value })}
-                        className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground"
+                        onChange={(e) => {
+                          setFormData({ ...formData, toHospital: e.target.value });
+                          if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+                        }}
+                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                          }`}
                       >
                         <option value="">Select destination hospital</option>
                         {hospitals.map(hospital => (
                           <option key={hospital} value={hospital}>{hospital}</option>
                         ))}
                       </select>
+                      {formErrors.toHospital && <p className="text-red-500 text-xs mt-1">{formErrors.toHospital}</p>}
                     </div>
                   </div>
 
@@ -438,6 +710,7 @@ export function TransferRequest() {
                         </div>
                       </button>
                     </div>
+                    {formErrors.priority && <p className="text-red-500 text-xs mt-2">{formErrors.priority}</p>}
                   </div>
 
                   <div className="mb-6">
@@ -445,10 +718,15 @@ export function TransferRequest() {
                     <textarea
                       required
                       value={formData.reason}
-                      onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                      className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground"
+                      onChange={(e) => {
+                        setFormData({ ...formData, reason: e.target.value });
+                        if (formErrors.reason) setFormErrors({ ...formErrors, reason: '' });
+                      }}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 min-h-[100px] bg-input-field-bg text-foreground ${formErrors.reason ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                        }`}
                       placeholder="Detailed reason for inter-hospital transfer..."
                     />
+                    {formErrors.reason && <p className="text-red-500 text-xs mt-1">{formErrors.reason}</p>}
                   </div>
 
                   <div className="mb-6">
@@ -489,6 +767,59 @@ export function TransferRequest() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Optional Patient Document Attachment */}
+                  {(() => {
+                    const stored = localStorage.getItem('patientFiles');
+                    const allFiles: Record<string, { name: string; size: number; type: string }[]> = stored ? JSON.parse(stored) : {};
+                    const patientDocs = allFiles[formData.patientId] || [];
+                    if (patientDocs.length === 0) return null;
+                    return (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Paperclip size={16} className="text-blue-600" />
+                          <label className="text-foreground font-medium text-sm">Attach Patient Records <span className="text-muted-foreground font-normal">(Optional)</span></label>
+                        </div>
+                        <p className="text-muted-foreground text-xs mb-3">Select documents from the patient's records to send to the receiving hospital.</p>
+                        <div className="space-y-2">
+                          {patientDocs.map((file, idx) => (
+                            <label
+                              key={idx}
+                              className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${selectedDocumentIndices.includes(idx)
+                                ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-border hover:bg-accent'
+                                }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedDocumentIndices.includes(idx)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedDocumentIndices(prev => [...prev, idx]);
+                                  } else {
+                                    setSelectedDocumentIndices(prev => prev.filter(i => i !== idx));
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 flex-shrink-0"
+                              />
+                              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <File size={15} className="text-blue-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-foreground text-sm font-medium truncate">{file.name}</p>
+                                <p className="text-muted-foreground text-xs">{(file.size / 1024).toFixed(1)} KB • {file.type || 'Unknown type'}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        {selectedDocumentIndices.length > 0 && (
+                          <p className="text-blue-600 text-xs mt-2 font-medium">
+                            {selectedDocumentIndices.length} document{selectedDocumentIndices.length > 1 ? 's' : ''} selected to transfer
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -621,45 +952,133 @@ export function TransferRequest() {
                 </h2>
 
                 <div className="space-y-6">
-                  {/* Driver Selection */}
-                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Truck className="text-green-600 flex-shrink-0 mt-1" size={20} />
-                      <div className="w-full">
-                        <p className="text-green-900 mb-2 font-medium">Select Available Driver</p>
-                        {availableDrivers.length === 0 ? (
-                          <p className="text-orange-600 text-sm">
-                            ⚠️ No drivers currently available. Please wait for a driver to come online.
-                          </p>
-                        ) : (
-                          <select
-                            required
-                            value={selectedDriverId}
-                            onChange={(e) => setSelectedDriverId(e.target.value)}
-                            className="w-full px-4 py-3 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 bg-input-field-bg text-foreground"
-                          >
-                            <option value="">Select a driver...</option>
-                            {availableDrivers.map(driver => (
-                              <option key={driver.id} value={driver.id}>
-                                {driver.driverName} (ID: {driver.id.substring(0, 8)}...)
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <p className="text-green-700 text-xs mt-2">
-                          {availableDrivers.length} driver(s) currently online
-                        </p>
+                  {/* Unified Driver & Ambulance Selection */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl shrink-0">
+                        <Users className="text-blue-600 dark:text-blue-400" size={24} />
                       </div>
-                    </div>
-                  </div>
+                      <div className="w-full">
+                        <p className="text-blue-900 dark:text-blue-300 mb-1 font-bold text-lg">Assign Mission Personnel</p>
+                        <p className="text-blue-700 dark:text-blue-400 text-sm mb-4">
+                          Select an active driver. The system will automatically link their assigned ambulance.
+                        </p>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-                      <div>
-                        <p className="text-blue-900 mb-1">Assignment Information</p>
-                        <p className="text-blue-700 text-sm">
-                          The selected driver will receive a notification on their mobile app with trip details.
+                        {activeDrivers.length === 0 ? (
+                          <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                            <p className="text-orange-700 dark:text-orange-400 text-sm flex items-center gap-2">
+                              <AlertTriangle size={16} /> No drivers currently active. Please check fleet status.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-blue-900 dark:text-blue-300 text-sm font-medium mb-2">Select Driver *</label>
+                              <select
+                                value={selectedDriverId}
+                                onChange={(e) => {
+                                  const drvId = e.target.value;
+                                  setSelectedDriverId(drvId);
+                                  if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
+
+                                  // Auto-link assigned ambulance
+                                  const drvRecord = allKnownDrivers.find(d => d.id === drvId);
+                                  if (drvRecord?.assignedAmbulance) {
+                                    setSelectedAmbulanceId(drvRecord.assignedAmbulance);
+                                    if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
+                                  } else {
+                                    setSelectedAmbulanceId('');
+                                  }
+                                }}
+                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-blue-950/20 text-foreground shadow-sm ${formErrors.selectedDriverId ? 'border-red-500 ring-1 ring-red-500' : 'border-blue-200 dark:border-blue-800'
+                                  }`}
+                              >
+                                <option value="">Choose a driver...</option>
+                                {activeDrivers.map(driver => {
+                                  const isLive = onlineDrivers.some(od =>
+                                    od.id === driver.id ||
+                                    od.driverName.toLowerCase().trim() === driver.name.toLowerCase().trim()
+                                  );
+                                  return (
+                                    <option key={driver.id} value={driver.id}>
+                                      {driver.name} {isLive ? '🟢 (LIVE ONLINE)' : '⚪ (OFFLINE)'} (Rating: {driver.rating})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              {formErrors.selectedDriverId && (
+                                <p className="text-red-500 text-xs mt-1 font-medium">{formErrors.selectedDriverId}</p>
+                              )}
+                            </div>
+
+                            {selectedDriverId && (() => {
+                              const drv = allKnownDrivers.find(d => d.id === selectedDriverId);
+                              const amb = ambulances.find(a => a.id === (drv?.assignedAmbulance || selectedAmbulanceId));
+                              if (!drv) return null;
+
+                              return (
+                                <div className="mt-4 p-4 bg-white dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm animate-in fade-in slide-in-from-top-2">
+                                  {/* Manual Ambulance Selection Fallback */}
+                                  {!drv.assignedAmbulance && (
+                                    <div className="mb-4">
+                                      <label className="block text-blue-900 dark:text-blue-300 text-sm font-medium mb-2">Select Ambulance *</label>
+                                      <select
+                                        value={selectedAmbulanceId}
+                                        onChange={(e) => {
+                                          setSelectedAmbulanceId(e.target.value);
+                                          if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
+                                        }}
+                                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white dark:bg-blue-950/20 text-foreground shadow-sm ${formErrors.selectedAmbulanceId ? 'border-red-500 ring-1 ring-red-500' : 'border-blue-200 dark:border-blue-800'}`}
+                                      >
+                                        <option value="">Choose an ambulance...</option>
+                                        {availableAmbulances.map(a => (
+                                          <option key={a.id} value={a.id}>Unit: {a.id}</option>
+                                        ))}
+                                      </select>
+                                      {formErrors.selectedAmbulanceId && (
+                                        <p className="text-red-500 text-xs mt-1 font-medium">{formErrors.selectedAmbulanceId}</p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center justify-between mb-3 border-b border-blue-100 dark:border-blue-900/50 pb-2">
+                                    <div className="flex items-center gap-2">
+                                      <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                                      <span className="text-blue-900 dark:text-blue-100 font-bold">{drv.name}</span>
+                                    </div>
+                                    <span className="text-blue-600 dark:text-blue-400 text-xs font-medium uppercase tracking-wider">{drv.id}</span>
+                                  </div>
+
+                                  {amb ? (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-3 text-blue-800 dark:text-blue-200">
+                                        <Truck size={18} className="text-blue-500" />
+                                        <div>
+                                          <p className="text-sm font-semibold">Assigned: {amb.id}</p>
+                                          <p className="text-[10px] opacity-70">Located at: {amb.location}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-md text-[10px] font-bold">VENTILATOR</span>}
+                                        {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-md text-[10px] font-bold">DOCTOR ON BOARD</span>}
+                                        {amb.equipment.slice(0, 2).map(e => (
+                                          <span key={e} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-md text-[10px] uppercase font-bold">{e}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 text-xs bg-orange-50 dark:bg-orange-950/30 p-2 rounded-lg">
+                                      <AlertCircle size={14} />
+                                      <span>Warning: This driver has no assigned ambulance.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        <p className="text-blue-600 dark:text-blue-400 text-[10px] mt-4 italic font-medium">
+                          Note: Trip manifest will be dispatched immediately upon submission.
                         </p>
                       </div>
                     </div>
@@ -754,8 +1173,8 @@ export function TransferRequest() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedDriverId || availableDrivers.length === 0}
-                  className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || availableDrivers.length === 0
+                  disabled={isSubmitting || !selectedDriverId || !selectedAmbulanceId}
+                  className={`flex-1 py-3 rounded-lg transition-colors ${isSubmitting || !selectedDriverId || !selectedAmbulanceId
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-red-600 hover:bg-red-700'
                     } text-white`}
