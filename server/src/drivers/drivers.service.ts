@@ -8,10 +8,18 @@ export class DriversService {
 
     constructor(private readonly firebase: FirebaseService) { }
 
-    /** Stream driver locations in real-time (online + offline) */
-    streamLocations(): Observable<MessageEvent> {
+    /** Stream driver locations in real-time (online + offline) for a specific hospital */
+    streamLocations(hospitalUid: string): Observable<MessageEvent> {
         return new Observable((subscriber) => {
+            const hospitalDriversRef = this.firebase.ref(`hospitals/${hospitalUid}/drivers`);
             const driversRef = this.firebase.ref('driver_locations');
+
+            let allowedDrivers = new Set<string>();
+            const hospitalCallback = hospitalDriversRef.on('value', (snap) => {
+                const data = snap.val();
+                allowedDrivers = new Set(data ? Object.keys(data) : []);
+            });
+
 
             // Emit immediately so frontend doesn't hang waiting for Firebase
             subscriber.next({
@@ -35,6 +43,7 @@ export class DriversService {
                     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
                     const allDrivers = Object.entries(data)
+                        .filter(([id]) => allowedDrivers.has(id))
                         .map(([id, value]: [string, any]) => {
                             const rawStatus = value.status || (value.isOnline ? 'online' : 'offline');
                             return {
@@ -73,7 +82,8 @@ export class DriversService {
 
             return () => {
                 driversRef.off('value', callback);
-                this.logger.log('Driver locations SSE stream closed');
+                hospitalDriversRef.off('value', hospitalCallback);
+                this.logger.log(`Driver locations SSE stream closed for ${hospitalUid}`);
             };
         });
     }

@@ -99,7 +99,7 @@ export function HospitalDashboard() {
   const toggleResource = async (id: string) => {
     const updatedResources = resources.map(r => r.id === id ? { ...r, available: !r.available } : r);
     setResources(updatedResources); // Optimistic UI
-    
+
     if (auth.currentUser) {
       const resourcesRef = ref(database, `hospitals/${auth.currentUser.uid}/resources`);
       await set(resourcesRef, updatedResources);
@@ -128,7 +128,7 @@ export function HospitalDashboard() {
   const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
 
   useEffect(() => {
-    let resourcesUnsub: () => void = () => {};
+    let resourcesUnsub: () => void = () => { };
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -139,7 +139,7 @@ export function HospitalDashboard() {
             const data = snapshot.val();
             setCurrentHospitalName(data.hospitalName || "");
           }
-          
+
           // Fetch resources
           const resourcesRef = ref(database, `hospitals/${user.uid}/resources`);
           const unsubRes = onValue(resourcesRef, (resSnapshot) => {
@@ -161,15 +161,8 @@ export function HospitalDashboard() {
     };
   }, []);
 
-  // Live driver data from Firebase
-  const { onlineDrivers: allOnline, busyDrivers: allBusy, offlineDrivers: allOffline, isLoading: driversLoading } = useDriverLocations();
-  const { drivers: myDrivers } = useFleetData();
-  
-  // Filter live drivers to only those belonging to this hospital
-  const myDriverIds = new Set(myDrivers.map(d => d.id));
-  const onlineDrivers = allOnline.filter(d => myDriverIds.has(d.id));
-  const busyDrivers = allBusy.filter(d => myDriverIds.has(d.id));
-  const offlineDrivers = allOffline.filter(d => myDriverIds.has(d.id));
+  // Live driver data from backend (filtered to this hospital)
+  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
@@ -371,7 +364,7 @@ export function HospitalDashboard() {
                   {[...onlineDrivers, ...busyDrivers, ...offlineDrivers].map((driver) => (
                     <div
                       key={driver.id}
-                      className="p-4 hover:bg-accent transition-colors"
+                      className="p-4 hover:bg-accent transition-colors cursor-pointer"
                       onClick={() => {
                         setMapView("map");
                         setTrackedDriverTrigger({ id: driver.id, timestamp: Date.now() });
@@ -379,15 +372,18 @@ export function HospitalDashboard() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`w-3 h-3 ${getStatusColor(driver.status)} rounded-full`}
-                          ></div>
+                          <div className="relative">
+                            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center border border-border">
+                              <User size={18} className="text-muted-foreground" />
+                            </div>
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${getStatusColor(driver.status)} border-2 border-background rounded-full`}></div>
+                          </div>
                           <div>
-                            <p className="text-foreground text-sm font-mono truncate max-w-[150px]">
-                              {driver.id}
+                            <p className="text-foreground text-sm font-semibold truncate max-w-[180px]">
+                              {driver.driverName || 'Unknown Driver'}
                             </p>
-                            <p className="text-muted-foreground text-xs">
-                              {driver.driverName}
+                            <p className="text-muted-foreground text-xs font-mono">
+                              {driver.id}
                             </p>
                           </div>
                         </div>

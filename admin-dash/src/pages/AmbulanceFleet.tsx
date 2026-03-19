@@ -305,7 +305,7 @@ export function AmbulanceFleet() {
       setShowAddModal(false);
       setAddForm({
         id: '', driver: '', driverGender: 'Male', attendant: '', attendantGender: 'Male',
-        location: 'City General Hospital', equipment: [], hasDoctor: false, hasVentilator: false,
+        location: '', equipment: [], hasDoctor: false, hasVentilator: false,
         year: new Date().getFullYear(),
       });
     } catch {
