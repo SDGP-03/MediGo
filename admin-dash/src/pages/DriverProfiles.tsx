@@ -363,6 +363,7 @@ function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
         if (!form.email.includes('@')) e.email = 'Invalid email';
         if (!form.licenseNumber.trim()) e.licenseNumber = 'Required';
         if (!form.licenseExpiry) e.licenseExpiry = 'Required';
+        if (!form.baseSalary || isNaN(Number(form.baseSalary))) e.baseSalary = 'Enter a valid number';
         return e;
     };
 
@@ -447,6 +448,18 @@ function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
                                 </select>
                             </div>
                             <Field label="Assigned Ambulance" icon={<Car size={14} />} value={form.assignedAmbulance} onChange={v => set('assignedAmbulance', v)} />
+                        </div>
+                    </div>
+                    {/* Salary */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-3">
+                            <TrendingUp size={15} className="text-red-500" />
+                            <h3 className="text-foreground text-sm font-medium">Salary Configuration</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <Field label="Base Monthly Salary (LKR) *" type="number" value={form.baseSalary} onChange={v => set('baseSalary', v)} error={errors.baseSalary} />
+                            <Field label="Overtime Rate/Hour" type="number" value={form.overtimeRate} onChange={v => set('overtimeRate', v)} />
+                            <Field label="Per Trip Bonus (LKR)" type="number" value={form.tripsBonus} onChange={v => set('tripsBonus', v)} />
                         </div>
                     </div>
                     {/* Attendance & Performance */}
