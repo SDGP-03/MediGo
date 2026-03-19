@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, database } from '../firebase';
 import { ref, onValue, off, push, update, remove, set } from 'firebase/database';
+import { apiPost } from '../api/apiClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,9 +152,8 @@ export function useFleetData(): UseFleetDataReturn {
     // ── Helpers ──
 
     const addAmbulance = useCallback(async (unit: AmbulanceUnit) => {
-        if (!uid) return;
-        await set(ref(database, `hospitals/${uid}/ambulances/${unit.id}`), unit);
-    }, [uid]);
+        await apiPost('/fleet/ambulances', unit);
+    }, []);
 
     const updateAmbulance = useCallback(async (id: string, changes: Partial<AmbulanceUnit>) => {
         if (!uid) return;

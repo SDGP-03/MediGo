@@ -251,9 +251,28 @@ export class FleetService {
     // ── Ambulance CRUD ──
 
     async addAmbulance(uid: string, unit: any): Promise<void> {
+        // 1. Get hospital/admin name to use as default location
+        const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
+        const hospitalName = adminSnap.exists() ? adminSnap.val().hospitalName : 'General Hospital';
+
+        // 2. Prepare the unit with defaults
+        const newUnit = {
+            ...unit,
+            location: unit.location || hospitalName,
+            driver: unit.driver || 'Not Assigned',
+            driverGender: unit.driver ? unit.driverGender : 'N/A',
+            status: unit.status || 'available',
+            mileage: unit.mileage || 0,
+            lastService: unit.lastService || new Date().toISOString().slice(0, 10),
+            equipment: unit.equipment || [],
+        };
+
+        // 3. Save to Firebase
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${unit.id}`)
-            .set(unit);
+            .ref(`hospitals/${uid}/ambulances/${newUnit.id}`)
+            .set(newUnit);
+        
+        this.logger.log(`Ambulance ${newUnit.id} added for hospital ${uid} (Default Location: ${hospitalName})`);
     }
 
     async updateAmbulance(uid: string, id: string, changes: any): Promise<void> {
