@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ambulance, Clock, Users, AlertCircle, TrendingUp, MapPin, Layers, List, Plus, Minus, Navigation, Maximize2, AlertTriangle, Wrench, Activity, CheckCircle, User, ArrowRightLeft } from "lucide-react";
+import { Ambulance, Clock, Users, AlertCircle, MapPin, Layers, List, Plus, Minus, Activity, CheckCircle, User, ArrowRightLeft, BedDouble, Stethoscope, Droplets, ScanLine, UserCheck, Wind } from "lucide-react";
 import { Switch } from "../components/ui/switch";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
@@ -12,17 +12,91 @@ export function HospitalDashboard() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
   // --- STATE: RESOURCE AVAILABILITY ---
-  const [resources, setResources] = useState([
-    { id: 'icu', name: 'ICU Bed Availability', available: false },
-    { id: 'nicu', name: 'NICU Bed Availability', available: false },
-    { id: 'picu', name: 'PICU Bed Availability', available: false },
-    { id: 'med_surg', name: 'Med/Surg Bed Availability', available: false },
-    { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
-    { id: 'er', name: 'Emergency Room Availability', available: false },
+  const [resourceGroups, setResourceGroups] = useState([
+    {
+      id: 'beds',
+      label: 'Beds & Units',
+      Icon: BedDouble,
+      color: 'blue' as const,
+      items: [
+        { id: 'icu',       name: 'ICU',            available: false },
+        { id: 'nicu',      name: 'NICU',           available: false },
+        { id: 'picu',      name: 'PICU',           available: false },
+        { id: 'med_surg',  name: 'Med / Surg',     available: false },
+        { id: 'telemetry', name: 'Telemetry',      available: false },
+        { id: 'er',        name: 'Emergency Room', available: false },
+      ],
+    },
+    {
+      id: 'specialty',
+      label: 'Specialty Units',
+      Icon: Stethoscope,
+      color: 'purple' as const,
+      items: [
+        { id: 'ot',        name: 'Operating Theatre (OT)', available: false },
+        { id: 'cath_lab',  name: 'Cath Lab',               available: false },
+        { id: 'stroke',    name: 'Stroke / Neuro-ICU',     available: false },
+        { id: 'isolation', name: 'Isolation Room',         available: false },
+        { id: 'burns',     name: 'Burns Unit',             available: false },
+      ],
+    },
+    {
+      id: 'supplies',
+      label: 'Critical Supplies',
+      Icon: Droplets,
+      color: 'red' as const,
+      items: [
+        { id: 'blood_o_neg', name: 'Blood Bank (O−neg)', available: false },
+        { id: 'platelets',   name: 'Platelets',          available: false },
+        { id: 'plasma',      name: 'Fresh Frozen Plasma', available: false },
+      ],
+    },
+    {
+      id: 'diagnostics',
+      label: 'Diagnostics',
+      Icon: ScanLine,
+      color: 'teal' as const,
+      items: [
+        { id: 'ct',  name: 'CT Scanner',  available: false },
+        { id: 'mri', name: 'MRI',         available: false },
+        { id: 'lab', name: 'Lab / Path',  available: false },
+      ],
+    },
+    {
+      id: 'staff',
+      label: 'Staff & Personnel',
+      Icon: UserCheck,
+      color: 'orange' as const,
+      items: [
+        { id: 'cardiologist',    name: 'On-call Cardiologist',  available: false },
+        { id: 'neurosurgeon',    name: 'On-call Neurosurgeon',  available: false },
+        { id: 'trauma_team',     name: 'Trauma Team Ready',     available: false },
+        { id: 'anesthesiologist',name: 'Anesthesiologist',      available: false },
+      ],
+    },
   ]);
 
-  const toggleResource = (id: string) => {
-    setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
+  // Ventilator stepper (separate countable resource)
+  const [ventilatorsAvailable, setVentilatorsAvailable] = useState(4);
+  const [ventilatorsTotal] = useState(12);
+
+  const toggleItem = (groupId: string, itemId: string) => {
+    setResourceGroups(groups =>
+      groups.map(g =>
+        g.id === groupId
+          ? { ...g, items: g.items.map(item => item.id === itemId ? { ...item, available: !item.available } : item) }
+          : g
+      )
+    );
+  };
+
+  // Colour palette per category
+  const colorMap = {
+    blue:   { header: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800', icon: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', dot: 'bg-blue-500' },
+    purple: { header: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800', icon: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', dot: 'bg-purple-500' },
+    red:    { header: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800', icon: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400', badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', dot: 'bg-red-500' },
+    teal:   { header: 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800', icon: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400', badge: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300', dot: 'bg-teal-500' },
+    orange: { header: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800', icon: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300', dot: 'bg-orange-500' },
   };
 
   // Live driver data from Firebase
@@ -806,57 +880,128 @@ export function HospitalDashboard() {
         </div>
 
         {/* --- SECTION: RESOURCE AVAILABILITY --- */}
-        {/* Checklist for hospital resource availability */}
         <div id="resource-availability" className="bg-card rounded-lg shadow-sm border border-border p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {resourceGroups.reduce((acc, g) => acc + g.items.filter(i => i.available).length, 0)}
+                  {' '}of{' '}
+                  {resourceGroups.reduce((acc, g) => acc + g.items.length, 0) + 1} resources available
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
+            {/* Overall health dot */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </div>
           </div>
-          <div className="space-y-3">
-            {resources.map((resource) => (
-              <div
-                key={resource.id}
-                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${resource.available
-                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-200 dark:hover:border-emerald-800'
-                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-200 dark:hover:border-red-800'
-                  }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-2.5 rounded-xl shadow-sm transition-colors ${resource.available
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                      }`}
-                  >
-                    {resource.available ? <CheckCircle size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h4 className="font-semibold text-foreground text-sm tracking-tight">{resource.name}</h4>
-                    <div className="flex">
-                      <span
-                        className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full ${resource.available
-                          ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
-                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900'
-                          }`}
-                      >
-                        {resource.available ? 'Available' : 'Unavailable'}
-                      </span>
+
+          {/* Category Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {resourceGroups.map(group => {
+              const colors = colorMap[group.color];
+              const availableCount = group.items.filter(i => i.available).length;
+              const GroupIcon = group.Icon;
+              return (
+                <div key={group.id} className="rounded-xl border border-border overflow-hidden">
+                  {/* Card Header */}
+                  <div className={`flex items-center justify-between px-4 py-3 border-b ${colors.header}`}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={`p-1.5 rounded-lg ${colors.icon}`}>
+                        <GroupIcon size={15} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">{group.label}</span>
                     </div>
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${colors.badge}`}>
+                      {availableCount}/{group.items.length} available
+                    </span>
+                  </div>
+
+                  {/* Toggle Rows */}
+                  <div className="divide-y divide-border">
+                    {group.items.map(item => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-accent transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.available ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                          <span className="text-sm text-foreground">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${
+                            item.available
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
+                              : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                          }`}>
+                            {item.available ? 'Available' : 'Unavailable'}
+                          </span>
+                          <Switch
+                            checked={item.available}
+                            onCheckedChange={() => toggleItem(group.id, item.id)}
+                            className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-400 scale-95"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+              );
+            })}
 
+            {/* Ventilator Stepper Card */}
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className={`flex items-center justify-between px-4 py-3 border-b bg-slate-50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    <Wind size={15} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">Ventilators</span>
+                </div>
+                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                  ventilatorsAvailable > 0
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                }`}>
+                  {ventilatorsAvailable}/{ventilatorsTotal} available
+                </span>
+              </div>
+              <div className="px-4 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`h-8 w-[1px] ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'}`}></div>
-                  <Switch
-                    checked={resource.available}
-                    onCheckedChange={() => toggleResource(resource.id)}
-                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-110 shadow-sm"
-                  />
+                  <div className={`w-2 h-2 rounded-full ${ventilatorsAvailable > 0 ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                  <div>
+                    <p className="text-sm text-foreground font-medium">Available Units</p>
+                    <p className="text-xs text-muted-foreground">Total fleet: {ventilatorsTotal}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setVentilatorsAvailable(v => Math.max(0, v - 1))}
+                    className="w-8 h-8 rounded-lg border border-border hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className={`text-2xl font-bold w-10 text-center ${
+                    ventilatorsAvailable === 0 ? 'text-red-500' : ventilatorsAvailable <= 2 ? 'text-orange-500' : 'text-emerald-600'
+                  }`}>
+                    {ventilatorsAvailable}
+                  </span>
+                  <button
+                    onClick={() => setVentilatorsAvailable(v => Math.min(ventilatorsTotal, v + 1))}
+                    className="w-8 h-8 rounded-lg border border-border hover:bg-accent flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Plus size={14} />
+                  </button>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>
