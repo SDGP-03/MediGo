@@ -39,10 +39,18 @@ export async function apiFetch<T = any>(
         throw new Error(error.message || `API Error: ${response.status}`);
     }
 
-    // Handle empty responses (204 No Content)
+    // Handle empty responses (204 No Content or empty 200 OK)
     if (response.status === 204) return undefined as T;
 
-    return response.json();
+    const text = await response.text();
+    if (!text) return undefined as T;
+
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        console.error('[API] Failed to parse JSON:', text, err);
+        return text as any;
+    }
 }
 
 /** Convenience POST */

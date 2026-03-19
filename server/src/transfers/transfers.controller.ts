@@ -8,6 +8,7 @@ import {
     Sse,
     UseGuards,
     NotFoundException,
+    HttpCode,
 } from '@nestjs/common';
 import { TransfersService } from './transfers.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -42,6 +43,7 @@ export class TransfersController {
 
     /** Cancel a transfer request */
     @Patch(':id/cancel')
+    @HttpCode(204)
     async cancelTransfer(@Param('id') id: string) {
         return this.transfersService.cancelTransfer(id);
     }
