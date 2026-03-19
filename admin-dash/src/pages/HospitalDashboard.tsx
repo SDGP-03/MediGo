@@ -31,8 +31,8 @@ import { useDriverLocations } from "../useDriverLocations";
 import { apiFetch } from "../api/apiClient";
 import { database, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, off, get } from "firebase/database";
-
+import { ref, onValue, off, get, set } from "firebase/database";
+import { useFleetData } from "../hooks/useFleetData";
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
@@ -96,8 +96,14 @@ export function HospitalDashboard() {
     { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
-  const toggleResource = (id: string) => {
-    setResources(resources.map(r => r.id === id ? { ...r, available: !r.available } : r));
+  const toggleResource = async (id: string) => {
+    const updatedResources = resources.map(r => r.id === id ? { ...r, available: !r.available } : r);
+    setResources(updatedResources); // Optimistic UI
+    
+    if (auth.currentUser) {
+      const resourcesRef = ref(database, `hospitals/${auth.currentUser.uid}/resources`);
+      await set(resourcesRef, updatedResources);
+    }
   };
 
   const handleCancelRequest = async (requestId: string) => {
@@ -122,6 +128,8 @@ export function HospitalDashboard() {
   const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
 
   useEffect(() => {
+    let resourcesUnsub: () => void = () => {};
+
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         try {
@@ -131,17 +139,37 @@ export function HospitalDashboard() {
             const data = snapshot.val();
             setCurrentHospitalName(data.hospitalName || "");
           }
+          
+          // Fetch resources
+          const resourcesRef = ref(database, `hospitals/${user.uid}/resources`);
+          const unsubRes = onValue(resourcesRef, (resSnapshot) => {
+            if (resSnapshot.exists()) {
+              setResources(resSnapshot.val());
+            }
+          });
+          resourcesUnsub = () => off(resourcesRef, 'value', unsubRes);
+
         } catch (err) {
           console.error("Error fetching admin profile:", err);
         }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      resourcesUnsub();
+    };
   }, []);
 
   // Live driver data from Firebase
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const { onlineDrivers: allOnline, busyDrivers: allBusy, offlineDrivers: allOffline, isLoading: driversLoading } = useDriverLocations();
+  const { drivers: myDrivers } = useFleetData();
+  
+  // Filter live drivers to only those belonging to this hospital
+  const myDriverIds = new Set(myDrivers.map(d => d.id));
+  const onlineDrivers = allOnline.filter(d => myDriverIds.has(d.id));
+  const busyDrivers = allBusy.filter(d => myDriverIds.has(d.id));
+  const offlineDrivers = allOffline.filter(d => myDriverIds.has(d.id));
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
@@ -244,109 +272,8 @@ export function HospitalDashboard() {
 
 
 
-  const ambulances = [
-    {
-      id: "AMB-001",
-      status: "available",
-      driver: "John Smith",
-      location: "City General Hospital",
-      lat: 6.9271,
-      lng: 79.8612,
-      position: { left: "25%", top: "33%" },
-    },
-    {
-      id: "AMB-003",
-      status: "available",
-      driver: "Mike Chen",
-      location: "Divisional Hospital North",
-      lat: 6.9350,
-      lng: 79.8700,
-      position: { left: "33%", bottom: "33%" },
-    },
-    {
-      id: "AMB-005",
-      status: "available",
-      driver: "Emily Davis",
-      location: "City General Hospital",
-      lat: 6.9200,
-      lng: 79.8500,
-      position: { left: "66%", top: "25%" },
-    },
-    {
-      id: "AMB-002",
-      status: "on_way",
-      driver: "Sarah Lee",
-      location: "En route to Central Medical",
-      eta: "12 mins",
-      lat: 6.9150,
-      lng: 79.8550,
-      position: { right: "33%", top: "25%" },
-    },
-    {
-      id: "AMB-006",
-      status: "on_way",
-      driver: "Robert Taylor",
-      location: "En route to Regional Base",
-      eta: "18 mins",
-      lat: 6.9400,
-      lng: 79.8750,
-      position: { right: "25%", bottom: "25%" },
-    },
-    {
-      id: "AMB-007",
-      status: "busy",
-      driver: "Jennifer White",
-      location: "At Central Medical Center",
-      lat: 6.9100,
-      lng: 79.8600,
-      position: { left: "50%", top: "25%" },
-    },
-    {
-      id: "AMB-008",
-      status: "busy",
-      driver: "Chris Johnson",
-      location: "At Specialist Hospital",
-      lat: 6.9300,
-      lng: 79.8650,
-      position: { right: "33%", bottom: "33%" },
-    },
-    {
-      id: "AMB-009",
-      status: "standby",
-      driver: "David Brown",
-      location: "Base Station A",
-      lat: 6.9250,
-      lng: 79.8620,
-      position: { left: "40%", top: "50%" },
-    },
-    {
-      id: "AMB-010",
-      status: "standby",
-      driver: "Lisa Anderson",
-      location: "Base Station B",
-      lat: 6.9280,
-      lng: 79.8630,
-      position: { right: "40%", bottom: "40%" },
-    },
-    {
-      id: "AMB-004",
-      status: "offline",
-      driver: "David Kumar",
-      location: "Service Center",
-      lat: 6.9000,
-      lng: 79.9000,
-      position: { right: "20%", top: "40%" },
-    },
-    {
-      id: "AMB-011",
-      status: "offline",
-      driver: "James Wilson",
-      location: "Maintenance Bay",
-      lat: 6.9500,
-      lng: 79.8800,
-      position: { left: "60%", bottom: "20%" },
-    },
-  ];
+  // Hardcoded ambulances array was removed. 
+  // We use live driver data instead.
 
   const liveDriverCount = onlineDrivers.length + busyDrivers.length + offlineDrivers.length;
   const statusCounts = {
