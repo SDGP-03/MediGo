@@ -1,15 +1,96 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Ambulance, Clock, Users, AlertCircle, MapPin, Layers, List, Plus, Minus, Activity, CheckCircle, User, ArrowRightLeft, BedDouble, Stethoscope, Droplets, ScanLine, UserCheck, Wind } from "lucide-react";
+import {
+  Ambulance,
+  Clock,
+  Users,
+  AlertCircle,
+  TrendingUp,
+  MapPin,
+  Layers,
+  List,
+  Plus,
+  Minus,
+  Navigation,
+  Maximize2,
+  AlertTriangle,
+  Wrench,
+  Activity,
+  CheckCircle,
+  User,
+  ArrowRightLeft,
+  Phone,
+  Mail,
+  Shield,
+  Car,
+  BedDouble,
+  Stethoscope,
+  Droplets,
+  ScanLine,
+  UserCheck,
+  Wind
+} from "lucide-react";
 import { Switch } from "../components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
 import { useDriverLocations } from "../useDriverLocations";
+import { apiFetch } from "../api/apiClient";
+import { database, auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { ref, onValue, off, get } from "firebase/database";
 
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
   const [mapView, setMapView] = useState<"map" | "list">("map");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+
+  // --- STATE: DRIVER INFO POPUP ---
+  const [driverPopupOpen, setDriverPopupOpen] = useState(false);
+  const [driverPopupData, setDriverPopupData] = useState<any>(null);
+  const [driverPopupLoading, setDriverPopupLoading] = useState(false);
+
+  const viewDriverDetails = async (driverId: string) => {
+    if (!driverId || driverId === 'Unknown') {
+      alert('No driver assigned to this request.');
+      return;
+    }
+    setDriverPopupOpen(true);
+    setDriverPopupLoading(true);
+    setDriverPopupData(null);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+
+      const driverRef = ref(database, `hospitals/${user.uid}/drivers/${driverId}`);
+      const snapshot = await get(driverRef);
+
+      if (snapshot.exists()) {
+        setDriverPopupData({ id: driverId, ...snapshot.val() });
+      } else {
+        setDriverPopupData({ id: driverId, notFound: true });
+      }
+    } catch (err: any) {
+      console.error('Error fetching driver details from Firebase:', err);
+      setDriverPopupData({ id: driverId, error: true });
+    } finally {
+      setDriverPopupLoading(false);
+    }
+  };
+
+  const handleTrackLive = (transfer: any) => {
+    if (!transfer.driverId) {
+      alert("No driver assigned to this transfer yet.");
+      return;
+    }
+    setMapView("map");
+    setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() });
+
+    setTimeout(() => {
+      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
 
   // --- STATE: RESOURCE AVAILABILITY ---
   const [resourceGroups, setResourceGroups] = useState([
@@ -47,7 +128,7 @@ export function HospitalDashboard() {
       color: 'red' as const,
       items: [
         { id: 'blood_o_neg', name: 'Blood Bank (O−neg)', available: false },
-        { id: 'platelets',   name: 'Platelets',          available: false },
+        { id: 'platelets',   name: 'Platelets',           available: false },
         { id: 'plasma',      name: 'Fresh Frozen Plasma', available: false },
       ],
     },
@@ -57,9 +138,9 @@ export function HospitalDashboard() {
       Icon: ScanLine,
       color: 'teal' as const,
       items: [
-        { id: 'ct',  name: 'CT Scanner',  available: false },
-        { id: 'mri', name: 'MRI',         available: false },
-        { id: 'lab', name: 'Lab / Path',  available: false },
+        { id: 'ct',  name: 'CT Scanner', available: false },
+        { id: 'mri', name: 'MRI',        available: false },
+        { id: 'lab', name: 'Lab / Path', available: false },
       ],
     },
     {
@@ -68,10 +149,10 @@ export function HospitalDashboard() {
       Icon: UserCheck,
       color: 'orange' as const,
       items: [
-        { id: 'cardiologist',    name: 'On-call Cardiologist',  available: false },
-        { id: 'neurosurgeon',    name: 'On-call Neurosurgeon',  available: false },
-        { id: 'trauma_team',     name: 'Trauma Team Ready',     available: false },
-        { id: 'anesthesiologist',name: 'Anesthesiologist',      available: false },
+        { id: 'cardiologist',     name: 'On-call Cardiologist',  available: false },
+        { id: 'neurosurgeon',     name: 'On-call Neurosurgeon',  available: false },
+        { id: 'trauma_team',      name: 'Trauma Team Ready',     available: false },
+        { id: 'anesthesiologist', name: 'Anesthesiologist',      available: false },
       ],
     },
   ]);
@@ -92,15 +173,101 @@ export function HospitalDashboard() {
 
   // Colour palette per category
   const colorMap = {
-    blue:   { header: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800', icon: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', dot: 'bg-blue-500' },
-    purple: { header: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800', icon: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', dot: 'bg-purple-500' },
-    red:    { header: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800', icon: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400', badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', dot: 'bg-red-500' },
-    teal:   { header: 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800', icon: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400', badge: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300', dot: 'bg-teal-500' },
-    orange: { header: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800', icon: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300', dot: 'bg-orange-500' },
+    blue:   { header: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',     icon: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400',     badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+    purple: { header: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800', icon: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+    red:    { header: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',         icon: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400',         badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+    teal:   { header: 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800',     icon: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400',     badge: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300' },
+    orange: { header: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800', icon: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400', badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
   };
 
+  const handleCancelRequest = async (requestId: string) => {
+    if (!requestId) return;
+
+    if (window.confirm("Are you sure you want to cancel this transfer request?")) {
+      try {
+        await apiFetch(`/transfers/${requestId}/cancel`, {
+          method: 'PATCH'
+        });
+        // Optimistic UI update: Remove from local state immediately
+        setDbPendingRequests(prev => prev.filter(req => req.id !== requestId));
+        setDbActiveTransfers(prev => prev.filter(req => req.id !== requestId));
+      } catch (error) {
+        console.error("Error cancelling request:", error);
+        alert("Failed to cancel request. Please try again.");
+      }
+    }
+  };
+
+  // --- STATE: HOSPITAL PROFILE ---
+  const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const adminRef = ref(database, `admin/${user.uid}`);
+          const snapshot = await get(adminRef);
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            setCurrentHospitalName(data.hospitalName || "");
+          }
+        } catch (err) {
+          console.error("Error fetching admin profile:", err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Live driver data from Firebase
-  const { onlineDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+
+  const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
+  const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const transfersRef = ref(database, 'transfer_requests');
+
+    const unsub = onValue(transfersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+
+      // Filter pending requests:
+      // 1. 'pending' (waiting for admin to assign driver)
+      // 2. 'dispatched' (waiting for driver to accept)
+      const pending = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
+        (t.status === 'pending' || t.status === 'dispatched') &&
+        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName)
+      );
+
+      // Active transfers: Driver has accepted and is on the move
+      const active = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
+        (t.status === 'on_way' ||
+          t.status === 'at_pickup' ||
+          t.status === 'patient_loaded' ||
+          t.status === 'in_transit' ||
+          t.status === 'arrived_at_destination')
+      );
+
+      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}`);
+      if (allTransfers.length > 0) {
+        const sample = allTransfers[allTransfers.length - 1]; // look at newest
+        console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
+      }
+
+      setDbPendingRequests(pending);
+      setDbActiveTransfers(active);
+    }, (err) => {
+      console.error('[Dashboard] Firebase transfers error:', err);
+    });
+
+    return () => off(transfersRef, 'value', unsub);
+  }, [currentHospitalName]);
 
   // --- DATA: INCOMING EMERGENCIES ---
   const incomingRequests = [
@@ -261,86 +428,17 @@ export function HospitalDashboard() {
     },
   ];
 
-  const liveDriverCount = onlineDrivers.length + offlineDrivers.length;
+  const liveDriverCount = onlineDrivers.length + busyDrivers.length + offlineDrivers.length;
   const statusCounts = {
     available: onlineDrivers.length,
-    busy: ambulances.filter(a => a.status === 'busy').length,
+    busy: busyDrivers.length,
     offline: offlineDrivers.length,
     total: liveDriverCount > 0 ? liveDriverCount : ambulances.length,
   };
 
-  const activeTransfers = [
-    {
-      id: "TR-2401",
-      patient: "Sarah Johnson",
-      age: 45,
-      gender: "Female",
-      from: "City General Hospital",
-      to: "Central Medical Center",
-      ambulance: "AMB-003",
-      driver: "Mike Chen",
-      attendant: "Lisa Brown (F)",
-      status: "in_transit",
-      eta: "12 mins",
-      distance: 8.5,
-      priority: "urgent",
-    },
-    {
-      id: "TR-2402",
-      patient: "David Miller",
-      age: 62,
-      gender: "Male",
-      from: "Divisional Hospital North",
-      to: "City General Hospital",
-      ambulance: "AMB-007",
-      driver: "John Smith",
-      attendant: "Tom Wilson (M)",
-      status: "patient_loaded",
-      eta: "18 mins",
-      distance: 12.3,
-      priority: "critical",
-    },
-    {
-      id: "TR-2403",
-      patient: "Emma Davis",
-      age: 28,
-      gender: "Female",
-      from: "City General Hospital",
-      to: "Specialist Care Hospital",
-      ambulance: "AMB-011",
-      driver: "Sarah Lee",
-      attendant: "Maria Garcia (F)",
-      status: "dispatched",
-      eta: "25 mins",
-      distance: 15.7,
-      priority: "standard",
-    },
-  ];
+  const activeTransfers = dbActiveTransfers.length > 0 ? dbActiveTransfers : [];
 
-  const pendingRequests = [
-    {
-      id: "REQ-1024",
-      patient: "Robert Taylor",
-      age: 55,
-      gender: "Male",
-      from: "Divisional Hospital East",
-      to: "City General Hospital",
-      priority: "urgent",
-      requestedBy: "Dr. Anderson",
-      time: "5 mins ago",
-    },
-    {
-      id: "REQ-1025",
-      patient: "Jennifer White",
-      age: 38,
-      gender: "Female",
-      from: "Rural Health Center",
-      to: "Central Medical Center",
-      priority: "standard",
-      requestedBy: "Dr. Martinez",
-      time: "12 mins ago",
-    },
-  ];
+  const pendingRequests = dbPendingRequests.length > 0 ? dbPendingRequests : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -392,13 +490,13 @@ export function HospitalDashboard() {
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
               onClick={() => setMapView("map")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
               <Layers size={18} />
             </button>
             <button
               onClick={() => setMapView("list")}
-              className={`p-2 rounded-lg transition-colors ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"}`}
+              className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
               <List size={18} />
             </button>
@@ -406,7 +504,7 @@ export function HospitalDashboard() {
         </div>
 
         <div className="flex flex-col lg:flex-row">
-          {/* Map / List Area */}
+          {/* Map/List Area */}
           <div className="flex-1 min-w-0">
             {mapView === "map" && (
               <AmbulanceMap ambulances={ambulances.map(amb => ({
@@ -418,12 +516,17 @@ export function HospitalDashboard() {
                 lat: amb.lat,
                 lng: amb.lng,
               }))}
+                activeTransfers={dbActiveTransfers}
+                onlineDrivers={onlineDrivers}
+                busyDrivers={busyDrivers}
+                offlineDrivers={offlineDrivers}
                 height="650px"
+                trackedDriverTrigger={trackedDriverTrigger}
               />
             )}
 
             {mapView === "list" && (
-              <div className="h-162m overflow-y-auto">
+              <div className="h-[650px] overflow-y-auto">
                 <div className="divide-y divide-border">
                   {ambulances.map((amb) => (
                     <div
@@ -462,8 +565,8 @@ export function HospitalDashboard() {
             )}
           </div>
 
-          {/* Fleet Overview Sidebar — Map Key */}
-          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group/sidebar">
+          {/* Fleet Overview Sidebar ΓÇö Map Key */}
+          <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 shadow-xl overflow-hidden group/sidebar">
             {/* Simple glow effect */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-blue-500/20 transition-all duration-700" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-purple-500/20 transition-all duration-700" />
@@ -529,7 +632,7 @@ export function HospitalDashboard() {
               </h3>
               <p className="text-red-400 text-sm">
                 {pendingRequests.length} requests waiting for
-                ambulance assignment
+                driver acceptance
               </p>
             </div>
           </div>
@@ -621,191 +724,194 @@ export function HospitalDashboard() {
             <h2 className="text-lg font-bold text-foreground">Active Transfers</h2>
           </div>
           <div className="divide-y divide-border">
-            {activeTransfers.map((transfer) => (
-              <div
-                key={transfer.id}
-                className="p-6 hover:bg-accent transition-colors"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-foreground">
-                        {transfer.patient}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(transfer.priority)}`}
-                      >
-                        {transfer.priority.toUpperCase()}
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs ${getStatusColor(transfer.status)}`}
-                      >
-                        {transfer.status
-                          .replace("_", " ")
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground text-sm mb-3">
-                      {transfer.age} yrs • {transfer.gender} •
-                      Transfer ID: {transfer.id}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      FROM
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {transfer.from}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      TO
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {transfer.to}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      ETA
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Clock
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <p className="text-foreground text-sm">
-                        {transfer.eta}
+            {activeTransfers.length === 0 ? (
+              <div className="p-8 text-center bg-muted/20">
+                <p className="text-muted-foreground italic">No active transfers at this moment.</p>
+              </div>
+            ) : (
+              activeTransfers.map((transfer) => (
+                <div
+                  key={transfer.id}
+                  className="p-6 hover:bg-accent/30 transition-all duration-300"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-foreground">
+                          {typeof transfer.patient === 'object' ? transfer.patient.name : transfer.patient}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase tracking-wider ${getPriorityColor(transfer.priority)} `}
+                        >
+                          {transfer.priority}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(transfer.status)} `}
+                        >
+                          {transfer.status?.replace("_", " ").toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        ID: <span className="text-foreground/70 font-mono">{transfer.id}</span> ΓÇó {transfer.patient?.age || transfer.age}y ΓÇó {transfer.patient?.gender || transfer.gender}
                       </p>
                     </div>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Ambulance
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.ambulance}
-                      </span>
+                    <button
+                      onClick={() => handleTrackLive(transfer)}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 active:scale-95 transition-all font-semibold text-sm cursor-pointer whitespace-nowrap self-start md:self-center"
+                    >
+                      <Navigation size={18} fill="currentColor" />
+                      Track Live
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-accent/30 rounded-xl border border-border/50">
+                    <div className="relative pl-6 border-l-2 border-emerald-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Pickup</p>
+                      <p className="text-foreground font-semibold text-sm">{transfer.pickup?.hospitalName || transfer.from}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Users
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.driver}
-                      </span>
+                    <div className="relative pl-6 border-l-2 border-red-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Destination</p>
+                      <p className="text-foreground font-semibold text-sm">{transfer.destination?.hospitalName || transfer.to}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Users
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.attendant}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin
-                        size={16}
-                        className="text-gray-400"
-                      />
-                      <span className="text-muted-foreground">
-                        {transfer.distance} km
-                      </span>
+                    <div className="relative pl-6 border-l-2 border-blue-500">
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">ETA Status</p>
+                      <div className="flex items-center gap-2">
+                        <Clock size={16} className="text-blue-500" />
+                        <p className="text-blue-600 dark:text-blue-400 font-bold">{transfer.eta || 'Calculating...'}</p>
+                      </div>
                     </div>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Track Live
-                  </button>
+
+                  <div className="flex flex-wrap items-center gap-y-3 gap-x-6 pt-4 border-t border-border/40">
+                    <div className="flex items-center gap-2 text-sm text-foreground/80">
+                      <Ambulance size={16} className="text-muted-foreground" />
+                      <span className="font-medium">{transfer.ambulance || 'Unit Assigned'}</span>
+                    </div>
+                    <div
+                      className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md transition-colors"
+                      onClick={() => viewDriverDetails(transfer.driverId)}
+                    >
+                      <Users size={16} />
+                      <span className="font-bold underline underline-offset-4">{transfer.driverName || transfer.driver}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-foreground/80">
+                      <Shield size={16} className="text-muted-foreground" />
+                      <span className="font-medium text-xs">Attendant: {transfer.attendant || 'Assigned'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-foreground/80 ml-auto">
+                      <MapPin size={16} className="text-muted-foreground" />
+                      <span className="text-xs font-bold">{transfer.distance || '--'} km</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {/* --- SECTION: PENDING REQUESTS --- */}
-        {/* Transfer requests waiting for assignment */}
-        <div id="pending-requests" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
-          <div className="p-4 border-b border-border flex items-center gap-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <h2 className="text-lg font-bold text-foreground">
-              Pending Transfer Requests
-            </h2>
-          </div>
-          <div className=" divide-y divide-border">
-            {pendingRequests.map((request) => (
-              <div
-                key={request.id}
-                className=" p-6 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-foreground">
-                        {request.patient}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs text-white ${getPriorityColor(request.priority)}`}
-                      >
-                        {request.priority.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {request.age} yrs • {request.gender} •{" "}
-                      {request.id}
-                    </p>
-                  </div>
-                  <span className="text-muted-foreground text-sm">
-                    {request.time}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      FROM
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {request.from}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-xs mb-1">
-                      TO
-                    </p>
-                    <p className="text-foreground text-sm">
-                      {request.to}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <p className="text-muted-foreground text-sm">
-                    Requested by:{" "}
-                    <span className="text-foreground">
-                      {request.requestedBy}
-                    </span>
-                  </p>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                    Assign Ambulance
-                  </button>
-                </div>
+        {/* Transfer requests waiting for assignment or driver acceptance */}
+        <div id="pending-requests" className="overflow-hidden bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-border">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
-            ))}
+              <h2 className="text-lg font-bold text-foreground">Pending Requests</h2>
+            </div>
+            {pendingRequests.length > 0 && (
+              <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg animate-pulse">
+                ACTION REQUIRED
+              </span>
+            )}
+          </div>
+          <div className="divide-y divide-border">
+            {pendingRequests.length === 0 ? (
+              <div className="p-8 text-center">
+                <CheckCircle className="mx-auto text-emerald-500 mb-2 opacity-20" size={48} />
+                <p className="text-muted-foreground italic">No pending requests to accept.</p>
+              </div>
+            ) : (
+              pendingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="p-6 hover:bg-orange-50/30 dark:hover:bg-orange-950/10 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="text-foreground font-bold">
+                          {typeof request.patient === 'object' ? request.patient.name : request.patient}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase ${getPriorityColor(request.priority)} `}>
+                          {request.priority}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs font-medium uppercase tracking-tight">
+                        Awaiting {request.status === 'dispatched' ? 'Driver Acceptance' : 'Admin Assignment'}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground text-xs font-mono bg-accent px-2 py-1 rounded">
+                      {request.id}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-950/50">
+                      <p className="text-orange-900/40 dark:text-orange-400/40 text-[9px] uppercase font-bold mb-1">Pickup Point</p>
+                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.pickup?.hospitalName || request.from}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-950/50">
+                      <p className="text-red-900/40 dark:text-red-400/40 text-[9px] uppercase font-bold mb-1">Requested Destination</p>
+                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.destination?.hospitalName || request.to}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+                          <User size={14} className="text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold leading-none">Requested By</p>
+                          <p className="text-foreground text-xs font-semibold">{request.requestedBy || 'Staff'}</p>
+                        </div>
+                      </div>
+                      {request.driverId && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                            <Car size={14} className="text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-500 uppercase font-bold leading-none">Assigned Driver</p>
+                            <p className="text-foreground text-xs font-semibold">{request.driverName || 'Unit Assigned'}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className='flex items-center gap-3'>
+                      <button
+                        onClick={() => viewDriverDetails(request.driverId || request.driver)}
+                        className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-accent active:scale-95 transition-all text-xs font-bold"
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => handleCancelRequest(request.id)}
+                        className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-foreground rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 transition-all active:scale-95 text-xs font-bold whitespace-nowrap"
+                      >
+                        Cancel Request
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
+
 
         {/* --- SECTION: INCOMING EMERGENCY PATIENTS --- */}
         {/* Real-time feed of incoming emergency patients */}
@@ -820,7 +926,7 @@ export function HospitalDashboard() {
             {incomingRequests.map((request) => (
               <div
                 key={request.id}
-                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all cursor-pointer"
+                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all"
                 onClick={() => setSelectedRequest(request)}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -830,14 +936,15 @@ export function HospitalDashboard() {
                       <span
                         className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
                           request.priority
-                        )}`}
+                        )
+                          }`}
                       >
                         {request.priority.toUpperCase()}
                       </span>
                       <span className="text-muted-foreground text-sm">{request.timestamp}</span>
                     </div>
                     <p className="text-muted-foreground">
-                      {request.age} yrs • {request.gender} • {request.incidentType}
+                      {request.age} yrs ΓÇó {request.gender} ΓÇó {request.incidentType}
                     </p>
                   </div>
                 </div>
@@ -866,11 +973,23 @@ export function HospitalDashboard() {
                   <p className="text-foreground text-sm">{request.symptoms}</p>
                 </div>
 
-                <div className="mt-3 flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                    Prepare Room
+                <div className="mt-3 flex justify-end gap-3 pl-8">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
+                    Accept
                   </button>
-                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
+                  >
                     View Details
                   </button>
                 </div>
@@ -896,7 +1015,6 @@ export function HospitalDashboard() {
                 </p>
               </div>
             </div>
-            {/* Overall health dot */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Live
@@ -958,7 +1076,7 @@ export function HospitalDashboard() {
 
             {/* Ventilator Stepper Card */}
             <div className="rounded-xl border border-border overflow-hidden">
-              <div className={`flex items-center justify-between px-4 py-3 border-b bg-slate-50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800`}>
+              <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2.5">
                   <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     <Wind size={15} strokeWidth={2.5} />
@@ -1017,6 +1135,114 @@ export function HospitalDashboard() {
         <Ambulance size={24} />
         <span className="hidden group-hover:block transition-all duration-300">New Request</span>
       </button>
+
+      {/* --- DRIVER INFO POPUP --- */}
+      <Dialog open={driverPopupOpen} onOpenChange={setDriverPopupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              Driver Details
+            </DialogTitle>
+            <DialogDescription>
+              {driverPopupData?.id ? `Driver ID: ${driverPopupData.id} ` : 'Loading driver information...'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {driverPopupLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            </div>
+          )}
+
+          {driverPopupData?.notFound && (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="text-orange-500" size={24} />
+              </div>
+              <p className="text-muted-foreground text-sm">No location data found for this driver.</p>
+              <p className="text-muted-foreground text-xs mt-1">ID: {driverPopupData.id}</p>
+            </div>
+          )}
+
+          {driverPopupData?.error && (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle className="text-red-500" size={24} />
+              </div>
+              <p className="text-muted-foreground text-sm">Failed to fetch driver details.</p>
+            </div>
+          )}
+
+          {driverPopupData && !driverPopupData.notFound && !driverPopupData.error && !driverPopupLoading && (
+            <div className="space-y-4">
+              {/* Driver Name & Status */}
+              <div className="flex items-center gap-4 p-4 bg-accent/50 rounded-xl">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                  <User className="text-white" size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-foreground font-semibold text-lg">
+                    {driverPopupData.driverName || 'Unknown Driver'}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'} `} />
+                    <span className={`text-xs font-medium ${driverPopupData.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'} `}>
+                      {driverPopupData.isOnline ? 'Online' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <MapPin size={12} /> Latitude
+                  </p>
+                  <p className="text-foreground text-sm font-mono">
+                    {driverPopupData.lat?.toFixed(6) || 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <MapPin size={12} /> Longitude
+                  </p>
+                  <p className="text-foreground text-sm font-mono">
+                    {driverPopupData.lng?.toFixed(6) || 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <Shield size={12} /> Accuracy
+                  </p>
+                  <p className="text-foreground text-sm">
+                    {driverPopupData.accuracy ? `${driverPopupData.accuracy.toFixed(1)} m` : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-accent/30 rounded-lg">
+                  <p className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                    <Clock size={12} /> Last Active
+                  </p>
+                  <p className="text-foreground text-sm">
+                    {driverPopupData.timestamp
+                      ? new Date(driverPopupData.timestamp).toLocaleString()
+                      : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Driver ID */}
+              <div className="p-3 bg-accent/30 rounded-lg">
+                <p className="text-muted-foreground text-xs mb-1">Driver ID</p>
+                <p className="text-foreground text-xs font-mono break-all">{driverPopupData.id}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1035,28 +1261,42 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
 
   // Track active section on scroll
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
+    const handleScroll = () => {
+      const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+
+      let current = '';
+      for (const id of sections) {
+        const element = document.getElementById(id);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          // Element is considered in view if its top is above the middle of viewport
+          // and its bottom is below 100px from the top.
+          if (rect.top <= window.innerHeight / 2 && rect.bottom >= 100) {
+            current = id;
           }
-        });
-      },
-      { threshold: 0.5 }
-    );
+        }
+      }
 
-    const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
-    sections.forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) observer.observe(element);
-    });
+      // If user scrolled to the absolute bottom of the page
+      if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight - 10) {
+        current = sections[sections.length - 1];
+      }
 
-    return () => observer.disconnect();
+      if (current) setActiveSection(current);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Initial check after a short delay to ensure rendering is complete
+    const timeoutId = setTimeout(handleScroll, 100);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const navItems = [
-    { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-teal-500 to-teal-600', shadow: 'shadow-teal-500/50', count: 0 },
+    { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
     { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
     { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
     { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
@@ -1065,7 +1305,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
 
   return (
     <div className="fixed left-6 top-1/2 -translate-y-1/2 z-40 hidden xl:flex flex-col gap-3">
-      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl p-2 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
+      <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl px-2 py-3 rounded-full shadow-2xl border border-white/20 flex flex-col gap-3 items-center">
         {navItems.map((item) => {
           const isActive = activeSection === item.id;
           return (
@@ -1081,7 +1321,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
               />
 
               {/* Hover Background */}
-              <div className={`absolute inset-0 rounded-full bg-white/20 transition-all duration-300 ${!isActive ? 'group-hover:opacity-100' : ''} opacity-0`} />
+              <div className={`absolute inset-0 rounded-full bg-white/50 transition-all duration-300 ${!isActive ? 'group-hover:opacity-100' : ''} opacity-0`} />
 
               <item.icon
                 size={18}
@@ -1092,7 +1332,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
 
               {/* Notification Badge */}
               {item.count > 0 && (
-                <div className="absolute -top-1 -right-1 z-20 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm animate-bounce">
+                <div className="absolute -top-1 -right-1 z-20 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm ">
                   {item.count}
                 </div>
               )}
@@ -1101,7 +1341,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2.5 py-1 bg-gray-900/90 dark:bg-white/90 backdrop-blur-sm text-white dark:text-gray-900 text-[10px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-x-1 group-hover:translate-x-0 whitespace-nowrap shadow-xl">
                 {item.label}
                 {/* Arrow */}
-                <div className="absolute top-1/2 -translate-y-1/2 -left-1 border-[4px] border-transparent border-r-gray-900/90 dark:border-r-white/90" />
+                <div className="absolute top-1/2 -translate-y-1/2 -left-3 border-[4px] border-transparent border-r-gray-900/90 dark:border-r-white/90" />
               </div>
             </button>
           );
