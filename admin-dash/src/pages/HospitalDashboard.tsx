@@ -1113,7 +1113,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
   // Track active section on scroll
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['map-section', 'active-transfers', 'pending-requests', 'resource-availability'];
+      const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
 
       let current = '';
       for (const id of sections) {
@@ -1150,6 +1150,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
     { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
     { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
     { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
+    { id: 'incoming-emergency', label: 'Incoming Emergencies', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
     { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
