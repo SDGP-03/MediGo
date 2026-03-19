@@ -353,7 +353,7 @@ export function HospitalDashboard() {
     available: onlineDrivers.length,
     busy: busyDrivers.length,
     offline: offlineDrivers.length,
-    total: liveDriverCount > 0 ? liveDriverCount : ambulances.length,
+    total: onlineDrivers.length + busyDrivers.length + offlineDrivers.length,
   };
 
   const activeTransfers = dbActiveTransfers.length > 0 ? dbActiveTransfers : [];
@@ -427,15 +427,8 @@ export function HospitalDashboard() {
           {/* Map/List Area */}
           <div className="flex-1 min-w-0">
             {mapView === "map" && (
-              <AmbulanceMap ambulances={ambulances.map(amb => ({
-                id: amb.id,
-                status: amb.status as "available" | "on_way" | "busy" | "standby" | "offline",
-                driver: amb.driver,
-                location: amb.location,
-                eta: amb.eta,
-                lat: amb.lat,
-                lng: amb.lng,
-              }))}
+              <AmbulanceMap
+                ambulances={[]}
                 activeTransfers={dbActiveTransfers}
                 onlineDrivers={onlineDrivers}
                 busyDrivers={busyDrivers}
@@ -448,38 +441,45 @@ export function HospitalDashboard() {
             {mapView === "list" && (
               <div className="h-[650px] overflow-y-auto">
                 <div className="divide-y divide-border">
-                  {ambulances.map((amb) => (
+                  {[...onlineDrivers, ...busyDrivers, ...offlineDrivers].map((driver) => (
                     <div
-                      key={amb.id}
+                      key={driver.id}
                       className="p-4 hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setMapView("map");
+                        setTrackedDriverTrigger({ id: driver.id, timestamp: Date.now() });
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-3 h-3 ${getStatusColor(amb.status)} rounded-full`}
+                            className={`w-3 h-3 ${getStatusColor(driver.status)} rounded-full`}
                           ></div>
                           <div>
-                            <p className="text-foreground text-sm">
-                              {amb.id}
+                            <p className="text-foreground text-sm font-mono truncate max-w-[150px]">
+                              {driver.id}
                             </p>
                             <p className="text-muted-foreground text-xs">
-                              {amb.driver}
+                              {driver.driverName}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-muted-foreground text-sm">
-                            {amb.location}
+                          <p className="text-muted-foreground text-xs">
+                            {driver.status.toUpperCase()}
                           </p>
-                          {amb.eta && (
-                            <p className="text-blue-600 text-xs">
-                              ETA: {amb.eta}
-                            </p>
-                          )}
+                          <p className="text-blue-600 text-[10px]">
+                            {new Date(driver.timestamp).toLocaleTimeString()}
+                          </p>
                         </div>
                       </div>
                     </div>
                   ))}
+                  {[...onlineDrivers, ...busyDrivers, ...offlineDrivers].length === 0 && (
+                    <div className="p-8 text-center text-muted-foreground italic">
+                      No live driver data available.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1113,7 +1113,7 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
   // Track active section on scroll
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
+      const sections = ['map-section', 'active-transfers', 'pending-requests', 'resource-availability'];
 
       let current = '';
       for (const id of sections) {
@@ -1150,7 +1150,6 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
     { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
     { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
     { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
-    { id: 'incoming-emergency', label: 'Incoming Emergency', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
     { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
