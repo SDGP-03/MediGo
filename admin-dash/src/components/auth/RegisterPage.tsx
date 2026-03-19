@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Mail, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
+import { Mail, MapPin, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { auth, database } from '../../firebase';
+import Autocomplete from 'react-google-autocomplete';
 
 interface RegisterPageProps {
     onBackToLogin: () => void;
@@ -13,12 +14,21 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [hospitalName, setHospitalName] = useState('');
+
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    //enhanced state for Hospital
+    const [hospitalName, setHospitalName] = useState('');
+    const [hospitalDetails, setHospitalDetails] = useState<{
+        address: string;
+        lat: number;
+        lng: number;
+        placeId: string;
+    } | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +45,13 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
             setError('Password must be at least 6 characters long.');
             return;
         }
+        // Ensure a hospital was actually selected from the list
+        if (!hospitalDetails) {
+            setError('Please select a valid hospital from search suggestions.');
+            return;
+        }
+
+
 
         setIsLoading(true);
 
@@ -46,6 +63,7 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                 displayName: `${name} - ${hospitalName}`,
             });
 
+
             // Save admin data to the "admin" table in Realtime Database
             const adminRef = ref(database, `admin/${userCredential.user.uid}`);
             await set(adminRef, {
@@ -55,6 +73,19 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                 hospitalName: hospitalName,
                 role: 'admin',
                 createdAt: new Date().toISOString(),
+
+                //link to detailed hospital info
+                hospital: {
+                    name: hospitalName,
+                    address: hospitalDetails.address,
+                    location: {
+                        lat: hospitalDetails.lat,
+                        lng: hospitalDetails.lng
+                    },
+                    placeId: hospitalDetails.placeId
+
+
+                }
             });
 
             setSuccess(true);
@@ -145,24 +176,41 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-                                    placeholder="John Doe"
+                                    placeholder="Enter Name"
                                 />
                             </div>
                         </div>
 
+                        {/* The google autocomplete input*/}
                         <div>
                             <label className="block text-gray-700 mb-2">Hospital Name</label>
                             <div className="relative">
                                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                <input
-                                    type="text"
-                                    required
-                                    value={hospitalName}
-                                    onChange={(e) => setHospitalName(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-                                    placeholder="City General Hospital"
+                                <Autocomplete
+                                    apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
+                                    onPlaceSelected={(place) => {
+                                        setHospitalName(place.name);
+                                        setHospitalDetails({
+                                            address: place.formatted_address,
+                                            lat: place.geometry.location.lat(),
+                                            lng: place.geometry.location.lng(),
+                                            placeId: place.place_id
+                                        });
+                                    }}
+                                    options={{
+                                        types: ['hospital'],
+                                        componentRestrictions: { country: 'lk' },
+                                        fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                                    }}
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                    placeholder="Search your hospital in Sri Lanka..."
                                 />
                             </div>
+                            {hospitalDetails && (
+                                <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                                    <MapPin size={12} /> {hospitalDetails.address}
+                                </p>
+                            )}
                         </div>
 
                         <div>
