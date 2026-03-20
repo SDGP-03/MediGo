@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFleetData, Driver, DriverStatus } from '../hooks/useFleetData';
+import { useDriverLocations } from '../useDriverLocations';
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -25,7 +26,25 @@ function StarRating({ rating }: { rating: number }) {
     );
 }
 
-function StatusBadge({ status }: { status: DriverStatus }) {
+function StatusBadge({ status, realTimeStatus }: { status: DriverStatus, realTimeStatus?: 'online' | 'busy' | 'offline' | null }) {
+    if (status === 'active' && realTimeStatus) {
+        const styles = {
+            online: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
+            busy: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
+            offline: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
+        };
+        const labels = {
+            online: 'ACTIVE',
+            busy: 'BUSY',
+            offline: 'OFFLINE',
+        };
+        return (
+            <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[realTimeStatus]}`}>
+                {labels[realTimeStatus]}
+            </span>
+        );
+    }
+
     const styles: Record<DriverStatus, string> = {
         active: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
         off_duty: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
@@ -595,18 +614,22 @@ export function DriverProfiles() {
         deleteDriver,
     } = useFleetData();
 
+    const { onlineDrivers, busyDrivers, offlineDrivers } = useDriverLocations();
+
+    const getRealTimeStatus = (driverId: string) => {
+        if (onlineDrivers.some(d => d.id === driverId)) return 'online';
+        if (busyDrivers.some(d => d.id === driverId)) return 'busy';
+        if (offlineDrivers.some(d => d.id === driverId)) return 'offline';
+        return null;
+    };
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | DriverStatus>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
     const [editTarget, setEditTarget] = useState<Driver | null>(null);
 
     // ── Firebase CRUD handlers ──
-
-    const handleRegister = async (driver: Driver) => {
-        await addDriver(driver);
-    };
 
     const handleEditSave = async (updated: Driver) => {
         const { id, ...changes } = updated;
@@ -669,13 +692,6 @@ export function DriverProfiles() {
                     <h1 className="text-foreground text-2xl font-bold">Driver Profiles</h1>
                     <p className="text-muted-foreground text-sm">Manage drivers, view performance and calculate salaries</p>
                 </div>
-                <button
-                    onClick={() => setShowRegisterModal(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
-                >
-                    <User size={16} />
-                    + Register New Driver
-                </button>
             </div>
 
             {/* ── Summary Cards ── */}
@@ -736,7 +752,10 @@ export function DriverProfiles() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-foreground font-semibold">{driver.name}</span>
                                         <span className="text-muted-foreground text-xs">#{driver.id}</span>
-                                        <StatusBadge status={driver.status} />
+                                        <StatusBadge 
+                                            status={driver.status} 
+                                            realTimeStatus={getRealTimeStatus(driver.id)}
+                                        />
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                         <StarRating rating={driver.rating} />
@@ -796,14 +815,6 @@ export function DriverProfiles() {
                     </div>
                 )}
             </div>
-
-            {/* ── Register Modal ── */}
-            {showRegisterModal && (
-                <RegisterDriverModal
-                    onClose={() => setShowRegisterModal(false)}
-                    onRegister={handleRegister}
-                />
-            )}
 
             {/* ── Edit Driver Modal ── */}
             {editTarget && (

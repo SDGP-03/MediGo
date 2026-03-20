@@ -6,12 +6,7 @@ import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
 import { apiPost } from '../api/apiClient';
-
-// Hospital coordinates mapping (you can expand this or fetch from Firestore)
-const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
-  'General Hospital O P D': { lat: 6.918955913694652, lng: 79.86611697073118, address: 'WV98+HC9, EW Perera Mawatha, Colombo 01000, Sri Lanka' },
-  'Lady Ridgeway Hospital for Children (LRH)': { lat: 6.918381526890345, lng: 79.8759550393045, address: 'Dr Danister De Silva Mawatha, Colombo 00800, Sri Lanka' },
-};
+import Autocomplete from 'react-google-autocomplete';
 
 // Patient records (mirrored from PatientRecords page)
 interface PatientRecord {
@@ -74,43 +69,38 @@ export function TransferRequest() {
   const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+  const [toHospitalDetails, setToHospitalDetails] = useState<{
+    address: string;
+    lat: number;
+    lng: number;
+    placeId: string;
+  } | null>(null);
 
   // Fleet data from Firebase (ambulances + drivers)
   const { ambulances, drivers, hospitalName } = useFleetData();
   const { onlineDrivers, busyDrivers } = useDriverLocations();
 
-  const availableAmbulances = ambulances.filter(a => a.status === 'available');
+  // Ambulances that are available AND not assigned to any driver AND have no active transfer
+  const assignedAmbulanceIds = new Set(
+    drivers.map(d => d.assignedAmbulance).filter(Boolean) as string[]
+  );
+  const availableAmbulances = ambulances.filter(
+    a => a.status === 'available' && !assignedAmbulanceIds.has(a.id) && !a.currentTransfer
+  );
 
-  // ─── SYNTHESIZE ACTIVE DRIVERS ───
-  // Merge registered drivers with live "online" status, and include any online drivers not in registry.
-  const allKnownDrivers = [...drivers];
-
-  // Add online drivers that aren't in the registry (using their UID as ID)
-  onlineDrivers.forEach(od => {
-    const isAlreadyInRegistry = drivers.some(rd =>
-      rd.id === od.id || rd.name.toLowerCase().trim() === od.driverName.toLowerCase().trim()
-    );
-    if (!isAlreadyInRegistry) {
-      allKnownDrivers.push({
-        id: od.id,
-        name: od.driverName,
-        status: 'active',
-        rating: 5.0,
-        assignedAmbulance: null,
-      } as any);
-    }
-  });
-
-  const activeDrivers = allKnownDrivers.filter(d => {
-    // A driver is selectable if they are "online" in real-time OR manually marked "active" in registry
-    // But they must NOT be "busy" (on another mission)
+  // ─── ACTIVE DRIVERS ───
+  // Only show drivers that are:
+  //   1. Registered in THIS hospital's Firebase registry (from useFleetData)
+  //   2. Currently ONLINE in the SSE live stream (matching by driver ID or name)
+  //   3. NOT currently marked as busy
+  const activeDrivers = drivers.filter(d => {
     const isLiveOnline = onlineDrivers.some(od =>
       od.id === d.id || od.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
     );
     const isLiveBusy = busyDrivers.some(bd =>
       bd.id === d.id || bd.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
     );
-    return (isLiveOnline || d.status === 'active') && !isLiveBusy;
+    return isLiveOnline && !isLiveBusy;
   });
 
   // Autocomplete state for patient name
@@ -163,13 +153,7 @@ export function TransferRequest() {
     attendantGender: '',
   });
 
-  const hospitals = [
-    'General Hospital O P D',
-    'Lady Ridgeway Hospital for Children (LRH)',
-    'Regional Base Hospital',
-    'Teaching Hospital East',
-    'Metro Hospital',
-  ];
+
 
   const equipment = [
     'Oxygen Cylinder',
@@ -198,7 +182,7 @@ export function TransferRequest() {
 
   const validateTransferStep = () => {
     const errors: Record<string, string> = {};
-    if (!formData.toHospital) errors.toHospital = 'Destination hospital is required';
+    if (!formData.toHospital || !toHospitalDetails) errors.toHospital = 'Destination hospital is required. Please select from suggestions.';
     if (!formData.priority) errors.priority = 'Priority level is required';
     if (!formData.reason) errors.reason = 'Reason for transfer is required';
 
@@ -227,7 +211,7 @@ export function TransferRequest() {
     setIsSubmitting(true);
 
     try {
-      const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
+      const toCoords = toHospitalDetails || { lat: 0, lng: 0, address: '', placeId: '' };
 
       const payload = {
         driverId: selectedDriverId,
@@ -252,6 +236,7 @@ export function TransferRequest() {
           address: toCoords.address,
           lat: toCoords.lat,
           lng: toCoords.lng,
+          placeId: toCoords.placeId,
         },
 
         requirements: {
@@ -304,6 +289,7 @@ export function TransferRequest() {
       setSelectedDriverId('');
       setSelectedAmbulanceId('');
       setSelectedDocumentIndices([]);
+      setToHospitalDetails(null);
 
       // Clear success message after 5 seconds
       setTimeout(() => {
@@ -624,21 +610,37 @@ export function TransferRequest() {
 
                     <div>
                       <label className="block text-foreground mb-2">To Hospital *</label>
-                      <select
-                        required
-                        value={formData.toHospital}
-                        onChange={(e) => {
-                          setFormData({ ...formData, toHospital: e.target.value });
-                          if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
-                          }`}
-                      >
-                        <option value="">Select destination hospital</option>
-                        {hospitals.map(hospital => (
-                          <option key={hospital} value={hospital}>{hospital}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <Autocomplete
+                          apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
+                          onPlaceSelected={(place) => {
+                            if (place && place.name && place.formatted_address && place.geometry) {
+                              setFormData({ ...formData, toHospital: place.name });
+                              setToHospitalDetails({
+                                address: place.formatted_address,
+                                lat: place.geometry.location.lat(),
+                                lng: place.geometry.location.lng(),
+                                placeId: place.place_id,
+                              });
+                              if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+                            }
+                          }}
+                          options={{
+                            types: ['hospital'],
+                            componentRestrictions: { country: 'lk' },
+                            fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                          }}
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                            }`}
+                          placeholder="Search destination hospital..."
+                        />
+                      </div>
+                      {toHospitalDetails && (
+                        <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                          <MapPin size={12} /> {toHospitalDetails.address}
+                        </p>
+                      )}
                       {formErrors.toHospital && <p className="text-red-500 text-xs mt-1">{formErrors.toHospital}</p>}
                     </div>
                   </div>
@@ -957,8 +959,8 @@ export function TransferRequest() {
                                   setSelectedDriverId(drvId);
                                   if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
 
-                                  // Auto-link assigned ambulance
-                                  const drvRecord = allKnownDrivers.find(d => d.id === drvId);
+                                  // Auto-link assigned ambulance using the registry list (correct IDs)
+                                  const drvRecord = drivers.find(d => d.id === drvId);
                                   if (drvRecord?.assignedAmbulance) {
                                     setSelectedAmbulanceId(drvRecord.assignedAmbulance);
                                     if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
@@ -988,7 +990,7 @@ export function TransferRequest() {
                             </div>
 
                             {selectedDriverId && (() => {
-                              const drv = allKnownDrivers.find(d => d.id === selectedDriverId);
+                              const drv = drivers.find(d => d.id === selectedDriverId);
                               const amb = ambulances.find(a => a.id === (drv?.assignedAmbulance || selectedAmbulanceId));
                               if (!drv) return null;
 
@@ -1037,7 +1039,7 @@ export function TransferRequest() {
                                       <div className="flex flex-wrap gap-2 mt-2">
                                         {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-md text-[10px] font-bold">VENTILATOR</span>}
                                         {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-md text-[10px] font-bold">DOCTOR ON BOARD</span>}
-                                        {amb.equipment.slice(0, 2).map(e => (
+                                        {(amb.equipment || []).slice(0, 2).map((e: string) => (
                                           <span key={e} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-md text-[10px] uppercase font-bold">{e}</span>
                                         ))}
                                       </div>

@@ -9,81 +9,99 @@ export class DriversService {
     constructor(private readonly firebase: FirebaseService) { }
 
     /** Stream driver locations in real-time (online + offline) for a specific hospital */
-    streamLocations(hospitalUid: string): Observable<MessageEvent> {
+    streamLocations(adminUid: string): Observable<MessageEvent> {
         return new Observable((subscriber) => {
-            const hospitalDriversRef = this.firebase.ref(`hospitals/${hospitalUid}/drivers`);
-            const driversRef = this.firebase.ref('driver_locations');
-
+            let hospitalDriversOff: (() => void) | null = null;
+            let driversOff: (() => void) | null = null;
             let allowedDrivers = new Set<string>();
-            const hospitalCallback = hospitalDriversRef.on('value', (snap) => {
-                const data = snap.val();
-                allowedDrivers = new Set(data ? Object.keys(data) : []);
-            });
-
 
             // Emit immediately so frontend doesn't hang waiting for Firebase
             subscriber.next({
                 data: JSON.stringify({ online: [], offline: [] }),
             } as MessageEvent);
 
-            const callback = driversRef.on(
-                'value',
-                (snapshot) => {
-                    const data = snapshot.val();
-                    this.logger.debug(`Firebase driver_locations data: ${JSON.stringify(data)}`);
-                    if (!data) {
+            // Resolve admin uid → hospitalPlaceId, then start listeners
+            this.firebase.ref(`admin/${adminUid}`).get().then((adminSnap) => {
+                const hospitalId: string =
+                    (adminSnap.exists() && adminSnap.val()?.hospitalPlaceId)
+                        ? adminSnap.val().hospitalPlaceId
+                        : adminUid; // fallback for legacy accounts
+
+                const hospitalDriversRef = this.firebase.ref(`hospitals/${hospitalId}/drivers`);
+                const driversRef = this.firebase.ref('driver_locations');
+
+                // Track which drivers belong to this hospital
+                const hospitalCb = hospitalDriversRef.on('value', (snap) => {
+                    const data = snap.val();
+                    allowedDrivers = new Set(data ? Object.keys(data) : []);
+                });
+                hospitalDriversOff = () => hospitalDriversRef.off('value', hospitalCb);
+
+                const driversCb = driversRef.on(
+                    'value',
+                    (snapshot) => {
+                        const data = snapshot.val();
+                        this.logger.debug(`Firebase driver_locations data: ${JSON.stringify(data)}`);
+                        if (!data) {
+                            subscriber.next({
+                                data: JSON.stringify({ online: [], offline: [] }),
+                            } as MessageEvent);
+                            return;
+                        }
+
+                        const now = Date.now();
+                        const FIVE_MINUTES = 5 * 60 * 1000;
+
+                        const allDrivers = Object.entries(data)
+                            .filter(([id]) => allowedDrivers.has(id))
+                            .map(([id, value]: [string, any]) => {
+                                const rawStatus = value.status || (value.isOnline ? 'online' : 'offline');
+                                return {
+                                    id,
+                                    driverName: value.driverName || 'Unknown Driver',
+                                    lat: value.lat,
+                                    lng: value.lng,
+                                    accuracy: value.accuracy || 0,
+                                    timestamp: value.timestamp || 0,
+                                    status: rawStatus,
+                                };
+                            })
+                            .filter((d) => d.lat && d.lng);
+
+                        const online = allDrivers.filter(
+                            (d) => d.status === 'online' && now - d.timestamp < FIVE_MINUTES,
+                        );
+                        const busy = allDrivers.filter(
+                            (d) => d.status === 'busy' && now - d.timestamp < FIVE_MINUTES,
+                        );
+                        const offline = allDrivers.filter(
+                            (d) =>
+                                d.status === 'offline' ||
+                                (d.status !== 'offline' && now - d.timestamp >= FIVE_MINUTES),
+                        );
+
                         subscriber.next({
-                            data: JSON.stringify({ online: [], offline: [] }),
+                            data: JSON.stringify({ online, busy, offline }),
                         } as MessageEvent);
-                        return;
-                    }
+                    },
+                    (error: Error) => {
+                        this.logger.error('Driver locations stream error:', error.message);
+                        subscriber.error(error);
+                    },
+                );
+                driversOff = () => driversRef.off('value', driversCb);
 
-                    const now = Date.now();
-                    const FIVE_MINUTES = 5 * 60 * 1000;
-                    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+                this.logger.log(`Driver SSE stream started for hospital ${hospitalId}`);
+            }).catch((err) => {
+                this.logger.error(`streamLocations failed to resolve hospitalId: ${err.message}`);
+                subscriber.error(err);
+            });
 
-                    const allDrivers = Object.entries(data)
-                        .filter(([id]) => allowedDrivers.has(id))
-                        .map(([id, value]: [string, any]) => {
-                            const rawStatus = value.status || (value.isOnline ? 'online' : 'offline');
-                            return {
-                                id,
-                                driverName: value.driverName || 'Unknown Driver',
-                                lat: value.lat,
-                                lng: value.lng,
-                                accuracy: value.accuracy || 0,
-                                timestamp: value.timestamp || 0,
-                                status: rawStatus,
-                            };
-                        })
-                        .filter((d) => d.lat && d.lng);
-
-                    const online = allDrivers.filter(
-                        (d) => d.status === 'online' && now - d.timestamp < FIVE_MINUTES,
-                    );
-                    const busy = allDrivers.filter(
-                        (d) => d.status === 'busy' && now - d.timestamp < FIVE_MINUTES,
-                    );
-                    const offline = allDrivers.filter(
-                        (d) =>
-                            d.status === 'offline' ||
-                            (d.status !== 'offline' && now - d.timestamp >= FIVE_MINUTES),
-                    );
-
-                    subscriber.next({
-                        data: JSON.stringify({ online, busy, offline }),
-                    } as MessageEvent);
-                },
-                (error: Error) => {
-                    this.logger.error('Driver locations stream error:', error.message);
-                    subscriber.error(error);
-                },
-            );
-
+            // Cleanup when client disconnects
             return () => {
-                driversRef.off('value', callback);
-                hospitalDriversRef.off('value', hospitalCallback);
-                this.logger.log(`Driver locations SSE stream closed for ${hospitalUid}`);
+                if (hospitalDriversOff) hospitalDriversOff();
+                if (driversOff) driversOff();
+                this.logger.log(`Driver locations SSE stream closed for admin ${adminUid}`);
             };
         });
     }

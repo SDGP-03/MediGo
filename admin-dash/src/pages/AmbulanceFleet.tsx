@@ -69,6 +69,7 @@ export function AmbulanceFleet() {
     assignAmbulanceToTransfer,
     scheduleMaintenance,
     completeMaintenance,
+    hospitalName: hookedHospitalName,
   } = useFleetData();
 
   // ── UI state ──
@@ -95,26 +96,13 @@ export function AmbulanceFleet() {
 
   const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
 
-  // ── Fetch hospital name for defaults ──
+  // ── Set default location when hospitalName is resolved ──
   useEffect(() => {
-    const fetchHospitalName = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const adminRef = ref(database, `admin/${user.uid}`);
-          const snapshot = await get(adminRef);
-          if (snapshot.exists()) {
-            const hName = snapshot.val().hospitalName || "";
-            setCurrentHospitalName(hName);
-            setAddForm(prev => ({ ...prev, location: hName }));
-          }
-        } catch (err) {
-          console.error("Error fetching hospital name:", err);
-        }
-      }
-    };
-    fetchHospitalName();
-  }, []);
+    if (hookedHospitalName) {
+      setCurrentHospitalName(hookedHospitalName);
+      setAddForm(prev => ({ ...prev, location: hookedHospitalName }));
+    }
+  }, [hookedHospitalName]);
 
   // ── Toast helper ──
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {

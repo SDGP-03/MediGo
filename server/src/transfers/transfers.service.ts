@@ -1,12 +1,47 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Observable } from 'rxjs';
 
 @Injectable()
-export class TransfersService {
+export class TransfersService implements OnModuleInit {
     private readonly logger = new Logger(TransfersService.name);
 
     constructor(private readonly firebase: FirebaseService) { }
+
+    async onModuleInit() {
+        this.logger.log('Initializing Transfer Request listener for Fleet state management...');
+        
+        // Listen to transfer status changes to centrally manage driver/ambulance states
+        this.firebase.ref('transfer_requests').on('child_changed', async (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const status = data.status;
+            const driverId = data.driverId;
+            const ambulanceId = data.ambulanceId || data.ambulance;
+            const hospitalId = data.hospitalId;
+
+            if (!driverId || !ambulanceId || !hospitalId) {
+                return;
+            }
+
+            try {
+                if (status === 'in_progress') {
+                    // Driver started navigation
+                    await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'busy' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'busy' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'on_trip' });
+                } else if (status === 'completed' || status === 'cancelled') {
+                    // Trip ended
+                    await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'available' });
+                }
+            } catch (err: any) {
+                this.logger.error(`Failed to update fleet statuses for transfer ${snapshot.key}: ${err.message}`);
+            }
+        });
+    }
 
     /** Stream all transfer requests in real-time via SSE */
     streamTransfers(): Observable<MessageEvent> {
@@ -76,32 +111,46 @@ export class TransfersService {
 
     /** Create a new transfer request */
     async createTransfer(uid: string, data: any): Promise<{ id: string }> {
-        // Fetch the admin's hospital from Firebase Reatime DB
-        // Fetch hospital data (address, lat, lng)
-        const hospitalSnapshot = await this.firebase.ref(`hospitals/${uid}`).get();
-        const hospitalData = hospitalSnapshot.val() || {};
+        // Resolve admin uid → shared hospitalPlaceId
+        const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
+        const adminData = adminSnap.val() || {};
+        const hospitalId: string = adminData.hospitalPlaceId || uid; // fallback for legacy accounts
 
-        // Fetch admin profile (the primary source for hospitalName)
-        const adminSnapshot = await this.firebase.ref(`admin/${uid}`).get();
-        const adminData = adminSnapshot.val() || {};
+        // Read hospital info from the shared hospital node
+        const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
+        const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
 
         const enrichedData = {
             ...data,
             pickup: {
-                hospitalName: adminData.hospitalName || hospitalData.hospitalName || 'Unknown Hospital',
-                address: hospitalData.address || 'Unknown Address',
-                lat: hospitalData.lat || 0,
-                lng: hospitalData.lng || 0,
+                hospitalName: hospitalInfo.name || adminData.hospitalName || 'Unknown Hospital',
+                address: hospitalInfo.address || 'Unknown Address',
+                lat: hospitalInfo.location?.lat || 0,
+                lng: hospitalInfo.location?.lng || 0,
             },
             status: 'pending',
             createdAt: new Date().toISOString(),
+            hospitalId: hospitalId, // Store hospitalId for fleet management!
         };
 
         const transfersRef = this.firebase.ref('transfer_requests');
         const newRef = transfersRef.push();
         await newRef.set(enrichedData);
-        
-        this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName}`);
+
+        // Update driver and ambulance to 'assigned' upon transfer creation
+        const targetDriverId = data.driverId;
+        const targetAmbulanceId = data.ambulanceId || data.ambulance;
+        if (targetDriverId && targetAmbulanceId && hospitalId) {
+            try {
+                await this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' });
+                await this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' });
+                await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${targetAmbulanceId}`).update({ status: 'assigned' });
+            } catch (err: any) {
+                this.logger.error(`Failed to assign driver/ambulance for transfer ${newRef.key}: ${err.message}`);
+            }
+        }
+
+        this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName} (${hospitalId})`);
         return { id: newRef.key! };
     }
 
@@ -135,9 +184,10 @@ export class TransfersService {
         return snapshot.exists() ? snapshot.val() : {};
     }
 
-    private formatTimeAgo(timestamp: number): string {
+    private formatTimeAgo(timestamp: any): string {
         if (!timestamp) return 'Just now';
-        const mins = Math.floor((Date.now() - timestamp) / 60000);
+        const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+        const mins = Math.floor((Date.now() - ts) / 60000);
         if (mins < 1) return 'Just now';
         if (mins < 60) return `${mins} mins ago`;
         const hours = Math.floor(mins / 60);

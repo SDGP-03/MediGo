@@ -12,6 +12,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _HospitalOption {
+  final String placeId;
+  final String name;
+  final String address;
+
+  const _HospitalOption({
+    required this.placeId,
+    required this.name,
+    required this.address,
+  });
+}
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -33,6 +45,11 @@ class _SignupScreenState extends State<SignupScreen> {
   bool get _isSinhala => _language == 'Sinhala';
   bool get _isTamil => _language == 'Tamil';
 
+  final List<_HospitalOption> _hospitals = [];
+  String? _selectedHospitalPlaceId;
+  bool _hospitalsLoading = true;
+  String? _hospitalsError;
+
   CommonMethods cMethods = CommonMethods();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -46,6 +63,7 @@ class _SignupScreenState extends State<SignupScreen> {
   void initState() {
     super.initState();
     _loadLanguage();
+    _loadHospitalsWithAdmins();
   }
 
   Future<void> _loadLanguage() async {
@@ -54,6 +72,71 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _language = prefs.getString('language') ?? 'English';
     });
+  }
+
+  Future<void> _loadHospitalsWithAdmins() async {
+    try {
+      if (mounted) {
+        setState(() {
+          _hospitalsLoading = true;
+          _hospitalsError = null;
+        });
+      }
+
+      final snapshot = await FirebaseDatabase.instance.ref("hospitals").get();
+      final List<_HospitalOption> options = [];
+
+      if (snapshot.exists && snapshot.value is Map) {
+        final hospitalsMap = snapshot.value as Map;
+        for (final entry in hospitalsMap.entries) {
+          final String hospitalKey = entry.key.toString();
+          final dynamic hospitalValue = entry.value;
+
+          if (hospitalValue is! Map) continue;
+
+          final dynamic admins = hospitalValue["admins"];
+          if (admins is! Map || admins.isEmpty) continue;
+
+          final dynamic info = hospitalValue["info"];
+          if (info is! Map) continue;
+
+          final String name = (info["name"] ?? "").toString().trim();
+          if (name.isEmpty) continue;
+
+          final String placeId =
+              (info["placeId"] ?? hospitalKey).toString().trim();
+          if (placeId.isEmpty) continue;
+
+          options.add(
+            _HospitalOption(
+              placeId: placeId,
+              name: name,
+              address: (info["address"] ?? "").toString().trim(),
+            ),
+          );
+        }
+      }
+
+      options.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+      if (!mounted) return;
+      setState(() {
+        _hospitals
+          ..clear()
+          ..addAll(options);
+        _hospitalsLoading = false;
+
+        if (_selectedHospitalPlaceId == null && options.length == 1) {
+          _selectedHospitalPlaceId = options.first.placeId;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _hospitalsLoading = false;
+        _hospitalsError = e.toString();
+      });
+    }
   }
 
   @override
@@ -104,6 +187,27 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> registerNewUser() async {
+    final String? hospitalPlaceId = _selectedHospitalPlaceId;
+    if (hospitalPlaceId == null || hospitalPlaceId.isEmpty) {
+      cMethods.displaySnackBar(
+        t(
+          "Please select a hospital.",
+          "කරුණාකර රෝහලක් තෝරන්න.",
+          "தயவு செய்து ஒரு மருத்துவமனையைத் தேர்ந்தெடுக்கவும்.",
+        ),
+        context,
+      );
+      return;
+    }
+
+    final String hospitalName = _hospitals
+        .firstWhere(
+          (h) => h.placeId == hospitalPlaceId,
+          orElse: () =>
+              _HospitalOption(placeId: hospitalPlaceId, name: "", address: ""),
+        )
+        .name;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -129,8 +233,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
       String? imageUrl = await uploadProfileImage(uid);
 
-      DatabaseReference driversRef = FirebaseDatabase.instance
+      final DatabaseReference rootDriverRef = FirebaseDatabase.instance
           .ref()
+          .child("drivers")
+          .child(userFirebase.uid);
+
+      final DatabaseReference hospitalDriverRef = FirebaseDatabase.instance
+          .ref()
+          .child("hospitals")
+          .child(hospitalPlaceId)
           .child("drivers")
           .child(userFirebase.uid);
 
@@ -141,9 +252,14 @@ class _SignupScreenState extends State<SignupScreen> {
         "email": emailTextEditingController.text.trim(),
         "profileImage": imageUrl ?? "",
         "blockStatus": "unblocked",
+        "hospitalPlaceId": hospitalPlaceId,
+        if (hospitalName.isNotEmpty) "hospitalName": hospitalName,
       };
 
-      await driversRef.set(driverMap);
+      await Future.wait([
+        rootDriverRef.set(driverMap),
+        hospitalDriverRef.set(driverMap),
+      ]);
 
       if (!mounted) return;
       Navigator.pop(context); // close loading dialog
@@ -401,6 +517,117 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                               ),
                             ),
+
+                            const SizedBox(height: 16),
+
+                            Text(
+                              t("Hospital", "රෝහල", "மருத்துவமனை"),
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            DropdownButtonFormField<String>(
+                              key: ValueKey(_selectedHospitalPlaceId ?? "none"),
+                              initialValue: _selectedHospitalPlaceId,
+                              isExpanded: true,
+                              items: _hospitals
+                                  .map(
+                                    (h) => DropdownMenuItem<String>(
+                                      value: h.placeId,
+                                      child: Text(
+                                        h.name,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: _hospitalsLoading
+                                  ? null
+                                  : (value) {
+                                      setState(() {
+                                        _selectedHospitalPlaceId = value;
+                                      });
+                                    },
+                              validator: (value) {
+                                if (_hospitalsLoading) {
+                                  return t(
+                                    "Loading hospitals...",
+                                    "රෝහල් ලැයිස්තුව ලබාගනිමින්...",
+                                    "மருத்துவமனைகளை ஏற்றுகிறது...",
+                                  );
+                                }
+                                if (value == null || value.isEmpty) {
+                                  return t(
+                                    "Please select a hospital.",
+                                    "කරුණාකර රෝහලක් තෝරන්න.",
+                                    "தயவு செய்து ஒரு மருத்துவமனையைத் தேர்ந்தெடுக்கவும்.",
+                                  );
+                                }
+                                if (_hospitals.isEmpty) {
+                                  return t(
+                                    "No hospitals available. Ask an admin to register first.",
+                                    "රෝහල් නොමැත. පළමුව පරිපාලකයෙකු ලියාපදිංචි වන්න කියන්න.",
+                                    "மருத்துவமனைகள் இல்லை. முதலில் நிர்வாகி ஒருவர் பதிவு செய்யுமாறு கேளுங்கள்.",
+                                  );
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                hintText: _hospitalsLoading
+                                    ? t(
+                                        "Loading hospitals...",
+                                        "රෝහල් ලැයිස්තුව ලබාගනිමින්...",
+                                        "மருத்துவமனைகளை ஏற்றுகிறது...",
+                                      )
+                                    : t(
+                                        "Select your hospital",
+                                        "ඔබේ රෝහල තෝරන්න",
+                                        "உங்கள் மருத்துவமனையைத் தேர்ந்தெடுக்கவும்",
+                                      ),
+                                prefixIcon: const Icon(Icons.local_hospital),
+                                border: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
+                                suffixIcon: _hospitalsLoading
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        tooltip: t(
+                                          "Refresh",
+                                          "යාවත්කාලීන කරන්න",
+                                          "புதுப்பிக்கவும்",
+                                        ),
+                                        icon: const Icon(Icons.refresh),
+                                        onPressed: _loadHospitalsWithAdmins,
+                                      ),
+                              ),
+                            ),
+
+                            if (_hospitalsError != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                t(
+                                  "Couldn't load hospitals. Tap refresh to try again.",
+                                  "රෝහල් ලබාගත නොහැක. නැවත උත්සාහ කිරීමට යාවත්කාලීන කරන්න.",
+                                  "மருத்துவமனைகளை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்க புதுப்பிக்கவும்.",
+                                ),
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
 
                             const SizedBox(height: 16),
 

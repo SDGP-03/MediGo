@@ -69,6 +69,46 @@ export interface PendingTransfer {
     priority: 'critical' | 'urgent' | 'standard';
 }
 
+function normalizeDriver(id: string, raw: any): Driver {
+    const safeNumber = (v: any, fallback = 0) => {
+        const n = typeof v === 'number' ? v : Number(v);
+        return Number.isFinite(n) ? n : fallback;
+    };
+
+    const statusFromRaw = (v: any): DriverStatus => {
+        if (v === 'active' || v === 'off_duty' || v === 'on_leave') return v;
+        if (v === 'blocked') return 'off_duty';
+        return 'active';
+    };
+
+    return {
+        id,
+        name: (raw?.name ?? raw?.driverName ?? 'Unknown Driver').toString(),
+        gender: (raw?.gender === 'Male' || raw?.gender === 'Female' || raw?.gender === 'Other')
+            ? raw.gender
+            : 'Other',
+        phone: (raw?.phone ?? '').toString(),
+        email: (raw?.email ?? '').toString(),
+        licenseNumber: (raw?.licenseNumber ?? '').toString(),
+        licenseExpiry: (raw?.licenseExpiry ?? '').toString(),
+        joinDate: (raw?.joinDate ?? '').toString(),
+        status: statusFromRaw(raw?.status ?? raw?.blockStatus),
+        assignedAmbulance: raw?.assignedAmbulance ?? null,
+        rating: safeNumber(raw?.rating, 0),
+        totalTrips: safeNumber(raw?.totalTrips, 0),
+        totalKm: safeNumber(raw?.totalKm, 0),
+        avgResponseTime: (raw?.avgResponseTime ?? 'N/A').toString(),
+        incidentReports: safeNumber(raw?.incidentReports, 0),
+        baseSalary: safeNumber(raw?.baseSalary, 0),
+        overtimeHours: safeNumber(raw?.overtimeHours, 0),
+        overtimeRate: safeNumber(raw?.overtimeRate, 0),
+        tripsBonus: safeNumber(raw?.tripsBonus, 0),
+        attendanceDays: safeNumber(raw?.attendanceDays, 0),
+        leaveDays: safeNumber(raw?.leaveDays, 0),
+        fuelEfficiencyScore: safeNumber(raw?.fuelEfficiencyScore, 0),
+    };
+}
+
 // ─── Hook return type ─────────────────────────────────────────────────────────
 
 export interface UseFleetDataReturn {
@@ -99,6 +139,7 @@ export interface UseFleetDataReturn {
 
 export function useFleetData(): UseFleetDataReturn {
     const [uid, setUid] = useState<string | null>(null);
+    const [hospitalId, setHospitalId] = useState<string | null>(null);
     const [authResolved, setAuthResolved] = useState(false);
     const [ambulances, setAmbulances] = useState<AmbulanceUnit[]>([]);
     const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -116,122 +157,153 @@ export function useFleetData(): UseFleetDataReturn {
         return unsub;
     }, []);
 
-    // ── Firebase subscription ──
+    // ── Admin profile subscription (resolve hospitalPlaceId) ──
     useEffect(() => {
-        if (!authResolved || !uid) {
+        const adminRef = ref(database, `admin/${uid}`);
+        if (!authResolved) return;
+        if (!uid) {
+            setHospitalId(null);
+            setHospitalName('');
             setLoading(false);
             return;
         }
 
-        const hospitalRef = ref(database, `hospitals/${uid}`);
-        const adminRef = ref(database, `admin/${uid}`);
+        setLoading(true);
 
-        // Listen to hospital fleet data (ambulances, drivers)
-        const unsubHospital = onValue(hospitalRef, (snapshot) => {
-            const data = snapshot.val() || {};
+        const unsubscribe = onValue(
+            adminRef,
+            (snapshot) => {
+                const data = snapshot.val() || {};
+                setHospitalName(data.hospitalName || '');
+                setHospitalId(data.hospitalPlaceId || uid); // fallback for legacy accounts
+            },
+            (err) => {
+                console.error('[FleetData] Admin fetch error:', err);
+                setError(err.message);
+                setHospitalId(uid);
+                setLoading(false);
+            },
+        );
 
-            // Parse Ambulances
-            const ambObj = data.ambulances || {};
-            setAmbulances(Object.entries(ambObj).map(([id, val]: [string, any]) => ({ id, ...val })));
-
-            // Parse Drivers
-            const drvObj = data.drivers || {};
-            setDrivers(Object.entries(drvObj).map(([id, val]: [string, any]) => ({ id, ...val })));
-
-            // Parse Pending Transfers
-            const pndObj = data.pendingTransfers || {};
-            setPendingTransfers(Object.entries(pndObj).map(([id, val]: [string, any]) => ({ id, ...val })));
-
-            setLoading(false);
-            setError(null);
-        }, (err) => {
-            console.error('[FleetData] Hospital fetch error:', err);
-            setError(err.message);
-            setLoading(false);
-        });
-
-        // Listen to admin profile (for hospital name)
-        const unsubAdmin = onValue(adminRef, (snapshot) => {
-            const data = snapshot.val() || {};
-            if (data.hospitalName) {
-                setHospitalName(data.hospitalName);
-            }
-        }, (err) => {
-            console.error('[FleetData] Admin fetch error:', err);
-        });
-
-        return () => {
-            off(hospitalRef, 'value', unsubHospital);
-            off(adminRef, 'value', unsubAdmin);
-        };
+        return () => unsubscribe();
     }, [uid, authResolved]);
+
+    // ── Hospital subscription (ambulances, drivers, pendingTransfers) ──
+    useEffect(() => {
+        if (!authResolved) return;
+        if (!hospitalId) return;
+
+        setLoading(true);
+        const hospitalRef = ref(database, `hospitals/${hospitalId}`);
+
+        const unsubscribe = onValue(
+            hospitalRef,
+            (snapshot) => {
+                const data = snapshot.val() || {};
+
+                const ambObj = data.ambulances || {};
+                setAmbulances(
+                    Object.entries(ambObj).map(([id, val]: [string, any]) => ({
+                        id,
+                        ...val,
+                    })),
+                );
+
+                const drvObj = data.drivers || {};
+                setDrivers(
+                    Object.entries(drvObj).map(([id, val]: [string, any]) => ({
+                        ...normalizeDriver(id, val),
+                    })),
+                );
+
+                const pndObj = data.pendingTransfers || {};
+                setPendingTransfers(
+                    Object.entries(pndObj).map(([id, val]: [string, any]) => ({
+                        id,
+                        ...val,
+                    })),
+                );
+
+                setLoading(false);
+                setError(null);
+            },
+            (err) => {
+                console.error('[FleetData] Hospital fetch error:', err);
+                setError(err.message);
+                setLoading(false);
+            },
+        );
+
+        return () => unsubscribe();
+    }, [hospitalId, authResolved]);
 
     // ── Helpers ──
 
     const addAmbulance = useCallback(async (unit: AmbulanceUnit) => {
-        await apiPost('/fleet/ambulances', unit);
-    }, []);
+        if (!hospitalId) return;
+        await set(ref(database, `hospitals/${hospitalId}/ambulances/${unit.id}`), unit);
+    }, [hospitalId]);
 
     const updateAmbulance = useCallback(async (id: string, changes: Partial<AmbulanceUnit>) => {
-        if (!uid) return;
-        await update(ref(database, `hospitals/${uid}/ambulances/${id}`), changes);
-    }, [uid]);
+        if (!hospitalId) return;
+        await update(ref(database, `hospitals/${hospitalId}/ambulances/${id}`), changes);
+    }, [hospitalId]);
 
     const deleteAmbulance = useCallback(async (id: string) => {
-        if (!uid) return;
-        await remove(ref(database, `hospitals/${uid}/ambulances/${id}`));
-    }, [uid]);
+        if (!hospitalId) return;
+        await remove(ref(database, `hospitals/${hospitalId}/ambulances/${id}`));
+    }, [hospitalId]);
 
     const addDriver = useCallback(async (driver: Driver) => {
-        if (!uid) return;
-        await set(ref(database, `hospitals/${uid}/drivers/${driver.id}`), driver);
-    }, [uid]);
+        if (!hospitalId) return;
+        await set(ref(database, `hospitals/${hospitalId}/drivers/${driver.id}`), driver);
+    }, [hospitalId]);
 
     const updateDriver = useCallback(async (id: string, changes: Partial<Driver>) => {
-        if (!uid) return;
-        await update(ref(database, `hospitals/${uid}/drivers/${id}`), changes);
-    }, [uid]);
+        if (!hospitalId) return;
+        await update(ref(database, `hospitals/${hospitalId}/drivers/${id}`), changes);
+    }, [hospitalId]);
 
     const deleteDriver = useCallback(async (id: string) => {
-        if (!uid) return;
-        await remove(ref(database, `hospitals/${uid}/drivers/${id}`));
-    }, [uid]);
+        if (!hospitalId) return;
+        await remove(ref(database, `hospitals/${hospitalId}/drivers/${id}`));
+    }, [hospitalId]);
 
     const assignAmbulanceToTransfer = useCallback(async (ambId: string, transfer: PendingTransfer) => {
-        if (!uid) return;
-        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+        if (!hospitalId) return;
+        await update(ref(database, `hospitals/${hospitalId}/ambulances/${ambId}`), {
             status: 'in_service',
             currentTransfer: transfer.patient
         });
-    }, [uid]);
+    }, [hospitalId]);
 
     const scheduleMaintenance = useCallback(async (ambId: string, date: string, notes: string) => {
-        if (!uid) return;
-        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+        if (!hospitalId) return;
+        await update(ref(database, `hospitals/${hospitalId}/ambulances/${ambId}`), {
             status: 'maintenance',
             nextServiceDue: date,
             maintenanceNotes: notes
         });
-    }, [uid]);
+    }, [hospitalId]);
 
     const completeMaintenance = useCallback(async (ambId: string) => {
-        if (!uid) return;
-        await update(ref(database, `hospitals/${uid}/ambulances/${ambId}`), {
+        if (!hospitalId) return;
+        await update(ref(database, `hospitals/${hospitalId}/ambulances/${ambId}`), {
             status: 'available',
             lastService: new Date().toISOString()
         });
-    }, [uid]);
+    }, [hospitalId]);
 
     const addPendingTransfer = useCallback(async (transfer: Omit<PendingTransfer, 'id'>) => {
-        if (!uid) return;
-        const newRef = push(ref(database, `hospitals/${uid}/pendingTransfers`));
+        if (!hospitalId) return;
+        const newRef = push(ref(database, `hospitals/${hospitalId}/pendingTransfers`));
         await set(newRef, transfer);
-    }, [uid]);
+    }, [hospitalId]);
 
     const removePendingTransfer = useCallback(async (id: string) => {
-        if (!uid) return;
-        await remove(ref(database, `hospitals/${uid}/pendingTransfers/${id}`));
-    }, [uid]);
+        if (!hospitalId) return;
+        await remove(ref(database, `hospitals/${hospitalId}/pendingTransfers/${id}`));
+    }, [hospitalId]);
 
     return {
         ambulances,

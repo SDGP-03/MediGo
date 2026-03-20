@@ -214,22 +214,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // Cached driver name from the drivers database
+  // Cached driver name and hospital ID from the drivers database
   String? _cachedDriverName;
+  String? _cachedHospitalId;
 
-  /// Fetch driver name from the drivers database node
+  /// Fetch driver info from the drivers database node
   Future<void> _fetchDriverName(String uid) async {
     try {
       final driversRef = FirebaseDatabase.instance
           .ref()
           .child('drivers')
           .child(uid);
-      final snapshot = await driversRef.child('name').get();
+      final snapshot = await driversRef.get();
       if (snapshot.exists && snapshot.value != null) {
-        _cachedDriverName = snapshot.value.toString();
+        final data = snapshot.value as Map;
+        _cachedDriverName = data['name']?.toString();
+        _cachedHospitalId = data['hospitalPlaceId']?.toString();
       }
     } catch (e) {
-      debugPrint('Failed to fetch driver name: $e');
+      debugPrint('Failed to fetch driver info: $e');
     }
   }
 
@@ -412,16 +415,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
           final requests = data as Map<dynamic, dynamic>;
 
-          // Find pending requests
-          for (var entry in requests.entries) {
-            final requestData = entry.value as Map<dynamic, dynamic>;
-            if (requestData['status'] == 'pending') {
-              final assignment = Assignment.fromJson(entry.key, requestData);
-              if (_activeRequestDialogId == assignment.requestId) return;
-              _showTripAlert(assignment);
-              break; // Show one at a time
-            }
+          // Collect all pending requests and sort newest-first by createdAt
+          // so that repeated admin submissions always surface the latest request.
+          final pendingEntries =
+              requests.entries
+                  .where(
+                    (e) =>
+                        (e.value as Map<dynamic, dynamic>)['status'] ==
+                        'pending',
+                  )
+                  .toList()
+                ..sort((a, b) {
+                  final aTime =
+                      (a.value as Map<dynamic, dynamic>)['createdAt']
+                          ?.toString() ??
+                      '';
+                  final bTime =
+                      (b.value as Map<dynamic, dynamic>)['createdAt']
+                          ?.toString() ??
+                      '';
+                  return bTime.compareTo(aTime); // descending — newest first
+                });
+
+          if (pendingEntries.isEmpty) return;
+
+          final newestEntry = pendingEntries.first;
+          final assignment = Assignment.fromJson(
+            newestEntry.key as String,
+            newestEntry.value as Map<dynamic, dynamic>,
+          );
+
+          // Already showing this exact request — do nothing.
+          if (_activeRequestDialogId == assignment.requestId) return;
+
+          // A *different* request arrived while an old dialog is still open:
+          // dismiss the old dialog so we can show the newer one.
+          if (_activeRequestDialogId != null && context.mounted) {
+            Navigator.of(context, rootNavigator: true).maybePop();
+            _activeRequestDialogId = null;
           }
+
+          _showTripAlert(assignment);
         });
   }
 
@@ -908,8 +942,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       'acceptedAt': ServerValue.timestamp,
     });
 
-    await _driverLocationRef?.update({'status': 'busy'});
-
     setState(() {
       currentAssignment = assignment;
     });
@@ -928,8 +960,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       'status': 'cancelled',
       'driverId': null, // Unassign so admin can reassign
     });
-
-    await _driverLocationRef?.update({'status': 'online'});
 
     if (!mounted) return;
     setState(() {
@@ -1380,9 +1410,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _miniTag(t("Service", "සේවාව", "சேவை")),
-                        _miniTag(t("Maintenance", "නඩත්තු", "பராமரிப்பு")),
                         _miniTag(t("Breakdown", "බිඳවැටීම", "கோளாறு")),
+                        _miniTag(
+                          t(
+                            "Other Problems",
+                            "වෙනත් ගැටලු",
+                            "மற்ற பிரச்சனைகள்",
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -1614,22 +1649,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 12),
             _sheetActionTile(
-              icon: Icons.miscellaneous_services,
-              color: Colors.blue,
-              title: t("Service", "සේවාව", "சேவை"),
-              onTap: () =>
-                  _showIssueDetailsDialog(ctx, t("Service", "සේවාව", "சேவை")),
-            ),
-            _sheetActionTile(
-              icon: Icons.build_circle,
-              color: Colors.orange,
-              title: t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
-              onTap: () => _showIssueDetailsDialog(
-                ctx,
-                t("Maintenance", "නඩත්තු", "பராமரிப்பு"),
-              ),
-            ),
-            _sheetActionTile(
               icon: Icons.car_repair,
               color: Colors.red,
               title: t("Breakdown", "බිඳවැටීම", "கோளாறு"),
@@ -1715,25 +1734,70 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  void _submitIssue(String issueType, String details) {
-    final hasDetails = details.isNotEmpty;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          hasDetails
-              ? t(
-                  "$issueType report sent with extra details.",
-                  "$issueType වාර්තාව අමතර විස්තර සමඟ යවන ලදී.",
-                  "$issueType அறிக்கை கூடுதல் விவரங்களுடன் அனுப்பப்பட்டது.",
-                )
-              : t(
-                  "$issueType report sent successfully.",
-                  "$issueType වාර්තාව සාර්ථකව යවන ලදී.",
-                  "$issueType அறிக்கை வெற்றிகரமாக அனுப்பப்பட்டது.",
-                ),
+  Future<void> _submitIssue(String issueType, String details) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Ensure we have driver details
+    if (_cachedDriverName == null || _cachedHospitalId == null) {
+      await _fetchDriverName(user.uid);
+    }
+
+    final hospitalId = _cachedHospitalId;
+    if (hospitalId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error: No hospital associated with driver."),
         ),
-      ),
-    );
+      );
+      return;
+    }
+
+    final issueId = DateTime.now().millisecondsSinceEpoch.toString();
+    final issueRef = FirebaseDatabase.instance
+        .ref()
+        .child('hospital_issues')
+        .child(hospitalId)
+        .child(issueId);
+
+    final issueData = {
+      'id': issueId,
+      'issueType': issueType,
+      'details': details,
+      'driverId': user.uid,
+      'driverName': _cachedDriverName ?? 'Driver',
+      'timestamp': ServerValue.timestamp,
+      'status': 'new',
+    };
+
+    try {
+      await issueRef.set(issueData);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            details.isNotEmpty
+                ? t(
+                    "$issueType report sent with extra details.",
+                    "$issueType වාර්තාව අමතර විස්තර සමඟ යවන ලදී.",
+                    "$issueType அறிக்கை கூடுதல் விவரங்களுடன் அனுப்பப்பட்டது.",
+                  )
+                : t(
+                    "$issueType report sent successfully.",
+                    "$issueType වාර්තාව සාර්ථකව යවන ලදී.",
+                    "$issueType அறிக்கை வெற்றிகரமாக அனுப்பப்பட்டது.",
+                  ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to submit issue: $e")));
+    }
   }
 
   Widget _priorityBadge(String priority) {
