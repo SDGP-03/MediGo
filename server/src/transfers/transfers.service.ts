@@ -75,15 +75,33 @@ export class TransfersService {
     }
 
     /** Create a new transfer request */
-    async createTransfer(data: any): Promise<{ id: string }> {
+    async createTransfer(uid: string, data: any): Promise<{ id: string }> {
+        // Fetch the admin's hospital from Firebase Reatime DB
+        // Fetch hospital data (address, lat, lng)
+        const hospitalSnapshot = await this.firebase.ref(`hospitals/${uid}`).get();
+        const hospitalData = hospitalSnapshot.val() || {};
+
+        // Fetch admin profile (the primary source for hospitalName)
+        const adminSnapshot = await this.firebase.ref(`admin/${uid}`).get();
+        const adminData = adminSnapshot.val() || {};
+
+        const enrichedData = {
+            ...data,
+            pickup: {
+                hospitalName: adminData.hospitalName || hospitalData.hospitalName || 'Unknown Hospital',
+                address: hospitalData.address || 'Unknown Address',
+                lat: hospitalData.lat || 0,
+                lng: hospitalData.lng || 0,
+            },
+            status: 'pending',
+            createdAt: new Date().toISOString(),
+        };
+
         const transfersRef = this.firebase.ref('transfer_requests');
         const newRef = transfersRef.push();
-        await newRef.set({
-            ...data,
-            createdAt: Date.now(),
-            status: 'pending',
-        });
-        this.logger.log(`Transfer created: ${newRef.key}`);
+        await newRef.set(enrichedData);
+        
+        this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName}`);
         return { id: newRef.key! };
     }
 

@@ -77,6 +77,7 @@ export interface UseFleetDataReturn {
     pendingTransfers: PendingTransfer[];
     loading: boolean;
     error: string | null;
+    hospitalName: string;
 
     addAmbulance: (unit: AmbulanceUnit) => Promise<void>;
     updateAmbulance: (id: string, changes: Partial<AmbulanceUnit>) => Promise<void>;
@@ -104,6 +105,7 @@ export function useFleetData(): UseFleetDataReturn {
     const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [hospitalName, setHospitalName] = useState<string>('');
 
     // ── Track auth state ──
     useEffect(() => {
@@ -122,8 +124,10 @@ export function useFleetData(): UseFleetDataReturn {
         }
 
         const hospitalRef = ref(database, `hospitals/${uid}`);
+        const adminRef = ref(database, `admin/${uid}`);
 
-        const unsub = onValue(hospitalRef, (snapshot) => {
+        // Listen to hospital fleet data (ambulances, drivers)
+        const unsubHospital = onValue(hospitalRef, (snapshot) => {
             const data = snapshot.val() || {};
 
             // Parse Ambulances
@@ -141,12 +145,25 @@ export function useFleetData(): UseFleetDataReturn {
             setLoading(false);
             setError(null);
         }, (err) => {
-            console.error('[FleetData] Firebase error:', err);
+            console.error('[FleetData] Hospital fetch error:', err);
             setError(err.message);
             setLoading(false);
         });
 
-        return () => off(hospitalRef, 'value', unsub);
+        // Listen to admin profile (for hospital name)
+        const unsubAdmin = onValue(adminRef, (snapshot) => {
+            const data = snapshot.val() || {};
+            if (data.hospitalName) {
+                setHospitalName(data.hospitalName);
+            }
+        }, (err) => {
+            console.error('[FleetData] Admin fetch error:', err);
+        });
+
+        return () => {
+            off(hospitalRef, 'value', unsubHospital);
+            off(adminRef, 'value', unsubAdmin);
+        };
     }, [uid, authResolved]);
 
     // ── Helpers ──
@@ -222,6 +239,7 @@ export function useFleetData(): UseFleetDataReturn {
         pendingTransfers,
         loading,
         error,
+        hospitalName,
         addAmbulance,
         updateAmbulance,
         deleteAmbulance,
