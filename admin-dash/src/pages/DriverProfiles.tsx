@@ -598,15 +598,10 @@ export function DriverProfiles() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | DriverStatus>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
     const [editTarget, setEditTarget] = useState<Driver | null>(null);
 
     // ── Firebase CRUD handlers ──
-
-    const handleRegister = async (driver: Driver) => {
-        await addDriver(driver);
-    };
 
     const handleEditSave = async (updated: Driver) => {
         const { id, ...changes } = updated;
@@ -669,13 +664,6 @@ export function DriverProfiles() {
                     <h1 className="text-foreground text-2xl font-bold">Driver Profiles</h1>
                     <p className="text-muted-foreground text-sm">Manage drivers, view performance and calculate salaries</p>
                 </div>
-                <button
-                    onClick={() => setShowRegisterModal(true)}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
-                >
-                    <User size={16} />
-                    + Register New Driver
-                </button>
             </div>
 
             {/* ── Summary Cards ── */}
@@ -796,14 +784,6 @@ export function DriverProfiles() {
                     </div>
                 )}
             </div>
-
-            {/* ── Register Modal ── */}
-            {showRegisterModal && (
-                <RegisterDriverModal
-                    onClose={() => setShowRegisterModal(false)}
-                    onRegister={handleRegister}
-                />
-            )}
 
             {/* ── Edit Driver Modal ── */}
             {editTarget && (
