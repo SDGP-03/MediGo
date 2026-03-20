@@ -240,8 +240,9 @@ export function useFleetData(): UseFleetDataReturn {
     // ── Helpers ──
 
     const addAmbulance = useCallback(async (unit: AmbulanceUnit) => {
-        await apiPost('/fleet/ambulances', unit);
-    }, []);
+        if (!hospitalId) return;
+        await set(ref(database, `hospitals/${hospitalId}/ambulances/${unit.id}`), unit);
+    }, [hospitalId]);
 
     const updateAmbulance = useCallback(async (id: string, changes: Partial<AmbulanceUnit>) => {
         if (!hospitalId) return;
