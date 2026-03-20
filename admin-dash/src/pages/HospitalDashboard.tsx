@@ -600,7 +600,7 @@ export function HospitalDashboard() {
           </div>
           <div className="divide-y divide-border">
             {activeTransfers.length === 0 ? (
-              <div className="p-8 text-center bg-muted/20">
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
                 <p className="text-muted-foreground italic">No active transfers at this moment.</p>
               </div>
             ) : (
@@ -703,8 +703,8 @@ export function HospitalDashboard() {
           </div>
           <div className="divide-y divide-border">
             {pendingRequests.length === 0 ? (
-              <div className="p-8 text-center">
-                <CheckCircle className="mx-auto text-emerald-500 mb-2 opacity-20" size={48} />
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
+                <CheckCircle className="mx-auto text-emerald-500/20 mb-2" size={48} />
                 <p className="text-muted-foreground italic">No pending requests to accept.</p>
               </div>
             ) : (
@@ -804,78 +804,84 @@ export function HospitalDashboard() {
             <h3 className="text-lg font-bold text-foreground">Incoming Emergency Patients</h3>
           </div>
           <div className="space-y-4">
-            {incomingRequests.map((request) => (
-              <div
-                key={request.id}
-                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all"
-                onClick={() => setSelectedRequest(request)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="text-foreground">{request.patientName}</h4>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
-                          request.priority
-                        )
-                          }`}
-                      >
-                        {request.priority.toUpperCase()}
-                      </span>
-                      <span className="text-muted-foreground text-sm">{request.timestamp}</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      {request.age} yrs • {request.gender} • {request.incidentType}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Ambulance size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">{request.ambulanceNumber}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">ETA {request.eta}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">{request.distance} km</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm capitalize">{request.consciousness}</span>
-                  </div>
-                </div>
-
-                <div className="bg-muted/30 rounded p-3">
-                  <p className="text-muted-foreground text-sm mb-1">Symptoms:</p>
-                  <p className="text-foreground text-sm">{request.symptoms}</p>
-                </div>
-
-                <div className="mt-3 flex justify-end gap-3 pl-8">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    Decline
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    View Details
-                  </button>
-                </div>
+            {incomingRequests.length === 0 ? (
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
+                <p className="text-muted-foreground italic">No incoming emergency patients at this moment.</p>
               </div>
-            ))}
+            ) : (
+              incomingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all"
+                  onClick={() => setSelectedRequest(request)}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="text-foreground">{request.patientName}</h4>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
+                            request.priority
+                          )
+                            }`}
+                        >
+                          {request.priority.toUpperCase()}
+                        </span>
+                        <span className="text-muted-foreground text-sm">{request.timestamp}</span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        {request.age} yrs • {request.gender} • {request.incidentType}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Ambulance size={16} className="text-gray-400" />
+                      <span className="text-muted-foreground text-sm">{request.ambulanceNumber}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock size={16} className="text-gray-400" />
+                      <span className="text-muted-foreground text-sm">ETA {request.eta}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin size={16} className="text-gray-400" />
+                      <span className="text-muted-foreground text-sm">{request.distance} km</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User size={16} className="text-gray-400" />
+                      <span className="text-muted-foreground text-sm capitalize">{request.consciousness}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/30 rounded p-3">
+                    <p className="text-muted-foreground text-sm mb-1">Symptoms:</p>
+                    <p className="text-foreground text-sm">{request.symptoms}</p>
+                  </div>
+
+                  <div className="mt-3 flex justify-end gap-3 pl-8">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
