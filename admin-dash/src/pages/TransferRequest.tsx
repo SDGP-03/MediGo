@@ -80,38 +80,27 @@ export function TransferRequest() {
   const { ambulances, drivers, hospitalName } = useFleetData();
   const { onlineDrivers, busyDrivers } = useDriverLocations();
 
-  const availableAmbulances = ambulances.filter(a => a.status === 'available');
+  // Ambulances that are available AND not assigned to any driver AND have no active transfer
+  const assignedAmbulanceIds = new Set(
+    drivers.map(d => d.assignedAmbulance).filter(Boolean) as string[]
+  );
+  const availableAmbulances = ambulances.filter(
+    a => a.status === 'available' && !assignedAmbulanceIds.has(a.id) && !a.currentTransfer
+  );
 
-  // ─── SYNTHESIZE ACTIVE DRIVERS ───
-  // Merge registered drivers with live "online" status, and include any online drivers not in registry.
-  const allKnownDrivers = [...drivers];
-
-  // Add online drivers that aren't in the registry (using their UID as ID)
-  onlineDrivers.forEach(od => {
-    const isAlreadyInRegistry = drivers.some(rd =>
-      rd.id === od.id || rd.name.toLowerCase().trim() === od.driverName.toLowerCase().trim()
-    );
-    if (!isAlreadyInRegistry) {
-      allKnownDrivers.push({
-        id: od.id,
-        name: od.driverName,
-        status: 'active',
-        rating: 5.0,
-        assignedAmbulance: null,
-      } as any);
-    }
-  });
-
-  const activeDrivers = allKnownDrivers.filter(d => {
-    // A driver is selectable if they are "online" in real-time OR manually marked "active" in registry
-    // But they must NOT be "busy" (on another mission)
+  // ─── ACTIVE DRIVERS ───
+  // Only show drivers that are:
+  //   1. Registered in THIS hospital's Firebase registry (from useFleetData)
+  //   2. Currently ONLINE in the SSE live stream (matching by driver ID or name)
+  //   3. NOT currently marked as busy
+  const activeDrivers = drivers.filter(d => {
     const isLiveOnline = onlineDrivers.some(od =>
       od.id === d.id || od.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
     );
     const isLiveBusy = busyDrivers.some(bd =>
       bd.id === d.id || bd.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
     );
-    return (isLiveOnline || d.status === 'active') && !isLiveBusy;
+    return isLiveOnline && !isLiveBusy;
   });
 
   // Autocomplete state for patient name
@@ -970,8 +959,8 @@ export function TransferRequest() {
                                   setSelectedDriverId(drvId);
                                   if (formErrors.selectedDriverId) setFormErrors({ ...formErrors, selectedDriverId: '' });
 
-                                  // Auto-link assigned ambulance
-                                  const drvRecord = allKnownDrivers.find(d => d.id === drvId);
+                                  // Auto-link assigned ambulance using the registry list (correct IDs)
+                                  const drvRecord = drivers.find(d => d.id === drvId);
                                   if (drvRecord?.assignedAmbulance) {
                                     setSelectedAmbulanceId(drvRecord.assignedAmbulance);
                                     if (formErrors.selectedAmbulanceId) setFormErrors({ ...formErrors, selectedAmbulanceId: '' });
@@ -1001,7 +990,7 @@ export function TransferRequest() {
                             </div>
 
                             {selectedDriverId && (() => {
-                              const drv = allKnownDrivers.find(d => d.id === selectedDriverId);
+                              const drv = drivers.find(d => d.id === selectedDriverId);
                               const amb = ambulances.find(a => a.id === (drv?.assignedAmbulance || selectedAmbulanceId));
                               if (!drv) return null;
 
@@ -1050,7 +1039,7 @@ export function TransferRequest() {
                                       <div className="flex flex-wrap gap-2 mt-2">
                                         {amb.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 rounded-md text-[10px] font-bold">VENTILATOR</span>}
                                         {amb.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded-md text-[10px] font-bold">DOCTOR ON BOARD</span>}
-                                        {amb.equipment.slice(0, 2).map(e => (
+                                        {(amb.equipment || []).slice(0, 2).map((e: string) => (
                                           <span key={e} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-md text-[10px] uppercase font-bold">{e}</span>
                                         ))}
                                       </div>
