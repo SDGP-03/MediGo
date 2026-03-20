@@ -609,9 +609,16 @@ export function TransferRequest() {
                     </div>
 
                     <div>
-                      <label className="block text-foreground mb-2">To Hospital *</label>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-foreground font-medium">To Hospital *</label>
+                        {toHospitalDetails && (
+                          <span className="text-[10px] uppercase tracking-wider bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded font-bold">
+                            Verified Destination
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative group">
+                        <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${toHospitalDetails ? 'text-green-500' : 'text-gray-400 group-focus-within:text-red-500'}`} size={20} />
                         <Autocomplete
                           apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
                           onPlaceSelected={(place) => {
@@ -631,15 +638,25 @@ export function TransferRequest() {
                             componentRestrictions: { country: 'lk' },
                             fields: ['name', 'formatted_address', 'geometry', 'place_id'],
                           }}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all bg-input-field-bg text-foreground ${formErrors.toHospital
+                            ? 'border-red-500 ring-1 ring-red-500'
+                            : toHospitalDetails
+                              ? 'border-green-500 ring-1 ring-green-500/20'
+                              : 'border-input hover:border-gray-300 dark:hover:border-gray-600'
                             }`}
                           placeholder="Search destination hospital..."
                         />
                       </div>
                       {toHospitalDetails && (
-                        <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                          <MapPin size={12} /> {toHospitalDetails.address}
-                        </p>
+                        <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg animate-in fade-in slide-in-from-top-1">
+                          <p className="text-xs text-green-700 dark:text-green-400 flex items-start gap-2">
+                            <MapPin size={14} className="mt-0.5" /> 
+                            <span>
+                              <strong>{formData.toHospital}</strong><br/>
+                              {toHospitalDetails.address}
+                            </span>
+                          </p>
+                        </div>
                       )}
                       {formErrors.toHospital && <p className="text-red-500 text-xs mt-1">{formErrors.toHospital}</p>}
                     </div>
