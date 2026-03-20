@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Observable } from 'rxjs';
 
@@ -148,74 +148,110 @@ export class FleetService {
 
     constructor(private readonly firebase: FirebaseService) { }
 
+    // ─── Hospital ID resolution ───────────────────────────────────────────────
+
+    /**
+     * Resolves an admin's Firebase Auth UID to the shared hospital placeId.
+     * All fleet data is stored under hospitals/{placeId} so that multiple
+     * admins/fleet officers belonging to the same hospital share one data node.
+     */
+    private async getHospitalId(uid: string): Promise<string> {
+        const snap = await this.firebase.ref(`admin/${uid}`).get();
+        if (!snap.exists()) {
+            throw new NotFoundException(`Admin profile not found for uid: ${uid}`);
+        }
+        const placeId: string | undefined = snap.val()?.hospitalPlaceId;
+        if (!placeId) {
+            throw new NotFoundException(
+                `No hospitalPlaceId on admin profile for uid: ${uid}. ` +
+                `Please re-register to link your account to a hospital.`,
+            );
+        }
+        return placeId;
+    }
+
+    // ─── Streaming ────────────────────────────────────────────────────────────
+
     /** Stream fleet data (ambulances, drivers, pending transfers) via SSE */
     streamFleet(uid: string): Observable<MessageEvent> {
         return new Observable((subscriber) => {
-            const basePath = `hospitals/${uid}`;
-            const ambRef = this.firebase.ref(`${basePath}/ambulances`);
-            const drvRef = this.firebase.ref(`${basePath}/drivers`);
-            const tfrRef = this.firebase.ref(`${basePath}/pendingTransfers`);
+            let cleanup: (() => void) | null = null;
 
-            let ambulances: any[] = [];
-            let drivers: any[] = [];
-            let pendingTransfers: any[] = [];
-            let initialised = false;
+            // Resolve hospitalId first, then set up listeners
+            this.getHospitalId(uid)
+                .then((hospitalId) => {
+                    const basePath = `hospitals/${hospitalId}`;
+                    const ambRef = this.firebase.ref(`${basePath}/ambulances`);
+                    const drvRef = this.firebase.ref(`${basePath}/drivers`);
+                    const tfrRef = this.firebase.ref(`${basePath}/pendingTransfers`);
 
-            const emit = () => {
-                subscriber.next({
-                    data: JSON.stringify({ ambulances, drivers, pendingTransfers }),
-                } as MessageEvent);
-            };
+                    let ambulances: any[] = [];
+                    let drivers: any[] = [];
+                    let pendingTransfers: any[] = [];
 
-            // Emit immediately so frontend doesn't hang waiting for Firebase
-            emit();
+                    const emit = () => {
+                        subscriber.next({
+                            data: JSON.stringify({ ambulances, drivers, pendingTransfers }),
+                        } as MessageEvent);
+                    };
 
-            const toArray = (val: unknown): string[] => {
-                if (!val) return [];
-                if (Array.isArray(val)) return val;
-                return Object.values(val as Record<string, string>);
-            };
+                    // Emit immediately so the frontend doesn't hang
+                    emit();
 
-            const normalizeAmb = (raw: Record<string, unknown>) => ({
-                ...raw,
-                equipment: toArray(raw['equipment']),
-            });
+                    const toArray = (val: unknown): string[] => {
+                        if (!val) return [];
+                        if (Array.isArray(val)) return val;
+                        return Object.values(val as Record<string, string>);
+                    };
 
-            const cbAmb = ambRef.on('value', (snap) => {
-                ambulances = snap.exists()
-                    ? Object.values(snap.val()).map((v: any) => normalizeAmb(v))
-                    : [];
-                emit();
-                if (!initialised) initialised = true;
-            });
+                    const normalizeAmb = (raw: Record<string, unknown>) => ({
+                        ...raw,
+                        equipment: toArray(raw['equipment']),
+                    });
 
-            const cbDrv = drvRef.on('value', (snap) => {
-                drivers = snap.exists() ? Object.values(snap.val()) : [];
-                emit();
-            });
+                    const cbAmb = ambRef.on('value', (snap) => {
+                        ambulances = snap.exists()
+                            ? Object.values(snap.val()).map((v: any) => normalizeAmb(v))
+                            : [];
+                        emit();
+                    });
 
-            const cbTfr = tfrRef.on('value', (snap) => {
-                pendingTransfers = snap.exists() ? Object.values(snap.val()) : [];
-                emit();
-            });
+                    const cbDrv = drvRef.on('value', (snap) => {
+                        drivers = snap.exists() ? Object.values(snap.val()) : [];
+                        emit();
+                    });
 
-            // Seed if empty
-            this.seedIfEmpty(uid).catch((err) =>
-                this.logger.error('Seed error:', err),
-            );
+                    const cbTfr = tfrRef.on('value', (snap) => {
+                        pendingTransfers = snap.exists() ? Object.values(snap.val()) : [];
+                        emit();
+                    });
+
+                    // Seed if empty
+                    this.seedIfEmpty(hospitalId).catch((err) =>
+                        this.logger.error('Seed error:', err),
+                    );
+
+                    cleanup = () => {
+                        ambRef.off('value', cbAmb);
+                        drvRef.off('value', cbDrv);
+                        tfrRef.off('value', cbTfr);
+                        this.logger.log(`Fleet SSE stream closed for hospital ${hospitalId}`);
+                    };
+                })
+                .catch((err) => {
+                    this.logger.error(`streamFleet failed to resolve hospitalId: ${err.message}`);
+                    subscriber.error(err);
+                });
 
             return () => {
-                ambRef.off('value', cbAmb);
-                drvRef.off('value', cbDrv);
-                tfrRef.off('value', cbTfr);
-                this.logger.log('Fleet SSE stream closed');
+                if (cleanup) cleanup();
             };
         });
     }
 
     /** Seed default data on first load */
-    private async seedIfEmpty(uid: string): Promise<void> {
-        const basePath = `hospitals/${uid}`;
+    private async seedIfEmpty(hospitalId: string): Promise<void> {
+        const basePath = `hospitals/${hospitalId}`;
         const db = this.firebase.getDatabase();
 
         const [ambSnap, drvSnap, tfrSnap] = await Promise.all([
@@ -244,18 +280,21 @@ export class FleetService {
 
         if (Object.keys(writes).length > 0) {
             await db.ref().update(writes);
-            this.logger.log(`Seeded fleet data for hospital ${uid}`);
+            this.logger.log(`Seeded fleet data for hospital ${hospitalId}`);
         }
     }
 
-    // ── Ambulance CRUD ──
+    // ── Ambulance CRUD ──────────────────────────────────────────────────────
 
     async addAmbulance(uid: string, unit: any): Promise<void> {
-        // 1. Get hospital/admin name to use as default location
-        const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
-        const hospitalName = adminSnap.exists() ? adminSnap.val().hospitalName : 'General Hospital';
+        const hospitalId = await this.getHospitalId(uid);
 
-        // 2. Prepare the unit with defaults
+        // Get hospital name from the shared info node
+        const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
+        const hospitalName = infoSnap.exists()
+            ? infoSnap.val().name
+            : 'General Hospital';
+
         const newUnit = {
             ...unit,
             location: unit.location || hospitalName,
@@ -267,55 +306,60 @@ export class FleetService {
             equipment: unit.equipment || [],
         };
 
-        // 3. Save to Firebase
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${newUnit.id}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${newUnit.id}`)
             .set(newUnit);
-        
-        this.logger.log(`Ambulance ${newUnit.id} added for hospital ${uid} (Default Location: ${hospitalName})`);
+
+        this.logger.log(`Ambulance ${newUnit.id} added for hospital ${hospitalId} (${hospitalName})`);
     }
 
     async updateAmbulance(uid: string, id: string, changes: any): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${id}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${id}`)
             .update(changes);
     }
 
     async deleteAmbulance(uid: string, id: string): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${id}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${id}`)
             .remove();
     }
 
-    // ── Driver CRUD ──
+    // ── Driver CRUD ─────────────────────────────────────────────────────────
 
     async addDriver(uid: string, driver: any): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/drivers/${driver.id}`)
+            .ref(`hospitals/${hospitalId}/drivers/${driver.id}`)
             .set(driver);
     }
 
     async updateDriver(uid: string, id: string, changes: any): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/drivers/${id}`)
+            .ref(`hospitals/${hospitalId}/drivers/${id}`)
             .update(changes);
     }
 
     async deleteDriver(uid: string, id: string): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/drivers/${id}`)
+            .ref(`hospitals/${hospitalId}/drivers/${id}`)
             .remove();
     }
 
-    // ── Assignment helpers ──
+    // ── Assignment helpers ───────────────────────────────────────────────────
 
     async assignAmbulanceToTransfer(
         uid: string,
         ambId: string,
         transfer: any,
     ): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${ambId}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${ambId}`)
             .update({
                 status: 'in_service',
                 currentTransfer: transfer.id,
@@ -330,6 +374,7 @@ export class FleetService {
         date: string,
         notes: string,
     ): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         const changes: Record<string, unknown> = {
             status: 'maintenance',
             location: 'Service Center',
@@ -339,16 +384,22 @@ export class FleetService {
         if (date) changes['nextServiceDue'] = date;
         if (notes) changes['maintenanceNotes'] = notes;
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${ambId}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${ambId}`)
             .update(changes);
     }
 
     async completeMaintenance(uid: string, ambId: string): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
+
+        // Use the hospital's own name as the return location
+        const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
+        const hospitalName = infoSnap.exists() ? infoSnap.val().name : 'City General Hospital';
+
         await this.firebase
-            .ref(`hospitals/${uid}/ambulances/${ambId}`)
+            .ref(`hospitals/${hospitalId}/ambulances/${ambId}`)
             .update({
                 status: 'available',
-                location: 'City General Hospital',
+                location: hospitalName,
                 lastService: new Date().toISOString().slice(0, 10),
                 maintenanceNotes: null,
                 currentTransfer: null,
@@ -356,19 +407,21 @@ export class FleetService {
             });
     }
 
-    // ── Pending transfer operations ──
+    // ── Pending transfer operations ──────────────────────────────────────────
 
     async addPendingTransfer(uid: string, transfer: any): Promise<{ id: string }> {
+        const hospitalId = await this.getHospitalId(uid);
         const newRef = this.firebase
-            .ref(`hospitals/${uid}/pendingTransfers`)
+            .ref(`hospitals/${hospitalId}/pendingTransfers`)
             .push();
         await newRef.set({ ...transfer, id: newRef.key });
         return { id: newRef.key! };
     }
 
     async removePendingTransfer(uid: string, id: string): Promise<void> {
+        const hospitalId = await this.getHospitalId(uid);
         await this.firebase
-            .ref(`hospitals/${uid}/pendingTransfers/${id}`)
+            .ref(`hospitals/${hospitalId}/pendingTransfers/${id}`)
             .remove();
     }
 }

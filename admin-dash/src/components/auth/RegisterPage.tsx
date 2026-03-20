@@ -57,35 +57,47 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
 
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const uid = userCredential.user.uid;
+            const placeId = hospitalDetails.placeId;
 
-            // Update profile with display name
+            // Update Firebase Auth display name
             await updateProfile(userCredential.user, {
                 displayName: `${name} - ${hospitalName}`,
             });
 
-
-            // Save admin data to the "admin" table in Realtime Database
-            const adminRef = ref(database, `admin/${userCredential.user.uid}`);
+            // 1. Save admin profile — hospitalPlaceId links this user to the shared hospital node
+            const adminRef = ref(database, `admin/${uid}`);
             await set(adminRef, {
-                uid: userCredential.user.uid,
-                name: name,
-                email: email,
-                hospitalName: hospitalName,
+                uid,
+                name,
+                email,
+                hospitalName,
+                hospitalPlaceId: placeId,   // ← shared key for the hospital node
                 role: 'admin',
                 createdAt: new Date().toISOString(),
+            });
 
-                //link to detailed hospital info
-                hospital: {
-                    name: hospitalName,
-                    address: hospitalDetails.address,
-                    location: {
-                        lat: hospitalDetails.lat,
-                        lng: hospitalDetails.lng
-                    },
-                    placeId: hospitalDetails.placeId
+            // 2. Create/update the shared hospital node (keyed by placeId)
+            //    This is where ALL admins of the same physical hospital share data.
+            const hospitalInfoRef = ref(database, `hospitals/${placeId}/info`);
+            await set(hospitalInfoRef, {
+                name: hospitalName,
+                address: hospitalDetails.address,
+                location: {
+                    lat: hospitalDetails.lat,
+                    lng: hospitalDetails.lng,
+                },
+                placeId,
+            });
 
-
-                }
+            // 3. Register this admin as a member of the hospital
+            const hospitalAdminRef = ref(database, `hospitals/${placeId}/admins/${uid}`);
+            await set(hospitalAdminRef, {
+                uid,
+                name,
+                email,
+                role: 'admin',
+                joinedAt: new Date().toISOString(),
             });
 
             setSuccess(true);

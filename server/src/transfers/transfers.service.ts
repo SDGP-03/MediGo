@@ -76,22 +76,22 @@ export class TransfersService {
 
     /** Create a new transfer request */
     async createTransfer(uid: string, data: any): Promise<{ id: string }> {
-        // Fetch the admin's hospital from Firebase Reatime DB
-        // Fetch hospital data (address, lat, lng)
-        const hospitalSnapshot = await this.firebase.ref(`hospitals/${uid}`).get();
-        const hospitalData = hospitalSnapshot.val() || {};
+        // Resolve admin uid → shared hospitalPlaceId
+        const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
+        const adminData = adminSnap.val() || {};
+        const hospitalId: string = adminData.hospitalPlaceId || uid; // fallback for legacy accounts
 
-        // Fetch admin profile (the primary source for hospitalName)
-        const adminSnapshot = await this.firebase.ref(`admin/${uid}`).get();
-        const adminData = adminSnapshot.val() || {};
+        // Read hospital info from the shared hospital node
+        const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
+        const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
 
         const enrichedData = {
             ...data,
             pickup: {
-                hospitalName: adminData.hospitalName || hospitalData.hospitalName || 'Unknown Hospital',
-                address: hospitalData.address || 'Unknown Address',
-                lat: hospitalData.lat || 0,
-                lng: hospitalData.lng || 0,
+                hospitalName: hospitalInfo.name || adminData.hospitalName || 'Unknown Hospital',
+                address: hospitalInfo.address || 'Unknown Address',
+                lat: hospitalInfo.location?.lat || 0,
+                lng: hospitalInfo.location?.lng || 0,
             },
             status: 'pending',
             createdAt: new Date().toISOString(),
@@ -100,8 +100,8 @@ export class TransfersService {
         const transfersRef = this.firebase.ref('transfer_requests');
         const newRef = transfersRef.push();
         await newRef.set(enrichedData);
-        
-        this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName}`);
+
+        this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName} (${hospitalId})`);
         return { id: newRef.key! };
     }
 
