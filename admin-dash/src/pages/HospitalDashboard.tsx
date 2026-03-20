@@ -45,6 +45,11 @@ export function HospitalDashboard() {
   const [driverPopupData, setDriverPopupData] = useState<any>(null);
   const [driverPopupLoading, setDriverPopupLoading] = useState(false);
 
+  // --- STATE: ISSUE NOTIFICATION POPUP ---
+  const [issuePopupOpen, setIssuePopupOpen] = useState(false);
+  const [latestIssue, setLatestIssue] = useState<any>(null);
+  const [lastSeenIssueTime, setLastSeenIssueTime] = useState<number>(Date.now());
+
   const viewDriverDetails = async (driverId: string) => {
     if (!driverId || driverId === 'Unknown') {
       alert('No driver assigned to this request.');
@@ -160,6 +165,52 @@ export function HospitalDashboard() {
       resourcesUnsub();
     };
   }, []);
+
+  // --- EFFECT: LISTEN FOR NEW ISSUES ---
+  useEffect(() => {
+    let issueUnsub: () => void = () => { };
+
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          // 1. Resolve hospitalId (admin may use hospitalPlaceId or fall back to uid)
+          const adminSnap = await get(ref(database, `admin/${user.uid}`));
+          const adminData = adminSnap.exists() ? adminSnap.val() : {};
+          const hospitalId: string = adminData.hospitalPlaceId || user.uid;
+
+          const issuesRef = ref(database, `hospital_issues/${hospitalId}`);
+
+          // 2. Use onValue to get the latest issues
+          const unsubIssues = onValue(issuesRef, (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              const issuesArray = Object.values(data) as any[];
+
+              // Sort by timestamp descending to get the newest
+              issuesArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+              const newest = issuesArray[0];
+
+              // Only show popup for NEW issues (reported after dashboard loaded)
+              // We use lastSeenIssueTime to avoid duplicates and show only the latest one
+              if (newest && newest.timestamp > lastSeenIssueTime) {
+                setLatestIssue(newest);
+                setIssuePopupOpen(true);
+                setLastSeenIssueTime(newest.timestamp);
+              }
+            }
+          });
+          issueUnsub = () => off(issuesRef, 'value', unsubIssues);
+        } catch (err) {
+          console.error("Error setting up issue listener:", err);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      issueUnsub();
+    };
+  }, [lastSeenIssueTime]);
 
   // Live driver data from backend (filtered to this hospital)
   const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
@@ -1022,6 +1073,60 @@ export function HospitalDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* --- POPUP: ISSUE NOTIFICATION --- */}
+      <Dialog open={issuePopupOpen} onOpenChange={setIssuePopupOpen}>
+        <DialogContent className="sm:max-w-[425px] border-red-500/20 border-2">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle size={20} />
+              New Ambulance Issue Reported
+            </DialogTitle>
+            <DialogDescription>
+              A driver has reported a new issue regarding their vehicle.
+            </DialogDescription>
+          </DialogHeader>
+          {latestIssue && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/20">
+                <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+                  {latestIssue.driverName?.charAt(0) || 'D'}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">{latestIssue.driverName}</p>
+                  <p className="text-xs text-muted-foreground">ID: {latestIssue.driverId}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Issue Type</p>
+                <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-md text-sm font-bold inline-block">
+                  {latestIssue.issueType}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Details</p>
+                <p className="text-sm p-3 bg-accent/30 rounded-lg border border-border">
+                  {latestIssue.details || 'No additional details provided.'}
+                </p>
+              </div>
+
+              <div className="pt-2 text-[10px] text-muted-foreground text-right italic">
+                Reported at: {latestIssue.timestamp ? new Date(latestIssue.timestamp).toLocaleString() : 'Just now'}
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => setIssuePopupOpen(false)}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-lg shadow-red-500/20 active:scale-95 transition-all font-semibold text-sm"
+            >
+              Acknowledge
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
