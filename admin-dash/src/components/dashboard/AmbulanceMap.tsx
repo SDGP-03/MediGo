@@ -1,5 +1,5 @@
-import { useMemo, useCallback, useState, useEffect } from 'react';
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
+import { useMemo, useCallback, useState, useEffect, useRef } from 'react';
+import { GoogleMap, MarkerF, InfoWindowF, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import { Ambulance, MapPin, Navigation, Car } from 'lucide-react';
 import { DriverLocation } from '../../useDriverLocations';
 
@@ -122,9 +122,15 @@ export function AmbulanceMap({
     );
   }, [isLoaded]);
 
+  // Ref to track last processed trigger to prevent redundant centering on location updates
+  const lastTriggerRef = useRef<string | null>(null);
+
   // Listen for trackedDriverTrigger to center map and show route
   useEffect(() => {
     if (trackedDriverTrigger) {
+      const triggerKey = `${trackedDriverTrigger.id}-${trackedDriverTrigger.timestamp}`;
+      const isNewTrigger = lastTriggerRef.current !== triggerKey;
+
       let driver = onlineDrivers.find(d => d.id === trackedDriverTrigger.id);
       if (!driver) driver = busyDrivers.find(d => d.id === trackedDriverTrigger.id);
 
@@ -139,8 +145,6 @@ export function AmbulanceMap({
         console.log(`[AmbulanceMap] Tracking driver: ${driver.driverName}, ID: ${driver.id}, Active Transfer:`, activeTransfer?.id);
         
         if (activeTransfer) {
-          // If status indicates driver is on way to pickup, route to pickup coordinates
-          // Added 'dispatched' and 'in_progress' to pickup statuses based on backend observation
           const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
           const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
@@ -156,9 +160,12 @@ export function AmbulanceMap({
           setDirections(null);
         }
 
-        if (map) {
+        // Only force center/zoom if the trigger itself is new (prevents jumping on every location update)
+        if (map && isNewTrigger) {
+          console.log('[AmbulanceMap] Centering map on tracked driver');
           map.setCenter({ lat: driver.lat, lng: driver.lng });
           map.setZoom(14);
+          lastTriggerRef.current = triggerKey;
         }
       } else {
         const offlineDriver = offlineDrivers.find(d => d.id === trackedDriverTrigger.id);
@@ -168,9 +175,10 @@ export function AmbulanceMap({
           setSelectedAmbulance(null);
           setShowUserLocationInfo(false);
           setShowTrackedDeviceInfo(false);
-          if (map) {
+          if (map && isNewTrigger) {
             map.setCenter({ lat: offlineDriver.lat, lng: offlineDriver.lng });
             map.setZoom(14);
+            lastTriggerRef.current = triggerKey;
           }
         }
       }
@@ -254,21 +262,22 @@ export function AmbulanceMap({
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
-    if (bounds && typeof google !== 'undefined') {
+    // Only fit bounds if we aren't already tracking or selecting a specific driver
+    if (bounds && typeof google !== 'undefined' && !trackedDriverTrigger && !selectedDriver && !selectedOfflineDriver) {
       map.fitBounds(bounds, 50);
     }
-  }, [bounds]);
+  }, [bounds, trackedDriverTrigger, selectedDriver, selectedOfflineDriver]);
 
   // Re-fit bounds when drivers arrive or change (to prevent disappearance from view)
   useEffect(() => {
-    if (map && bounds && !trackedDriverTrigger) {
+    if (map && bounds && !trackedDriverTrigger && !selectedDriver && !selectedOfflineDriver) {
       // Small timeout to ensure markers have rendered
       const timer = setTimeout(() => {
         map.fitBounds(bounds, 50);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [map, bounds, trackedDriverTrigger]);
+  }, [map, bounds, trackedDriverTrigger, selectedDriver, selectedOfflineDriver]);
 
   const onUnmount = useCallback(() => {
     setMap(null);
@@ -562,8 +571,8 @@ export function AmbulanceMap({
           const icon = getMarkerIcon(color);
 
           return (
-            <Marker
-              key={ambulance.id}
+            <MarkerF
+              key={`amb-${ambulance.id}`}
               position={{ lat: ambulance.lat, lng: ambulance.lng }}
               icon={icon}
               onClick={() => handleMarkerClick(ambulance)}
@@ -573,7 +582,7 @@ export function AmbulanceMap({
 
         {/* User Location Marker */}
         {userLocation && (
-          <Marker
+          <MarkerF
             position={userLocation}
             icon={getUserLocationIcon()}
             title="Your Location"
@@ -586,7 +595,7 @@ export function AmbulanceMap({
         )}
 
         {selectedAmbulance && (
-          <InfoWindow
+          <InfoWindowF
             position={{ lat: selectedAmbulance.lat, lng: selectedAmbulance.lng }}
             onCloseClick={() => setSelectedAmbulance(null)}
           >
@@ -598,12 +607,12 @@ export function AmbulanceMap({
                 <p className="text-blue-600 text-xs">ETA: {selectedAmbulance.eta}</p>
               )}
             </div>
-          </InfoWindow>
+          </InfoWindowF>
         )}
 
         {/* User Location Info Window */}
         {userLocation && showUserLocationInfo && (
-          <InfoWindow
+          <InfoWindowF
             position={userLocation}
             onCloseClick={() => setShowUserLocationInfo(false)}
           >
@@ -624,12 +633,12 @@ export function AmbulanceMap({
                 <p className="text-green-600 text-xs">📍 Live Tracking Active</p>
               )}
             </div>
-          </InfoWindow>
+          </InfoWindowF>
         )}
 
         {/* Tracked Device Marker (from external tracker app) */}
         {trackedDevice && trackedDevice.isTracking && (
-          <Marker
+          <MarkerF
             position={{ lat: trackedDevice.lat, lng: trackedDevice.lng }}
             icon={getTrackedDeviceIcon()}
             title={trackedDevice.name}
@@ -644,7 +653,7 @@ export function AmbulanceMap({
 
         {/* Tracked Device Info Window */}
         {trackedDevice && trackedDevice.isTracking && showTrackedDeviceInfo && (
-          <InfoWindow
+          <InfoWindowF
             position={{ lat: trackedDevice.lat, lng: trackedDevice.lng }}
             onCloseClick={() => setShowTrackedDeviceInfo(false)}
           >
@@ -664,13 +673,13 @@ export function AmbulanceMap({
               </p>
               <p className="text-violet-600 text-xs">📡 Live Tracking</p>
             </div>
-          </InfoWindow>
+          </InfoWindowF>
         )}
 
         {/* Driver Location Markers (from Firebase) */}
         {onlineDrivers.map((driver) => (
-          <Marker
-            key={driver.id}
+          <MarkerF
+            key={`driver-${driver.id}`}
             position={{ lat: driver.lat, lng: driver.lng }}
             icon={getDriverIcon()}
             title={driver.driverName}
@@ -695,15 +704,14 @@ export function AmbulanceMap({
               } else {
                 setDirections(null);
               }
-              // -----------------------------
             }}
           />
         ))}
 
         {/* Busy Driver Location Markers */}
         {busyDrivers.map((driver) => (
-          <Marker
-            key={`busy-${driver.id}`}
+          <MarkerF
+            key={`driver-${driver.id}`}
             position={{ lat: driver.lat, lng: driver.lng }}
             icon={getBusyDriverIcon()}
             title={`${driver.driverName} (Busy)`}
@@ -733,7 +741,7 @@ export function AmbulanceMap({
 
         {/* Driver Info Window (for both Online and Busy) */}
         {selectedDriver && (
-          <InfoWindow
+          <InfoWindowF
             position={{ lat: selectedDriver.lat, lng: selectedDriver.lng }}
             onCloseClick={() => { setSelectedDriver(null); setDirections(null); }}
             options={{ maxWidth: 180 }}
@@ -759,13 +767,13 @@ export function AmbulanceMap({
                 ● {selectedDriver.status === 'busy' ? 'Busy' : 'Online'}
               </span>
             </div>
-          </InfoWindow>
+          </InfoWindowF>
         )}
 
         {/* Offline Driver Location Markers (grayed out) */}
         {offlineDrivers.map((driver) => (
-          <Marker
-            key={`offline-${driver.id}`}
+          <MarkerF
+            key={`driver-${driver.id}`}
             position={{ lat: driver.lat, lng: driver.lng }}
             icon={getOfflineDriverIcon()}
             title={`${driver.driverName} (Offline)`}
@@ -782,7 +790,7 @@ export function AmbulanceMap({
 
         {/* Offline Driver Info Window */}
         {selectedOfflineDriver && (
-          <InfoWindow
+          <InfoWindowF
             position={{ lat: selectedOfflineDriver.lat, lng: selectedOfflineDriver.lng }}
             onCloseClick={() => setSelectedOfflineDriver(null)}
             options={{ maxWidth: 180 }}
@@ -796,7 +804,7 @@ export function AmbulanceMap({
               </div>
               <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>● Offline · {formatTimeAgo(selectedOfflineDriver.timestamp)}</span>
             </div>
-          </InfoWindow>
+          </InfoWindowF>
         )}
       </GoogleMap>
 
