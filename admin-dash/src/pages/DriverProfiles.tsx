@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFleetData, Driver, DriverStatus } from '../hooks/useFleetData';
+import { useDriverLocations } from '../useDriverLocations';
 
 // ─── Helper Components ────────────────────────────────────────────────────────
 
@@ -25,7 +26,25 @@ function StarRating({ rating }: { rating: number }) {
     );
 }
 
-function StatusBadge({ status }: { status: DriverStatus }) {
+function StatusBadge({ status, realTimeStatus }: { status: DriverStatus, realTimeStatus?: 'online' | 'busy' | 'offline' | null }) {
+    if (status === 'active' && realTimeStatus) {
+        const styles = {
+            online: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
+            busy: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
+            offline: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
+        };
+        const labels = {
+            online: 'ACTIVE',
+            busy: 'BUSY',
+            offline: 'OFFLINE',
+        };
+        return (
+            <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[realTimeStatus]}`}>
+                {labels[realTimeStatus]}
+            </span>
+        );
+    }
+
     const styles: Record<DriverStatus, string> = {
         active: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
         off_duty: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
@@ -595,6 +614,15 @@ export function DriverProfiles() {
         deleteDriver,
     } = useFleetData();
 
+    const { onlineDrivers, busyDrivers, offlineDrivers } = useDriverLocations();
+
+    const getRealTimeStatus = (driverId: string) => {
+        if (onlineDrivers.some(d => d.id === driverId)) return 'online';
+        if (busyDrivers.some(d => d.id === driverId)) return 'busy';
+        if (offlineDrivers.some(d => d.id === driverId)) return 'offline';
+        return null;
+    };
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | DriverStatus>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -724,7 +752,10 @@ export function DriverProfiles() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="text-foreground font-semibold">{driver.name}</span>
                                         <span className="text-muted-foreground text-xs">#{driver.id}</span>
-                                        <StatusBadge status={driver.status} />
+                                        <StatusBadge 
+                                            status={driver.status} 
+                                            realTimeStatus={getRealTimeStatus(driver.id)}
+                                        />
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                         <StarRating rating={driver.rating} />

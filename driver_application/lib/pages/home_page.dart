@@ -924,7 +924,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     await requestRef.update({
       'status': 'cancelled',
-      // Keep driverId here so the backend listener knows who to mark as 'online' again
+      'driverId': null, // Unassign so admin can reassign
     });
 
     if (!mounted) return;
