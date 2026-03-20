@@ -6,12 +6,7 @@ import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
 import { apiPost } from '../api/apiClient';
-
-// Hospital coordinates mapping (you can expand this or fetch from Firestore)
-const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
-  'General Hospital O P D': { lat: 6.918955913694652, lng: 79.86611697073118, address: 'WV98+HC9, EW Perera Mawatha, Colombo 01000, Sri Lanka' },
-  'Lady Ridgeway Hospital for Children (LRH)': { lat: 6.918381526890345, lng: 79.8759550393045, address: 'Dr Danister De Silva Mawatha, Colombo 00800, Sri Lanka' },
-};
+import Autocomplete from 'react-google-autocomplete';
 
 // Patient records (mirrored from PatientRecords page)
 interface PatientRecord {
@@ -74,6 +69,12 @@ export function TransferRequest() {
   const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+  const [toHospitalDetails, setToHospitalDetails] = useState<{
+    address: string;
+    lat: number;
+    lng: number;
+    placeId: string;
+  } | null>(null);
 
   // Fleet data from Firebase (ambulances + drivers)
   const { ambulances, drivers, hospitalName } = useFleetData();
@@ -163,13 +164,7 @@ export function TransferRequest() {
     attendantGender: '',
   });
 
-  const hospitals = [
-    'General Hospital O P D',
-    'Lady Ridgeway Hospital for Children (LRH)',
-    'Regional Base Hospital',
-    'Teaching Hospital East',
-    'Metro Hospital',
-  ];
+
 
   const equipment = [
     'Oxygen Cylinder',
@@ -198,7 +193,7 @@ export function TransferRequest() {
 
   const validateTransferStep = () => {
     const errors: Record<string, string> = {};
-    if (!formData.toHospital) errors.toHospital = 'Destination hospital is required';
+    if (!formData.toHospital || !toHospitalDetails) errors.toHospital = 'Destination hospital is required. Please select from suggestions.';
     if (!formData.priority) errors.priority = 'Priority level is required';
     if (!formData.reason) errors.reason = 'Reason for transfer is required';
 
@@ -227,7 +222,7 @@ export function TransferRequest() {
     setIsSubmitting(true);
 
     try {
-      const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
+      const toCoords = toHospitalDetails || { lat: 0, lng: 0, address: '', placeId: '' };
 
       const payload = {
         driverId: selectedDriverId,
@@ -252,6 +247,7 @@ export function TransferRequest() {
           address: toCoords.address,
           lat: toCoords.lat,
           lng: toCoords.lng,
+          placeId: toCoords.placeId,
         },
 
         requirements: {
@@ -304,6 +300,7 @@ export function TransferRequest() {
       setSelectedDriverId('');
       setSelectedAmbulanceId('');
       setSelectedDocumentIndices([]);
+      setToHospitalDetails(null);
 
       // Clear success message after 5 seconds
       setTimeout(() => {
@@ -624,21 +621,37 @@ export function TransferRequest() {
 
                     <div>
                       <label className="block text-foreground mb-2">To Hospital *</label>
-                      <select
-                        required
-                        value={formData.toHospital}
-                        onChange={(e) => {
-                          setFormData({ ...formData, toHospital: e.target.value });
-                          if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
-                        }}
-                        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
-                          }`}
-                      >
-                        <option value="">Select destination hospital</option>
-                        {hospitals.map(hospital => (
-                          <option key={hospital} value={hospital}>{hospital}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <Autocomplete
+                          apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
+                          onPlaceSelected={(place) => {
+                            if (place && place.name && place.formatted_address && place.geometry) {
+                              setFormData({ ...formData, toHospital: place.name });
+                              setToHospitalDetails({
+                                address: place.formatted_address,
+                                lat: place.geometry.location.lat(),
+                                lng: place.geometry.location.lng(),
+                                placeId: place.place_id,
+                              });
+                              if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+                            }
+                          }}
+                          options={{
+                            types: ['hospital'],
+                            componentRestrictions: { country: 'lk' },
+                            fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                          }}
+                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.toHospital ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
+                            }`}
+                          placeholder="Search destination hospital..."
+                        />
+                      </div>
+                      {toHospitalDetails && (
+                        <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                          <MapPin size={12} /> {toHospitalDetails.address}
+                        </p>
+                      )}
                       {formErrors.toHospital && <p className="text-red-500 text-xs mt-1">{formErrors.toHospital}</p>}
                     </div>
                   </div>
