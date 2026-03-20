@@ -86,11 +86,23 @@ export function AmbulanceMap({
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
 
+  // Load Google Maps API
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+  });
+
   // --- ADDED FOR MAP ROUTING ---
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
 
   const fetchDirections = useCallback((originLat: number, originLng: number, destLat: number, destLng: number) => {
-    if (!isLoaded || typeof google === 'undefined' || !google.maps) return;
+    if (!isLoaded || typeof google === 'undefined' || !google.maps) {
+      console.warn('[AmbulanceMap] Cannot fetch directions: Google Maps not loaded');
+      return;
+    }
+    
+    console.log(`[AmbulanceMap] Fetching directions from (${originLat}, ${originLng}) to (${destLat}, ${destLng})`);
+    
     const directionsService = new google.maps.DirectionsService();
     directionsService.route(
       {
@@ -100,14 +112,15 @@ export function AmbulanceMap({
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK && result) {
+          console.log('[AmbulanceMap] Directions fetched successfully');
           setDirections(result);
         } else {
-          console.error(`Error fetching directions: ${status}`);
+          console.error(`[AmbulanceMap] Error fetching directions: ${status}`);
           setDirections(null);
         }
       }
     );
-  }, []);
+  }, [isLoaded]);
 
   // Listen for trackedDriverTrigger to center map and show route
   useEffect(() => {
@@ -123,14 +136,20 @@ export function AmbulanceMap({
         setShowTrackedDeviceInfo(false);
 
         const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
+        console.log(`[AmbulanceMap] Tracking driver: ${driver.driverName}, ID: ${driver.id}, Active Transfer:`, activeTransfer?.id);
+        
         if (activeTransfer) {
           // If status indicates driver is on way to pickup, route to pickup coordinates
-          const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+          // Added 'dispatched' and 'in_progress' to pickup statuses based on backend observation
+          const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
           const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+
+          console.log(`[AmbulanceMap] Routing to ${toPickup ? 'PICKUP' : 'DESTINATION'} (${activeTransfer.status}). Target:`, target);
 
           if (target && target.lat && target.lng) {
             fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
           } else {
+            console.warn('[AmbulanceMap] Target location missing lat/lng:', target);
             setDirections(null);
           }
         } else {
@@ -192,11 +211,6 @@ export function AmbulanceMap({
     };
   }, []);
 
-  // Load Google Maps API
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
-  });
 
   // Create marker icon function that works after Google Maps loads
   const getMarkerIcon = useCallback((color: string) => {
@@ -670,7 +684,7 @@ export function AmbulanceMap({
               // --- UPDATED FOR MAP ROUTING ---
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
-                const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
                 const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
@@ -702,7 +716,7 @@ export function AmbulanceMap({
 
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
-                const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
                 const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
