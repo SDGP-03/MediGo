@@ -78,12 +78,22 @@ export function HospitalDashboard() {
       const locationData = locationSnap.exists() ? locationSnap.val() : {};
       if (driverSnap.exists() || locationSnap.exists()) {
         // Merge data, prioritizing live location fields if they exist
+        const now = Date.now();
+        const ts = locationData.timestamp || 0;
+        let displayStatus = locationData.status || (locationData.isOnline === true ? 'online' : 'offline');
+
+        // Heartbeat logic: If last update is > 5 mins old, force offline
+        if (displayStatus !== 'offline' && (now - ts >= 5 * 60 * 1000)) {
+          displayStatus = 'offline';
+        }
+
         setDriverPopupData({
           id: driverId,
           ...driverData,
           ...locationData,
-          // Logic for online status (online if status is 'online' or legacy isOnline is true)
-          isOnline: locationData.status === 'online' || locationData.isOnline === true
+          status: displayStatus,
+          isOnline: displayStatus === 'online',
+          isBusy: displayStatus === 'busy'
         });
       } else {
         setDriverPopupData({ id: driverId, notFound: true });
@@ -280,6 +290,8 @@ export function HospitalDashboard() {
         gender: t.patient?.gender || t.gender || 'N/A',
         incidentType: t.reason || 'Emergency Transfer',
         priority: t.priority || 'standard',
+        pickup: t.pickup,
+        destination: t.destination,
         eta: t.eta || 'Evaluating...',
         distance: t.distance || 'N/A',
         ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
@@ -287,6 +299,8 @@ export function HospitalDashboard() {
         symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
         consciousness: 'conscious',
         breathing: 'normal',
+        driverId: t.driverId,
+        driverName: t.driverName,
         timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
       })).reverse();
 
@@ -822,9 +836,19 @@ export function HospitalDashboard() {
                     {driverPopupData.driverName || 'Unknown Driver'}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'} `} />
-                    <span className={`text-xs font-medium ${driverPopupData.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'} `}>
-                      {driverPopupData.isOnline ? 'Online' : 'Offline'}
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      driverPopupData.status === 'online' ? 'bg-emerald-500 animate-pulse' :
+                      driverPopupData.status === 'busy' ? 'bg-orange-500' :
+                      'bg-gray-400'
+                    }`} />
+                    <span className={`text-xs font-medium ${
+                      driverPopupData.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
+                      driverPopupData.status === 'busy' ? 'text-orange-600 dark:text-orange-400' :
+                      'text-muted-foreground'
+                    }`}>
+                      {driverPopupData.status === 'online' ? 'Online' :
+                       driverPopupData.status === 'busy' ? 'Busy' :
+                       'Offline'}
                     </span>
                   </div>
                 </div>
