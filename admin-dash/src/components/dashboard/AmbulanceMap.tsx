@@ -123,8 +123,16 @@ export function AmbulanceMap({
         setShowTrackedDeviceInfo(false);
 
         const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
-        if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
-          fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+        if (activeTransfer) {
+          // If status indicates driver is on way to pickup, route to pickup coordinates
+          const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+          const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+
+          if (target && target.lat && target.lng) {
+            fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
+          } else {
+            setDirections(null);
+          }
         } else {
           setDirections(null);
         }
@@ -659,10 +667,17 @@ export function AmbulanceMap({
               setShowUserLocationInfo(false);
               setShowTrackedDeviceInfo(false);
 
-              // --- ADDED FOR MAP ROUTING ---
+              // --- UPDATED FOR MAP ROUTING ---
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
-              if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
-                fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+              if (activeTransfer) {
+                const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+                const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+
+                if (target && target.lat && target.lng) {
+                  fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
+                } else {
+                  setDirections(null);
+                }
               } else {
                 setDirections(null);
               }
@@ -686,8 +701,15 @@ export function AmbulanceMap({
               setShowTrackedDeviceInfo(false);
 
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
-              if (activeTransfer && activeTransfer.destLat && activeTransfer.destLng) {
-                fetchDirections(driver.lat, driver.lng, activeTransfer.destLat, activeTransfer.destLng);
+              if (activeTransfer) {
+                const toPickup = ['accepted', 'on_way', 'at_pickup'].includes(activeTransfer.status);
+                const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+
+                if (target && target.lat && target.lng) {
+                  fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
+                } else {
+                  setDirections(null);
+                }
               } else {
                 setDirections(null);
               }
