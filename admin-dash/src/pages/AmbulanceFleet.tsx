@@ -11,6 +11,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '../components/ui/dialog';
+import { auth, database } from '../firebase';
+import { ref, get } from 'firebase/database';
 import { useFleetData } from '../hooks/useFleetData';
 import type { AmbulanceUnit } from '../hooks/useFleetData';
 
@@ -85,11 +87,34 @@ export function AmbulanceFleet() {
   const [addForm, setAddForm] = useState({
     id: '', driver: '', driverGender: 'Male',
     attendant: '', attendantGender: 'Male',
-    location: 'City General Hospital',
+    location: '',
     equipment: [] as string[],
     hasDoctor: false, hasVentilator: false,
     year: new Date().getFullYear(),
   });
+
+  const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
+
+  // ── Fetch hospital name for defaults ──
+  useEffect(() => {
+    const fetchHospitalName = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const adminRef = ref(database, `admin/${user.uid}`);
+          const snapshot = await get(adminRef);
+          if (snapshot.exists()) {
+            const hName = snapshot.val().hospitalName || "";
+            setCurrentHospitalName(hName);
+            setAddForm(prev => ({ ...prev, location: hName }));
+          }
+        } catch (err) {
+          console.error("Error fetching hospital name:", err);
+        }
+      }
+    };
+    fetchHospitalName();
+  }, []);
 
   // ── Toast helper ──
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
@@ -274,8 +299,8 @@ export function AmbulanceFleet() {
   };
 
   const handleAddAmbulance = async () => {
-    if (!addForm.id.trim() || !addForm.driver.trim()) {
-      showToast('Ambulance ID and driver name are required.', 'error');
+    if (!addForm.id.trim()) {
+      showToast('Ambulance ID is required.', 'error');
       return;
     }
     const newId = addForm.id.trim().toUpperCase();
@@ -305,7 +330,7 @@ export function AmbulanceFleet() {
       setShowAddModal(false);
       setAddForm({
         id: '', driver: '', driverGender: 'Male', attendant: '', attendantGender: 'Male',
-        location: 'City General Hospital', equipment: [], hasDoctor: false, hasVentilator: false,
+        location: currentHospitalName, equipment: [], hasDoctor: false, hasVentilator: false,
         year: new Date().getFullYear(),
       });
     } catch {

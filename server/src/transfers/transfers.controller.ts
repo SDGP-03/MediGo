@@ -9,6 +9,7 @@ import {
     UseGuards,
     NotFoundException,
     HttpCode,
+    Req,
 } from '@nestjs/common';
 import { TransfersService } from './transfers.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -27,8 +28,8 @@ export class TransfersController {
 
     /** Create a new transfer request */
     @Post()
-    async createTransfer(@Body() body: any) {
-        return this.transfersService.createTransfer(body);
+    async createTransfer(@Req() req: any, @Body() body: any) {
+        return this.transfersService.createTransfer(req.user.uid, body);
     }
 
     /** Get a single transfer by its Firebase key */

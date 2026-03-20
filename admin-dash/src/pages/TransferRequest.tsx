@@ -5,6 +5,7 @@ import { ref, push, set } from 'firebase/database';
 import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
+import { apiPost } from '../api/apiClient';
 
 // Hospital coordinates mapping (you can expand this or fetch from Firestore)
 const hospitalCoordinates: Record<string, { lat: number; lng: number; address: string }> = {
@@ -75,7 +76,7 @@ export function TransferRequest() {
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
 
   // Fleet data from Firebase (ambulances + drivers)
-  const { ambulances, drivers } = useFleetData();
+  const { ambulances, drivers, hospitalName } = useFleetData();
   const { onlineDrivers, busyDrivers } = useDriverLocations();
 
   const availableAmbulances = ambulances.filter(a => a.status === 'available');
@@ -129,6 +130,13 @@ export function TransferRequest() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Sync hospital name to form when it loads
+  useEffect(() => {
+    if (hospitalName) {
+      setFormData(prev => ({ ...prev, fromHospital: `${hospitalName} (Auto-detected)` }));
+    }
+  }, [hospitalName]);
+
   const [formData, setFormData] = useState({
     // Patient Info
     patientName: '',
@@ -139,7 +147,7 @@ export function TransferRequest() {
     allergies: '',
 
     // Transfer Info
-    fromHospital: 'General Hospital O P D',
+    fromHospital: 'Loading... (Auto-detected)',
     toHospital: '',
     reason: '',
     priority: 'standard',
@@ -219,20 +227,14 @@ export function TransferRequest() {
     setIsSubmitting(true);
 
     try {
-      const fromCoords = hospitalCoordinates[formData.fromHospital] || { lat: 0, lng: 0, address: '' };
       const toCoords = hospitalCoordinates[formData.toHospital] || { lat: 0, lng: 0, address: '' };
 
-      const transferRef = ref(database, 'transfer_requests');
-      const newTransferRef = push(transferRef);
-
-      await set(newTransferRef, {
+      const payload = {
         driverId: selectedDriverId,
         driverName: activeDrivers.find(d => d.id === selectedDriverId)?.name || '',
         ambulanceId: selectedAmbulanceId,
         ambulance: selectedAmbulanceId,
         priority: formData.priority,
-        status: 'pending',
-        createdAt: Date.now(),
 
         patient: {
           name: formData.patientName,
@@ -243,13 +245,6 @@ export function TransferRequest() {
           allergies: formData.allergies,
           medicalHistory: formData.medicalHistory,
           currentCondition: formData.currentCondition,
-        },
-
-        pickup: {
-          hospitalName: formData.fromHospital,
-          address: fromCoords.address,
-          lat: fromCoords.lat,
-          lng: fromCoords.lng,
         },
 
         destination: {
@@ -278,7 +273,9 @@ export function TransferRequest() {
         })(),
 
         reason: formData.reason,
-      });
+      };
+
+      await apiPost('/transfers', payload);
 
       setFormErrors({ submitSuccess: 'Transfer request sent to driver! They will receive a notification shortly.' });
 
@@ -291,7 +288,7 @@ export function TransferRequest() {
         patientId: '',
         bloodGroup: '',
         allergies: '',
-        fromHospital: 'General Hospital O P D',
+        fromHospital: hospitalName ? `${hospitalName} (Auto-detected)` : 'Loading... (Auto-detected)',
         toHospital: '',
         reason: '',
         priority: 'standard',
