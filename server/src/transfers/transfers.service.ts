@@ -135,16 +135,20 @@ export class TransfersService implements OnModuleInit {
 
         const transfersRef = this.firebase.ref('transfer_requests');
         const newRef = transfersRef.push();
+        
+        // Setting the transfer immediately signals the driver app.
         await newRef.set(enrichedData);
 
-        // Update driver and ambulance to 'assigned' upon transfer creation
+        // Concurrently update driver and ambulance to 'assigned' to enhance performance
         const targetDriverId = data.driverId;
         const targetAmbulanceId = data.ambulanceId || data.ambulance;
         if (targetDriverId && targetAmbulanceId && hospitalId) {
             try {
-                await this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' });
-                await this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' });
-                await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${targetAmbulanceId}`).update({ status: 'assigned' });
+                await Promise.all([
+                    this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' }),
+                    this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' }),
+                    this.firebase.ref(`hospitals/${hospitalId}/ambulances/${targetAmbulanceId}`).update({ status: 'assigned' })
+                ]);
             } catch (err: any) {
                 this.logger.error(`Failed to assign driver/ambulance for transfer ${newRef.key}: ${err.message}`);
             }

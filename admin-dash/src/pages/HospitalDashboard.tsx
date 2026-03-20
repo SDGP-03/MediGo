@@ -33,6 +33,7 @@ import { database, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, off, get, set } from "firebase/database";
 import { useFleetData } from "../hooks/useFleetData";
+import { TransferCard } from "../components/dashboard/TransferCard";
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
@@ -217,6 +218,7 @@ export function HospitalDashboard() {
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const transfersRef = ref(database, 'transfer_requests');
@@ -232,7 +234,7 @@ export function HospitalDashboard() {
         t.status !== 'cancelled' &&
         t.status !== 'completed' &&
         (t.status === 'pending' || t.status === 'dispatched') &&
-        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
       // Active transfers: Driver has accepted and is on the move
@@ -249,7 +251,29 @@ export function HospitalDashboard() {
         (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
-      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}`);
+      // Incoming transfers directed to this hospital
+      const incoming = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
+        t.destination?.hospitalName === currentHospitalName
+      ).map(t => ({
+        id: t.id,
+        patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
+        age: t.patient?.age || t.age || 'N/A',
+        gender: t.patient?.gender || t.gender || 'N/A',
+        incidentType: t.reason || 'Emergency Transfer',
+        priority: t.priority || 'standard',
+        eta: t.eta || 'Evaluating...',
+        distance: t.distance || 'N/A',
+        ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
+        contactNumber: 'N/A',
+        symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
+        consciousness: 'conscious',
+        breathing: 'normal',
+        timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
+      })).reverse();
+
+      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
       if (allTransfers.length > 0) {
         const sample = allTransfers[allTransfers.length - 1]; // look at newest
         console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
@@ -257,6 +281,7 @@ export function HospitalDashboard() {
 
       setDbPendingRequests(pending);
       setDbActiveTransfers(active);
+      setIncomingRequests(incoming);
     }, (err) => {
       console.error('[Dashboard] Firebase transfers error:', err);
     });
@@ -265,57 +290,7 @@ export function HospitalDashboard() {
   }, [currentHospitalName]);
 
   // --- DATA: INCOMING EMERGENCIES ---
-  const incomingRequests = [
-    {
-      id: 1,
-      patientName: 'John Doe',
-      age: 45,
-      gender: 'Male',
-      incidentType: 'Cardiac Emergency',
-      priority: 'critical',
-      eta: '8 mins',
-      distance: 3.2,
-      ambulanceNumber: 'AMB-102',
-      contactNumber: '+91 9876543210',
-      symptoms: 'Severe chest pain, shortness of breath',
-      consciousness: 'conscious',
-      breathing: 'difficulty',
-      timestamp: '2 mins ago',
-    },
-    {
-      id: 2,
-      patientName: 'Sarah Smith',
-      age: 32,
-      gender: 'Female',
-      incidentType: 'Trauma/Accident',
-      priority: 'urgent',
-      eta: '12 mins',
-      distance: 5.1,
-      ambulanceNumber: 'AMB-205',
-      contactNumber: '+91 9123456789',
-      symptoms: 'Head injury, bleeding from forehead',
-      consciousness: 'conscious',
-      breathing: 'normal',
-      timestamp: '5 mins ago',
-    },
-    {
-      id: 3,
-      patientName: 'Raj Kumar',
-      age: 28,
-      gender: 'Male',
-      incidentType: 'Seizure',
-      priority: 'urgent',
-      eta: '15 mins',
-      distance: 6.8,
-      ambulanceNumber: 'AMB-301',
-      contactNumber: '+91 9898989898',
-      symptoms: 'Seizure episode, now stable',
-      consciousness: 'drowsy',
-      breathing: 'normal',
-      timestamp: '8 mins ago',
-    },
-  ];
-
+  // Replaced with dynamic stream from setIncomingRequests above.
 
 
 
@@ -626,86 +601,18 @@ export function HospitalDashboard() {
           </div>
           <div className="divide-y divide-border">
             {activeTransfers.length === 0 ? (
-              <div className="p-8 text-center bg-muted/20">
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
                 <p className="text-muted-foreground italic">No active transfers at this moment.</p>
               </div>
             ) : (
               activeTransfers.map((transfer) => (
-                <div
+                <TransferCard
                   key={transfer.id}
-                  className="p-6 hover:bg-accent/30 transition-all duration-300"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-foreground">
-                          {typeof transfer.patient === 'object' ? transfer.patient.name : transfer.patient}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white uppercase tracking-wider ${getPriorityColor(transfer.priority)} `}
-                        >
-                          {transfer.priority}
-                        </span>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(transfer.status)} `}
-                        >
-                          {transfer.status?.replace("_", " ").toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        ID: <span className="text-foreground/70 font-mono">{transfer.id}</span> • {transfer.patient?.age || transfer.age}y • {transfer.patient?.gender || transfer.gender}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => handleTrackLive(transfer)}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 active:scale-95 transition-all font-semibold text-sm cursor-pointer whitespace-nowrap self-start md:self-center"
-                    >
-                      <Navigation size={18} fill="currentColor" />
-                      Track Live
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-accent/30 rounded-xl border border-border/50">
-                    <div className="relative pl-6 border-l-2 border-emerald-500">
-                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Pickup</p>
-                      <p className="text-foreground font-semibold text-sm">{transfer.pickup?.hospitalName || transfer.from}</p>
-                    </div>
-                    <div className="relative pl-6 border-l-2 border-red-500">
-                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">Destination</p>
-                      <p className="text-foreground font-semibold text-sm">{transfer.destination?.hospitalName || transfer.to}</p>
-                    </div>
-                    <div className="relative pl-6 border-l-2 border-blue-500">
-                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">ETA Status</p>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} className="text-blue-500" />
-                        <p className="text-blue-600 dark:text-blue-400 font-bold">{transfer.eta || 'Calculating...'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-y-3 gap-x-6 pt-4 border-t border-border/40">
-                    <div className="flex items-center gap-2 text-sm text-foreground/80">
-                      <Ambulance size={16} className="text-muted-foreground" />
-                      <span className="font-medium">{transfer.ambulance || 'Unit Assigned'}</span>
-                    </div>
-                    <div
-                      className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md transition-colors"
-                      onClick={() => viewDriverDetails(transfer.driverId)}
-                    >
-                      <Users size={16} />
-                      <span className="font-bold underline underline-offset-4">{transfer.driverName || transfer.driver}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-foreground/80">
-                      <Shield size={16} className="text-muted-foreground" />
-                      <span className="font-medium text-xs">Attendant: {transfer.attendant || 'Assigned'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-foreground/80 ml-auto">
-                      <MapPin size={16} className="text-muted-foreground" />
-                      <span className="text-xs font-bold">{transfer.distance || '--'} km</span>
-                    </div>
-                  </div>
-                </div>
+                  type="active"
+                  data={transfer}
+                  onTrackLive={handleTrackLive}
+                  onViewDriverDetails={viewDriverDetails}
+                />
               ))
             )}
           </div>
@@ -729,91 +636,19 @@ export function HospitalDashboard() {
           </div>
           <div className="divide-y divide-border">
             {pendingRequests.length === 0 ? (
-              <div className="p-8 text-center">
-                <CheckCircle className="mx-auto text-emerald-500 mb-2 opacity-20" size={48} />
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
+                <CheckCircle className="mx-auto text-emerald-500/20 mb-2" size={48} />
                 <p className="text-muted-foreground italic">No pending requests to accept.</p>
               </div>
             ) : (
               pendingRequests.map((request) => (
-                <div
+                <TransferCard
                   key={request.id}
-                  className="p-6 hover:bg-orange-50/30 dark:hover:bg-orange-950/10 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-foreground font-bold">
-                          {typeof request.patient === 'object' ? request.patient.name : request.patient}
-                        </h3>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase ${getPriorityColor(request.priority)} `}>
-                          {request.priority}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground text-xs font-medium uppercase tracking-tight">
-                        Awaiting {request.status === 'dispatched' ? 'Driver Acceptance' : 'Admin Assignment'}
-                      </p>
-                    </div>
-                    <span className="text-muted-foreground text-xs font-mono bg-accent px-2 py-1 rounded">
-                      {request.id}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="p-3 rounded-lg bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-950/50">
-                      <p className="text-orange-900/40 dark:text-orange-400/40 text-[9px] uppercase font-bold mb-1">Pickup Point</p>
-                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.pickup?.hospitalName || request.from}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-950/50">
-                      <p className="text-red-900/40 dark:text-red-400/40 text-[9px] uppercase font-bold mb-1">Requested Destination</p>
-                      <p className="text-foreground text-sm font-semibold truncate leading-tight">{request.destination?.hospitalName || request.to}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                    <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                          <User size={14} className="text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-muted-foreground uppercase font-bold leading-none">Requested By</p>
-                          <p className="text-foreground text-xs font-semibold">{request.requestedBy || 'Staff'}</p>
-                        </div>
-                      </div>
-                      {request.driverId && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                            <Car size={14} className="text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-500 uppercase font-bold leading-none">Assigned Driver</p>
-                            <p className="text-foreground text-xs font-semibold">{request.driverName || 'Unit Assigned'}</p>
-                          </div>
-                        </div>
-                      )}
-                      {(request.ambulance || request.ambulanceId) && (
-                        <div className="flex items-center gap-2 text-sm text-foreground/80 ml-2">
-                          <Ambulance size={16} className="text-muted-foreground" />
-                          <span className="font-medium text-xs font-semibold">{request.ambulance || request.ambulanceId || 'Unit Assigned'}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className='flex items-center gap-3'>
-                      <button
-                        onClick={() => viewDriverDetails(request.driverId || request.driver)}
-                        className="px-4 py-2 border border-border text-foreground rounded-lg hover:bg-accent active:scale-95 transition-all text-xs font-bold"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => handleCancelRequest(request.id)}
-                        className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-foreground rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 transition-all active:scale-95 text-xs font-bold whitespace-nowrap"
-                      >
-                        Cancel Request
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  type="pending"
+                  data={request}
+                  onViewDriverDetails={viewDriverDetails}
+                  onCancelRequest={handleCancelRequest}
+                />
               ))
             )}
           </div>
@@ -830,78 +665,22 @@ export function HospitalDashboard() {
             <h3 className="text-lg font-bold text-foreground">Incoming Emergency Patients</h3>
           </div>
           <div className="space-y-4">
-            {incomingRequests.map((request) => (
-              <div
-                key={request.id}
-                className="border-2 border-border rounded-lg p-4 hover:border-red-400 transition-all"
-                onClick={() => setSelectedRequest(request)}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h4 className="text-foreground">{request.patientName}</h4>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs text-white ${getPriorityColor(
-                          request.priority
-                        )
-                          }`}
-                      >
-                        {request.priority.toUpperCase()}
-                      </span>
-                      <span className="text-muted-foreground text-sm">{request.timestamp}</span>
-                    </div>
-                    <p className="text-muted-foreground">
-                      {request.age} yrs • {request.gender} • {request.incidentType}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Ambulance size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">{request.ambulanceNumber}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">ETA {request.eta}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm">{request.distance} km</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User size={16} className="text-gray-400" />
-                    <span className="text-muted-foreground text-sm capitalize">{request.consciousness}</span>
-                  </div>
-                </div>
-
-                <div className="bg-muted/30 rounded p-3">
-                  <p className="text-muted-foreground text-sm mb-1">Symptoms:</p>
-                  <p className="text-foreground text-sm">{request.symptoms}</p>
-                </div>
-
-                <div className="mt-3 flex justify-end gap-3 pl-8">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Accepting emergency from ${request.patientName} `); }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Declining emergency from ${request.patientName} `); }}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    Decline
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); alert(`Viewing details for ${request.patientName}`); }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 text-sm cursor-pointer"
-                  >
-                    View Details
-                  </button>
-                </div>
+            {incomingRequests.length === 0 ? (
+              <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
+                <p className="text-muted-foreground italic">No incoming emergency patients at this moment.</p>
               </div>
-            ))}
+            ) : (
+              incomingRequests.map((request) => (
+                <TransferCard
+                  key={request.id}
+                  type="incoming"
+                  data={request}
+                  onAccept={(req) => alert(`Accepting emergency from ${req.patientName}`)}
+                  onDecline={(req) => alert(`Declining emergency from ${req.patientName}`)}
+                  onViewDetails={(req) => setSelectedRequest(req)}
+                />
+              ))
+            )}
           </div>
         </div>
 
