@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Observable } from 'rxjs';
 
@@ -358,14 +358,33 @@ export class FleetService {
         transfer: any,
     ): Promise<void> {
         const hospitalId = await this.getHospitalId(uid);
-        await this.firebase
-            .ref(`hospitals/${hospitalId}/ambulances/${ambId}`)
-            .update({
-                status: 'in_service',
-                currentTransfer: transfer.id,
-                etaMinutes: 15,
-                location: `En route to ${transfer.to}`,
-            });
+        const ambRef = this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambId}`);
+        const snapshot = await ambRef.get();
+
+        if (!snapshot.exists()) {
+            throw new BadRequestException(`Ambulance ${ambId} not found.`);
+        }
+
+        const currentStatus = snapshot.val()?.status;
+        if (currentStatus === 'in_service') {
+            throw new BadRequestException(
+                `Ambulance ${ambId} is already in service and cannot be assigned.`,
+            );
+        }
+        if (currentStatus === 'maintenance') {
+            throw new BadRequestException(
+                `Ambulance ${ambId} is under maintenance and cannot be assigned.`,
+            );
+        }
+
+        await ambRef.update({
+            status: 'in_service',
+            currentTransfer: transfer.id,
+            etaMinutes: 15,
+            location: `En route to ${transfer.to}`,
+        });
+
+        this.logger.log(`Ambulance ${ambId} assigned to transfer ${transfer.id} for hospital ${hospitalId}`);
     }
 
     async scheduleMaintenance(
