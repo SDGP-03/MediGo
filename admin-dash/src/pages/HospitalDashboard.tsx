@@ -233,7 +233,7 @@ export function HospitalDashboard() {
         t.status !== 'cancelled' &&
         t.status !== 'completed' &&
         (t.status === 'pending' || t.status === 'dispatched') &&
-        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
       // Active transfers: Driver has accepted and is on the move
