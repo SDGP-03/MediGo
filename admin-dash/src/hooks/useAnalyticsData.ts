@@ -24,7 +24,7 @@ export interface AnalyticsData {
         borderColor: string;
     }[];
     responseTimeTrend: { month: string; avgTime: number | null }[];
-    avgResponseTimeMinutes: number | null;
+    avgResponseTimeSeconds: number | null;
     demandAreasData: { area: string; requests: number }[];
     incidentTypeData: { name: string; value: number; color: string }[];
     hospitalLoadData: { name: string; count: number; percent: number; color: string; borderColor: string; }[];
@@ -40,7 +40,7 @@ export function useAnalyticsData(): AnalyticsData {
         monthlyTrend: [],
         statusDistribution: [],
         responseTimeTrend: [],
-        avgResponseTimeMinutes: null,
+        avgResponseTimeSeconds: null,
         demandAreasData: [],
         incidentTypeData: [],
         hospitalLoadData: [],
