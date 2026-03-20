@@ -155,66 +155,93 @@ export function Header({ user, onLogout }: HeaderProps) {
 
 
 
-                    {/* User profile dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className='hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:bg-white/20 outline-none cursor-pointer'
+                    {/* User profile dropdown + signout */}
+                    <div className="flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className='hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors hover:bg-white/20 outline-none cursor-pointer'
+                                    style={{
+                                        background: 'var(--header-nav-bg)',
+                                        backdropFilter: 'blur(8px)',
+                                        border: '1px solid var(--header-nav-border-color)',
+                                        color: 'var(--header-text)',
+                                    }}>
+                                    <div className='w-3 h-3 bg-sky-500 rounded-full animate-bounce'></div>
+                                    <span className='text-sm font-medium capitalize'>{displayName}</span>
+                                </button>
+                            </DropdownMenuTrigger>
+
+
+
+                            <DropdownMenuContent align='end' className='w-56 rounded-sm mt-2 p-4 data-[state=open]:animate-in data-[state=closed]:animate-out'
                                 style={{
-                                    background: 'var(--header-nav-bg)',
-                                    backdropFilter: 'blur(8px)',
-                                    border: '1px solid var(--header-nav-border-color)',
-                                    color: 'var(--header-text)',
+                                    background: 'var(--header-bg)'
                                 }}>
-                                <div className='w-3 h-3 bg-sky-500 rounded-full animate-bounce'></div>
-                                <span className='text-sm font-medium capitalize'>{displayName}</span>
-                            </button>
-                        </DropdownMenuTrigger>
+                                <DropdownMenuLabel className='pb-4 font-bold'>My account</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
 
 
+                                {/* Profile option */}
+                                <DropdownMenuItem onClick={() => navigate('/profile')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group'>
+                                    <UserIcon className='mr-2 h-4 w-4' />
+                                    <span>Profile</span>
+                                </DropdownMenuItem>
 
-                        <DropdownMenuContent align='end' className='w-56 rounded-sm mt-2 p-4 data-[state=open]:animate-in data-[state=closed]:animate-out'
+                                {/* Settings */}
+                                <DropdownMenuItem onClick={() => navigate('/settings')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group' >
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    <span>Settings</span>
+                                </DropdownMenuItem>
+
+                                {/* Dark mode */}
+                                <DropdownMenuItem
+                                    onSelect={(e) => {
+                                        e.preventDefault();
+                                        toggleTheme();
+                                    }}
+                                    className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group'
+                                >
+                                    <Moon className="mr-2 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                                    <Sun className="absolute mr-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                                    <span>Toggle Theme</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+
+                                {/* Logout option */}
+                                <DropdownMenuItem onClick={onLogout} className="flex flex-row justify-start items-center py-2 text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive hover:pl-6 focus:bg-destructive/10 focus:text-destructive focus:outline-none cursor-pointer border-0 group" >
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out</span>
+                                </DropdownMenuItem>
+
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Sign-out icon button */}
+                        <button
+                            onClick={onLogout}
+                            title="Sign out"
+                            className="hidden md:flex items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer"
                             style={{
-                                background: 'var(--header-bg)'
-                            }}>
-                            <DropdownMenuLabel className='pb-4 font-bold'>My account</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-
-
-                            {/* Profile option */}
-                            <DropdownMenuItem onClick={() => navigate('/profile')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group'>
-                                <UserIcon className='mr-2 h-4 w-4' />
-                                <span>Profile</span>
-                            </DropdownMenuItem>
-
-                            {/* Settings */}
-                            <DropdownMenuItem onClick={() => navigate('/settings')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group' >
-                                <Settings className="mr-2 h-4 w-4" />
-                                <span>Settings</span>
-                            </DropdownMenuItem>
-
-                            {/* Dark mode */}
-                            <DropdownMenuItem
-                                onSelect={(e) => {
-                                    e.preventDefault();
-                                    toggleTheme();
-                                }}
-                                className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group'
-                            >
-                                <Moon className="mr-2 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                                <Sun className="absolute mr-2 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                                <span>Toggle Theme</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-
-                            {/* Logout option */}
-                            <DropdownMenuItem onClick={onLogout} className="flex flex-row justify-start items-center py-2 text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive hover:pl-6 focus:bg-destructive/10 focus:text-destructive focus:outline-none cursor-pointer border-0 group" >
-                                <LogOut className="mr-2 h-4 w-4" />
-                                <span>Log out</span>
-                            </DropdownMenuItem>
-
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                background: 'var(--header-nav-bg)',
+                                backdropFilter: 'blur(8px)',
+                                border: '1px solid var(--header-nav-border-color)',
+                                color: 'var(--header-text-muted)',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#ef4444';
+                                e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)';
+                                e.currentTarget.style.background = 'rgba(239,68,68,0.08)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--header-text-muted)';
+                                e.currentTarget.style.borderColor = 'var(--header-nav-border-color)';
+                                e.currentTarget.style.background = 'var(--header-nav-bg)';
+                            }}
+                        >
+                            <LogOut size={16} />
+                        </button>
+                    </div>
 
 
                     {/*Previous User Profile & Actions */}
