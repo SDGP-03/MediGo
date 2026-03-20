@@ -184,9 +184,10 @@ export class TransfersService implements OnModuleInit {
         return snapshot.exists() ? snapshot.val() : {};
     }
 
-    private formatTimeAgo(timestamp: number): string {
+    private formatTimeAgo(timestamp: any): string {
         if (!timestamp) return 'Just now';
-        const mins = Math.floor((Date.now() - timestamp) / 60000);
+        const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+        const mins = Math.floor((Date.now() - ts) / 60000);
         if (mins < 1) return 'Just now';
         if (mins < 60) return `${mins} mins ago`;
         const hours = Math.floor(mins / 60);

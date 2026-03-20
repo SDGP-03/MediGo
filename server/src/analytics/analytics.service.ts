@@ -24,28 +24,33 @@ export class AnalyticsService {
         // Read hospital info from the shared hospital node
         const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
         const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
-        const hospitalName = hospitalInfo.name || adminData.hospitalName;
+        const hospitalName = hospitalInfo.name || adminData.hospitalName || 'Your Hospital';
 
-        const [transferSnap, driverSnap] = await Promise.all([
+        const [transferSnap, driverSnap, hospitalDriversSnap] = await Promise.all([
             this.firebase.ref('transfer_requests').get(),
             this.firebase.ref('driver_locations').get(),
+            this.firebase.ref(`hospitals/${hospitalId}/drivers`).get(),
         ]);
         this.logger.log('Firebase fetch complete.');
 
-        let transfers: any[] = transferSnap.exists()
+        let allTransfers: any[] = transferSnap.exists()
             ? Object.values(transferSnap.val())
             : [];
 
-        if (hospitalName) {
-            transfers = transfers.filter(
-                (t: any) =>
-                    t.pickup?.hospitalName === hospitalName ||
-                    t.destination?.hospitalName === hospitalName,
-            );
-        }
+        // Filter transfers: initiated by this hospital OR destination is this hospital
+        const transfers = allTransfers.filter(
+            (t: any) =>
+                t.hospitalId === hospitalId ||
+                t.destination?.placeId === hospitalId ||
+                t.pickup?.hospitalName === hospitalName ||
+                t.destination?.hospitalName === hospitalName
+        );
 
-        const driverData = driverSnap.exists() ? driverSnap.val() : {};
-        this.logger.log(`Fetched ${transfers.length} relevant transfers for ${hospitalName || 'Unknown'}.`);
+        const driverLocations = driverSnap.exists() ? driverSnap.val() : {};
+        const hospitalDrivers = hospitalDriversSnap.exists() ? hospitalDriversSnap.val() : {};
+        const hospitalDriverIds = Object.keys(hospitalDrivers);
+
+        this.logger.log(`Fetched ${transfers.length} relevant transfers for ${hospitalName}.`);
 
         // Total requests
         const totalRequests = transfers.length;
@@ -54,14 +59,18 @@ export class AnalyticsService {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
         const transfersThisMonth = transfers.filter(
-            (t: any) => (t.createdAt || 0) >= startOfMonth,
+            (t: any) => {
+                const createdTs = t.createdAt ? new Date(t.createdAt).getTime() : 0;
+                return createdTs >= startOfMonth;
+            }
         ).length;
 
-        // Active ambulances (drivers online)
+        // Active ambulances (drivers online belonging to this hospital)
         const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-        const activeAmbulances = Object.values(driverData).filter(
-            (d: any) => d.isOnline && (d.timestamp || 0) > fiveMinutesAgo,
-        ).length;
+        const activeAmbulances = hospitalDriverIds.filter(id => {
+            const loc = driverLocations[id];
+            return loc && (loc.isOnline || loc.status === 'online' || loc.status === 'busy') && (loc.timestamp || 0) > fiveMinutesAgo;
+        }).length;
 
         // Status distribution
         const statusMap: Record<string, number> = {};
@@ -82,32 +91,47 @@ export class AnalyticsService {
 
         // Monthly trend — last 6 months
         const monthlyTrend: { month: string; count: number }[] = [];
+        const responseTimeTrend: { month: string; avgTime: number | null }[] = [];
+
         for (let i = 5; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
             const monthStart = d.getTime();
+            const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
             const label = d.toLocaleString('default', { month: 'short' });
-            const count = transfers.filter(
-                (t: any) => (t.createdAt || 0) >= monthStart && (t.createdAt || 0) <= monthEnd,
-            ).length;
-            monthlyTrend.push({ month: label, count });
+
+            const monthTransfers = transfers.filter((t: any) => {
+                const ts = t.createdAt ? new Date(t.createdAt).getTime() : 0;
+                return ts >= monthStart && ts <= monthEnd;
+            });
+
+            monthlyTrend.push({ month: label, count: monthTransfers.length });
+
+            // Real response time calculation (AcceptedAt - CreatedAt)
+            const transfersWithResponse = monthTransfers.filter(t => t.acceptedAt && t.createdAt);
+            if (transfersWithResponse.length > 0) {
+                const totalResponseTimeMs = transfersWithResponse.reduce((sum, t) => {
+                    const createdTs = new Date(t.createdAt).getTime();
+                    const acceptedTs = t.acceptedAt; // Firebase timestamp
+                    return sum + (acceptedTs - createdTs);
+                }, 0);
+                const avgMinutes = Math.round((totalResponseTimeMs / transfersWithResponse.length) / 60000);
+                responseTimeTrend.push({ month: label, avgTime: Math.max(0, avgMinutes) });
+            } else {
+                responseTimeTrend.push({ month: label, avgTime: null });
+            }
         }
 
-        // Response time trend (mock — would require actual trip timing data)
-        const responseTimeTrend = monthlyTrend.map((m) => ({
-            month: m.month,
-            avgTime: m.count > 0 ? Math.round(8 + Math.random() * 4) : null,
-        }));
-
-        // Average response time
-        const validTimes = responseTimeTrend.filter((r) => r.avgTime !== null);
-        const avgResponseTimeMinutes =
-            validTimes.length > 0
-                ? Math.round(
-                    validTimes.reduce((sum, r) => sum + (r.avgTime || 0), 0) /
-                    validTimes.length,
-                )
-                : null;
+        // Average response time across all time (filtered)
+        const allTransfersWithResponse = transfers.filter(t => t.acceptedAt && t.createdAt);
+        const avgResponseTimeMinutes = allTransfersWithResponse.length > 0
+            ? Math.round(
+                allTransfersWithResponse.reduce((sum, t) => {
+                    const createdTs = new Date(t.createdAt).getTime();
+                    const acceptedTs = t.acceptedAt;
+                    return sum + (acceptedTs - createdTs);
+                }, 0) / allTransfersWithResponse.length / 60000
+            )
+            : null;
 
         // Incident Types (Priority Breakdown)
         const priorityMap: Record<string, number> = {};
@@ -162,9 +186,9 @@ export class AnalyticsService {
             },
         ];
 
-        // Demand Areas (Destinations)
+        // Demand Areas (Destinations where this hospital sent patients)
         const destMap: Record<string, number> = {};
-        transfers.forEach((t: any) => {
+        transfers.filter(t => t.hospitalId === hospitalId).forEach((t: any) => {
             const dest = t.destination?.hospitalName;
             if (dest) destMap[dest] = (destMap[dest] || 0) + 1;
         });
@@ -173,9 +197,9 @@ export class AnalyticsService {
             .sort((a, b) => b.requests - a.requests)
             .slice(0, 5);
 
-        // Hospital Load (Senders)
+        // Hospital Load (Senders who sent patients to this hospital)
         const fromMap: Record<string, number> = {};
-        transfers.forEach((t: any) => {
+        transfers.filter(t => t.destination?.placeId === hospitalId || t.destination?.hospitalName === hospitalName).forEach((t: any) => {
             const sender = t.pickup?.hospitalName;
             if (sender) fromMap[sender] = (fromMap[sender] || 0) + 1;
         });
