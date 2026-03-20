@@ -236,7 +236,7 @@ export function AmbulanceMap({
 
   // Calculate map bounds to fit all markers including user location, tracked device, and drivers
   const bounds = useMemo(() => {
-    if (!isLoaded || typeof google === 'undefined' || !google.maps || (ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && offlineDrivers.length === 0)) return null;
+    if (!isLoaded || typeof google === 'undefined' || !google.maps || (ambulances.length === 0 && !userLocation && !trackedDevice && onlineDrivers.length === 0 && busyDrivers.length === 0 && offlineDrivers.length === 0)) return null;
 
     const bounds = new google.maps.LatLngBounds();
     ambulances.forEach((amb) => {
@@ -252,12 +252,16 @@ export function AmbulanceMap({
     onlineDrivers.forEach((driver) => {
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
+    // Include busy driver locations in bounds
+    busyDrivers.forEach((driver) => {
+      bounds.extend({ lat: driver.lat, lng: driver.lng });
+    });
     // Include offline drivers in bounds
     offlineDrivers.forEach((driver) => {
       bounds.extend({ lat: driver.lat, lng: driver.lng });
     });
     return bounds;
-  }, [isLoaded, ambulances, userLocation, trackedDevice, onlineDrivers, offlineDrivers]);
+  }, [isLoaded, ambulances, userLocation, trackedDevice, onlineDrivers, busyDrivers, offlineDrivers]);
 
   // Fit bounds when map loads
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -557,6 +561,7 @@ export function AmbulanceMap({
             options={{
               suppressMarkers: true,
               suppressInfoWindows: true,
+              preserveViewport: true,
               polylineOptions: {
                 strokeColor: "#3b82f6",
                 strokeWeight: 5,
