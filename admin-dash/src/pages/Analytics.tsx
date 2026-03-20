@@ -17,6 +17,16 @@ export function Analytics() {
     );
   }
 
+  // Helper to format duration: "M min S sec" or just "S sec"
+  const formatDuration = (totalSeconds: number | null) => {
+    if (totalSeconds === null) return 'No data yet';
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = Math.round(totalSeconds % 60);
+    if (mins === 0) return `${secs} sec`;
+    if (secs === 0) return `${mins} min`;
+    return `${mins} min ${secs} sec`;
+  };
+
   // ── Stats Cards ──────────────────────────────────────────────────────────────
   const operationalStats = [
     {
@@ -35,9 +45,7 @@ export function Analytics() {
     },
     {
       label: 'Avg Response Time',
-      value: data.avgResponseTimeMinutes !== null
-        ? `${data.avgResponseTimeMinutes} min`
-        : 'No data yet',
+      value: formatDuration(data.avgResponseTimeSeconds),
       icon: Clock,
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-50 dark:bg-orange-900/20',
@@ -102,10 +110,10 @@ export function Analytics() {
               Time from request creation to driver acceptance &mdash; grouped by month
             </p>
           </div>
-          {data.avgResponseTimeMinutes !== null && (
+          {data.avgResponseTimeSeconds !== null && (
             <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-1.5 rounded-full text-sm font-semibold">
               <TrendingDown size={15} />
-              Overall avg: {data.avgResponseTimeMinutes} min
+              Overall avg: {formatDuration(data.avgResponseTimeSeconds)}
             </div>
           )}
         </div>
@@ -128,7 +136,7 @@ export function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis
-                  label={{ value: 'Minutes', angle: -90, position: 'insideLeft', offset: 10 }}
+                  label={{ value: 'Seconds', angle: -90, position: 'insideLeft', offset: 10 }}
                   allowDecimals={false}
                 />
                 <Tooltip
@@ -144,7 +152,7 @@ export function Analytics() {
                   labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
                   itemStyle={{ color: '#ef4444', fontWeight: 700, padding: 0 }}
                   formatter={(value: number | null) =>
-                    value !== null ? [`${value} min`, 'Avg Response Time'] : ['No data', 'Avg Response Time']
+                    [formatDuration(value), 'Avg Response Time']
                   }
                 />
                 <Legend />

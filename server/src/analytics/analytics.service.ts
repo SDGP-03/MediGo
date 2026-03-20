@@ -21,10 +21,15 @@ export class AnalyticsService {
         const adminData = adminSnap.val() || {};
         const hospitalId: string = adminData.hospitalPlaceId || uid;
 
+        this.logger.log(`Admin Data: ${JSON.stringify(adminData)}`);
+        this.logger.log(`Resolved hospitalId: ${hospitalId}`);
+
         // Read hospital info from the shared hospital node
         const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
         const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
         const hospitalName = hospitalInfo.name || adminData.hospitalName || 'Your Hospital';
+
+        this.logger.log(`Resolved hospitalName: ${hospitalName}`);
 
         const [transferSnap, driverSnap, hospitalDriversSnap] = await Promise.all([
             this.firebase.ref('transfer_requests').get(),
@@ -37,13 +42,18 @@ export class AnalyticsService {
             ? Object.values(transferSnap.val())
             : [];
 
+        this.logger.log(`Total transfers in DB: ${allTransfers.length}`);
+        if (allTransfers.length > 0) {
+            const sample = allTransfers[0];
+            this.logger.log(`Sample Transfer - hospitalId: ${sample.hospitalId}, pickup: ${sample.pickup?.hospitalName}, destPlaceId: ${sample.destination?.placeId}`);
+        }
+
         // Filter transfers: initiated by this hospital OR destination is this hospital
         const transfers = allTransfers.filter(
             (t: any) =>
                 t.hospitalId === hospitalId ||
                 t.destination?.placeId === hospitalId ||
-                t.pickup?.hospitalName === hospitalName ||
-                t.destination?.hospitalName === hospitalName
+                (hospitalName !== 'Your Hospital' && (t.pickup?.hospitalName === hospitalName || t.destination?.hospitalName === hospitalName))
         );
 
         const driverLocations = driverSnap.exists() ? driverSnap.val() : {};
@@ -89,11 +99,12 @@ export class AnalyticsService {
             }),
         );
 
-        // Monthly trend — last 6 months
+        // Monthly trend — 7 months window (Current Month in the MIDDLE)
         const monthlyTrend: { month: string; count: number }[] = [];
         const responseTimeTrend: { month: string; avgTime: number | null }[] = [];
 
-        for (let i = 5; i >= 0; i--) {
+        // -3 to +3 range puts current month (0) in the middle of 7 slots
+        for (let i = 3; i >= -3; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const monthStart = d.getTime();
             const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
@@ -106,7 +117,7 @@ export class AnalyticsService {
 
             monthlyTrend.push({ month: label, count: monthTransfers.length });
 
-            // Real response time calculation (AcceptedAt - CreatedAt)
+            // Real response time calculation (AcceptedAt - CreatedAt) in SECONDS
             const transfersWithResponse = monthTransfers.filter(t => t.acceptedAt && t.createdAt);
             if (transfersWithResponse.length > 0) {
                 const totalResponseTimeMs = transfersWithResponse.reduce((sum, t) => {
@@ -114,22 +125,22 @@ export class AnalyticsService {
                     const acceptedTs = t.acceptedAt; // Firebase timestamp
                     return sum + (acceptedTs - createdTs);
                 }, 0);
-                const avgMinutes = Math.round((totalResponseTimeMs / transfersWithResponse.length) / 60000);
-                responseTimeTrend.push({ month: label, avgTime: Math.max(0, avgMinutes) });
+                const avgSeconds = Math.round((totalResponseTimeMs / transfersWithResponse.length) / 1000);
+                responseTimeTrend.push({ month: label, avgTime: Math.max(0, avgSeconds) });
             } else {
                 responseTimeTrend.push({ month: label, avgTime: null });
             }
         }
 
-        // Average response time across all time (filtered)
+        // Average response time across all time (filtered) in SECONDS
         const allTransfersWithResponse = transfers.filter(t => t.acceptedAt && t.createdAt);
-        const avgResponseTimeMinutes = allTransfersWithResponse.length > 0
+        const avgResponseTimeSeconds = allTransfersWithResponse.length > 0
             ? Math.round(
                 allTransfersWithResponse.reduce((sum, t) => {
                     const createdTs = new Date(t.createdAt).getTime();
                     const acceptedTs = t.acceptedAt;
                     return sum + (acceptedTs - createdTs);
-                }, 0) / allTransfersWithResponse.length / 60000
+                }, 0) / allTransfersWithResponse.length / 1000
             )
             : null;
 
@@ -231,7 +242,7 @@ export class AnalyticsService {
             monthlyTrend,
             statusDistribution,
             responseTimeTrend,
-            avgResponseTimeMinutes,
+            avgResponseTimeSeconds,
             incidentTypeData,
             peakHoursData,
             demandAreasData,

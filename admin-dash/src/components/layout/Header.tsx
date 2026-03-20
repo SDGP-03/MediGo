@@ -8,20 +8,15 @@ type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 
 interface HeaderProps {
     user: User | null;
-
-    // 4. removing due to deletion of the useState
-    // currentView: View;
-    // onViewChange: (view: View) => void;
-
-
+    adminName?: string | null;
     onLogout: () => void;
 }
 
-export function Header({ user, onLogout }: HeaderProps) {
+export function Header({ user, onLogout, adminName }: HeaderProps) {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const displayName = user?.email?.split('@')[0] || 'User';
+    const displayName = adminName || user?.displayName?.split(' - ')[0] || user?.email?.split('@')[0] || 'User';
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: Activity },

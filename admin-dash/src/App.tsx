@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from './firebase';
+import { ref, get } from 'firebase/database';
+import { auth, database } from './firebase';
 import { TransferRequest } from './pages/TransferRequest';
 import { AmbulanceFleet } from './pages/AmbulanceFleet';
 import { PatientRecords } from './pages/PatientRecords';
@@ -39,18 +40,32 @@ export default function App() {
   const [authView, setAuthView] = useState<AuthView>('login');
   //specifies the initially user can be null (either user object or null value)
   const [user, setUser] = useState<User | null>(null);
+  const [adminName, setAdminName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      
+      if (currentUser) {
+        try {
+          const adminSnap = await get(ref(database, `admin/${currentUser.uid}`));
+          if (adminSnap.exists()) {
+            setAdminName(adminSnap.val().name);
+          }
+        } catch (error) {
+          console.error('Error fetching admin name:', error);
+        }
+      } else {
+        setAdminName(null);
+      }
+      
       setLoading(false);
     });
     //when app closes, tell the system to stop watching
     return () => unsubscribe();
-  },
-    []//run once app starts
+  }, []//run once app starts
   );
 
   const handleLogin = () => {
@@ -110,9 +125,7 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground">
       <Header
         user={user}
-        // 3. removing 
-        // currentView={currentView}
-        // onViewChange={setCurrentView}
+        adminName={adminName}
         onLogout={handleLogout}
       />
 
