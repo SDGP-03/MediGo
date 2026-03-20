@@ -239,7 +239,9 @@ export function HospitalDashboard() {
       const active = allTransfers.filter(t =>
         t.status !== 'cancelled' &&
         t.status !== 'completed' &&
-        (t.status === 'on_way' ||
+        (t.status === 'accepted' ||
+          t.status === 'in_progress' ||
+          t.status === 'on_way' ||
           t.status === 'at_pickup' ||
           t.status === 'patient_loaded' ||
           t.status === 'in_transit' ||
@@ -336,6 +338,10 @@ export function HospitalDashboard() {
     switch (status) {
       case "available":
         return "bg-emerald-500";
+      case "accepted":
+        return "bg-blue-400 text-white";
+      case "in_progress":
+        return "bg-blue-600 text-white";
       case "on_way":
         return "bg-blue-500";
       case "busy":
