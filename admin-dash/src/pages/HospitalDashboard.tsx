@@ -63,11 +63,28 @@ export function HospitalDashboard() {
       const user = auth.currentUser;
       if (!user) throw new Error('Not authenticated');
 
-      const driverRef = ref(database, `hospitals/${user.uid}/drivers/${driverId}`);
-      const snapshot = await get(driverRef);
+      // 1. Resolve hospitalId (admin may use hospitalPlaceId or fall back to uid)
+      const adminSnap = await get(ref(database, `admin/${user.uid}`));
+      const adminData = adminSnap.exists() ? adminSnap.val() : {};
+      const hospitalId: string = adminData.hospitalPlaceId || user.uid;
 
-      if (snapshot.exists()) {
-        setDriverPopupData({ id: driverId, ...snapshot.val() });
+       // 2. Fetch static/membership data from the hospital's driver list
+      const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`);
+      const driverSnap = await get(driverRef);
+      const driverData = driverSnap.exists() ? driverSnap.val() : {};
+      // 3. Fetch live tracking data from driver_locations
+      const locationRef = ref(database, `driver_locations/${driverId}`);
+      const locationSnap = await get(locationRef);
+      const locationData = locationSnap.exists() ? locationSnap.val() : {};
+      if (driverSnap.exists() || locationSnap.exists()) {
+        // Merge data, prioritizing live location fields if they exist
+        setDriverPopupData({
+          id: driverId,
+          ...driverData,
+          ...locationData,
+          // Logic for online status (online if status is 'online' or legacy isOnline is true)
+          isOnline: locationData.status === 'online' || locationData.isOnline === true
+        });
       } else {
         setDriverPopupData({ id: driverId, notFound: true });
       }
