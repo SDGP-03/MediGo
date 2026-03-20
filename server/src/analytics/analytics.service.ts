@@ -13,19 +13,39 @@ export class AnalyticsService {
     constructor(private readonly firebase: FirebaseService) { }
 
     /** Get aggregated analytics data */
-    async getAnalytics(): Promise<any> {
-        this.logger.log('Starting getAnalytics() calculation...');
+    async getAnalytics(uid: string): Promise<any> {
+        this.logger.log(`Starting getAnalytics() calculation for uid: ${uid}...`);
+
+        // Resolve admin uid → shared hospitalPlaceId
+        const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
+        const adminData = adminSnap.val() || {};
+        const hospitalId: string = adminData.hospitalPlaceId || uid;
+
+        // Read hospital info from the shared hospital node
+        const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
+        const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
+        const hospitalName = hospitalInfo.name || adminData.hospitalName;
+
         const [transferSnap, driverSnap] = await Promise.all([
             this.firebase.ref('transfer_requests').get(),
             this.firebase.ref('driver_locations').get(),
         ]);
         this.logger.log('Firebase fetch complete.');
 
-        const transfers: any[] = transferSnap.exists()
+        let transfers: any[] = transferSnap.exists()
             ? Object.values(transferSnap.val())
             : [];
+
+        if (hospitalName) {
+            transfers = transfers.filter(
+                (t: any) =>
+                    t.pickup?.hospitalName === hospitalName ||
+                    t.destination?.hospitalName === hospitalName,
+            );
+        }
+
         const driverData = driverSnap.exists() ? driverSnap.val() : {};
-        this.logger.log(`Fetched ${transfers.length} transfers.`);
+        this.logger.log(`Fetched ${transfers.length} relevant transfers for ${hospitalName || 'Unknown'}.`);
 
         // Total requests
         const totalRequests = transfers.length;
