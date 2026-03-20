@@ -178,6 +178,32 @@ class _NavigationPageState extends State<NavigationPage> {
     );
   }
 
+  Future<void> _startTrip() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final requestRef = FirebaseDatabase.instance
+          .ref()
+          .child('transfer_requests')
+          .child(widget.assignment.requestId);
+
+      await requestRef.update({
+        'status': 'in_progress',
+        'startedAt': ServerValue.timestamp,
+      });
+
+      await _history.upsertTrip(
+        driverId: uid,
+        assignment: widget.assignment,
+        status: 'in_progress',
+        extra: {'startedAt': ServerValue.timestamp},
+      );
+    } catch (e) {
+      debugPrint('Failed to start trip status update: $e');
+    }
+  }
+
   @override
   void dispose() {
     _arrivalSub?.cancel();
@@ -454,6 +480,7 @@ class _NavigationPageState extends State<NavigationPage> {
                         ? _boot
                         : (_isReady
                               ? () async {
+                                  await _startTrip();
                                   await _nav.startNavigation();
                                 }
                               : null),
