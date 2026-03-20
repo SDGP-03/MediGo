@@ -415,16 +415,47 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
           final requests = data as Map<dynamic, dynamic>;
 
-          // Find pending requests
-          for (var entry in requests.entries) {
-            final requestData = entry.value as Map<dynamic, dynamic>;
-            if (requestData['status'] == 'pending') {
-              final assignment = Assignment.fromJson(entry.key, requestData);
-              if (_activeRequestDialogId == assignment.requestId) return;
-              _showTripAlert(assignment);
-              break; // Show one at a time
-            }
+          // Collect all pending requests and sort newest-first by createdAt
+          // so that repeated admin submissions always surface the latest request.
+          final pendingEntries =
+              requests.entries
+                  .where(
+                    (e) =>
+                        (e.value as Map<dynamic, dynamic>)['status'] ==
+                        'pending',
+                  )
+                  .toList()
+                ..sort((a, b) {
+                  final aTime =
+                      (a.value as Map<dynamic, dynamic>)['createdAt']
+                          ?.toString() ??
+                      '';
+                  final bTime =
+                      (b.value as Map<dynamic, dynamic>)['createdAt']
+                          ?.toString() ??
+                      '';
+                  return bTime.compareTo(aTime); // descending — newest first
+                });
+
+          if (pendingEntries.isEmpty) return;
+
+          final newestEntry = pendingEntries.first;
+          final assignment = Assignment.fromJson(
+            newestEntry.key as String,
+            newestEntry.value as Map<dynamic, dynamic>,
+          );
+
+          // Already showing this exact request — do nothing.
+          if (_activeRequestDialogId == assignment.requestId) return;
+
+          // A *different* request arrived while an old dialog is still open:
+          // dismiss the old dialog so we can show the newer one.
+          if (_activeRequestDialogId != null && context.mounted) {
+            Navigator.of(context, rootNavigator: true).maybePop();
+            _activeRequestDialogId = null;
           }
+
+          _showTripAlert(assignment);
         });
   }
 
