@@ -181,7 +181,7 @@ export function HospitalDashboard() {
         t.status !== 'cancelled' &&
         t.status !== 'completed' &&
         (t.status === 'pending' || t.status === 'dispatched') &&
-        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName)
+        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
       // Active transfers: Driver has accepted and is on the move
@@ -192,7 +192,8 @@ export function HospitalDashboard() {
           t.status === 'at_pickup' ||
           t.status === 'patient_loaded' ||
           t.status === 'in_transit' ||
-          t.status === 'arrived_at_destination')
+          t.status === 'arrived_at_destination') &&
+        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
       console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}`);
@@ -731,6 +732,12 @@ export function HospitalDashboard() {
                             <p className="text-[10px] text-blue-500 uppercase font-bold leading-none">Assigned Driver</p>
                             <p className="text-foreground text-xs font-semibold">{request.driverName || 'Unit Assigned'}</p>
                           </div>
+                        </div>
+                      )}
+                      {(request.ambulance || request.ambulanceId) && (
+                        <div className="flex items-center gap-2 text-sm text-foreground/80 ml-2">
+                          <Ambulance size={16} className="text-muted-foreground" />
+                          <span className="font-medium text-xs font-semibold">{request.ambulance || request.ambulanceId || 'Unit Assigned'}</span>
                         </div>
                       )}
                     </div>
