@@ -217,6 +217,7 @@ export function HospitalDashboard() {
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const transfersRef = ref(database, 'transfer_requests');
@@ -249,7 +250,29 @@ export function HospitalDashboard() {
         (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
       );
 
-      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}`);
+      // Incoming transfers directed to this hospital
+      const incoming = allTransfers.filter(t =>
+        t.status !== 'cancelled' &&
+        t.status !== 'completed' &&
+        t.destination?.hospitalName === currentHospitalName
+      ).map(t => ({
+        id: t.id,
+        patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
+        age: t.patient?.age || t.age || 'N/A',
+        gender: t.patient?.gender || t.gender || 'N/A',
+        incidentType: t.reason || 'Emergency Transfer',
+        priority: t.priority || 'standard',
+        eta: t.eta || 'Evaluating...',
+        distance: t.distance || 'N/A',
+        ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
+        contactNumber: 'N/A',
+        symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
+        consciousness: 'conscious',
+        breathing: 'normal',
+        timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
+      })).reverse();
+
+      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
       if (allTransfers.length > 0) {
         const sample = allTransfers[allTransfers.length - 1]; // look at newest
         console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
@@ -257,6 +280,7 @@ export function HospitalDashboard() {
 
       setDbPendingRequests(pending);
       setDbActiveTransfers(active);
+      setIncomingRequests(incoming);
     }, (err) => {
       console.error('[Dashboard] Firebase transfers error:', err);
     });
@@ -265,57 +289,7 @@ export function HospitalDashboard() {
   }, [currentHospitalName]);
 
   // --- DATA: INCOMING EMERGENCIES ---
-  const incomingRequests = [
-    {
-      id: 1,
-      patientName: 'John Doe',
-      age: 45,
-      gender: 'Male',
-      incidentType: 'Cardiac Emergency',
-      priority: 'critical',
-      eta: '8 mins',
-      distance: 3.2,
-      ambulanceNumber: 'AMB-102',
-      contactNumber: '+91 9876543210',
-      symptoms: 'Severe chest pain, shortness of breath',
-      consciousness: 'conscious',
-      breathing: 'difficulty',
-      timestamp: '2 mins ago',
-    },
-    {
-      id: 2,
-      patientName: 'Sarah Smith',
-      age: 32,
-      gender: 'Female',
-      incidentType: 'Trauma/Accident',
-      priority: 'urgent',
-      eta: '12 mins',
-      distance: 5.1,
-      ambulanceNumber: 'AMB-205',
-      contactNumber: '+91 9123456789',
-      symptoms: 'Head injury, bleeding from forehead',
-      consciousness: 'conscious',
-      breathing: 'normal',
-      timestamp: '5 mins ago',
-    },
-    {
-      id: 3,
-      patientName: 'Raj Kumar',
-      age: 28,
-      gender: 'Male',
-      incidentType: 'Seizure',
-      priority: 'urgent',
-      eta: '15 mins',
-      distance: 6.8,
-      ambulanceNumber: 'AMB-301',
-      contactNumber: '+91 9898989898',
-      symptoms: 'Seizure episode, now stable',
-      consciousness: 'drowsy',
-      breathing: 'normal',
-      timestamp: '8 mins ago',
-    },
-  ];
-
+  // Replaced with dynamic stream from setIncomingRequests above.
 
 
 
