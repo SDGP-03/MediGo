@@ -1,12 +1,47 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { Observable } from 'rxjs';
 
 @Injectable()
-export class TransfersService {
+export class TransfersService implements OnModuleInit {
     private readonly logger = new Logger(TransfersService.name);
 
     constructor(private readonly firebase: FirebaseService) { }
+
+    async onModuleInit() {
+        this.logger.log('Initializing Transfer Request listener for Fleet state management...');
+        
+        // Listen to transfer status changes to centrally manage driver/ambulance states
+        this.firebase.ref('transfer_requests').on('child_changed', async (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const status = data.status;
+            const driverId = data.driverId;
+            const ambulanceId = data.ambulanceId || data.ambulance;
+            const hospitalId = data.hospitalId;
+
+            if (!driverId || !ambulanceId || !hospitalId) {
+                return;
+            }
+
+            try {
+                if (status === 'in_progress') {
+                    // Driver started navigation
+                    await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'busy' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'busy' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'on_trip' });
+                } else if (status === 'completed' || status === 'cancelled') {
+                    // Trip ended
+                    await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
+                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'available' });
+                }
+            } catch (err: any) {
+                this.logger.error(`Failed to update fleet statuses for transfer ${snapshot.key}: ${err.message}`);
+            }
+        });
+    }
 
     /** Stream all transfer requests in real-time via SSE */
     streamTransfers(): Observable<MessageEvent> {
@@ -95,11 +130,25 @@ export class TransfersService {
             },
             status: 'pending',
             createdAt: new Date().toISOString(),
+            hospitalId: hospitalId, // Store hospitalId for fleet management!
         };
 
         const transfersRef = this.firebase.ref('transfer_requests');
         const newRef = transfersRef.push();
         await newRef.set(enrichedData);
+
+        // Update driver and ambulance to 'assigned' upon transfer creation
+        const targetDriverId = data.driverId;
+        const targetAmbulanceId = data.ambulanceId || data.ambulance;
+        if (targetDriverId && targetAmbulanceId && hospitalId) {
+            try {
+                await this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' });
+                await this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' });
+                await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${targetAmbulanceId}`).update({ status: 'assigned' });
+            } catch (err: any) {
+                this.logger.error(`Failed to assign driver/ambulance for transfer ${newRef.key}: ${err.message}`);
+            }
+        }
 
         this.logger.log(`Transfer created: ${newRef.key} by hospital: ${enrichedData.pickup.hospitalName} (${hospitalId})`);
         return { id: newRef.key! };

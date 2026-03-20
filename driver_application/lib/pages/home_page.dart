@@ -908,8 +908,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       'acceptedAt': ServerValue.timestamp,
     });
 
-    await _driverLocationRef?.update({'status': 'busy'});
-
     setState(() {
       currentAssignment = assignment;
     });
@@ -926,10 +924,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     await requestRef.update({
       'status': 'cancelled',
-      'driverId': null, // Unassign so admin can reassign
+      // Keep driverId here so the backend listener knows who to mark as 'online' again
     });
-
-    await _driverLocationRef?.update({'status': 'online'});
 
     if (!mounted) return;
     setState(() {
