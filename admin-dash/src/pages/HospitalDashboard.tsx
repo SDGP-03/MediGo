@@ -249,10 +249,19 @@ export function HospitalDashboard() {
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    const transfersRef = ref(database, 'transfer_requests');
+    let unsub = () => {};
+    const authUnsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        setDbPendingRequests([]);
+        setDbActiveTransfers([]);
+        setIncomingRequests([]);
+        return;
+      }
 
-    const unsub = onValue(transfersRef, (snapshot) => {
-      const data = snapshot.val() || {};
+      const transfersRef = ref(database, 'transfer_requests');
+
+      unsub = onValue(transfersRef, (snapshot) => {
+        const data = snapshot.val() || {};
       const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
 
       // Filter pending requests:
@@ -318,7 +327,13 @@ export function HospitalDashboard() {
       console.error('[Dashboard] Firebase transfers error:', err);
     });
 
-    return () => off(transfersRef, 'value', unsub);
+    });
+
+    return () => {
+      authUnsub();
+      unsub();
+      off(ref(database, 'transfer_requests'), 'value');
+    };
   }, [currentHospitalName]);
 
   // --- DATA: INCOMING EMERGENCIES ---
