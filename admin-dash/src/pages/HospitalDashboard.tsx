@@ -241,12 +241,18 @@ export function HospitalDashboard() {
     };
   }, [lastSeenIssueTime]);
 
-  // Live driver data from backend (filtered to this hospital)
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
-
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+
+  // Collect external driver IDs from active/incoming transfers (for receiving hospitals)
+  const externalDriverIds = Array.from(new Set([
+    ...dbActiveTransfers.map(t => t.driverId).filter(Boolean),
+    ...incomingRequests.map(t => t.driverId).filter(Boolean)
+  ]));
+
+  // Live driver data from backend (filtered to this hospital + external transfers)
+  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations(externalDriverIds);
 
   useEffect(() => {
     let unsub = () => {};

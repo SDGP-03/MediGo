@@ -14,7 +14,7 @@
  *              (still shown on map at their LAST KNOWN location, up to 24 h)
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { database, auth } from './firebase';
 import { ref, onValue, off, get } from 'firebase/database';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -32,11 +32,17 @@ export interface DriverLocation {
 const FIVE_MINUTES = 5 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-export function useDriverLocations() {
+export function useDriverLocations(externalDriverIds: string[] = []) {
     const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
     const [busyDrivers, setBusyDrivers] = useState<DriverLocation[]>([]);
     const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const externalDriverIdsRef = useRef(externalDriverIds);
+
+    useEffect(() => {
+        externalDriverIdsRef.current = externalDriverIds;
+    }, [externalDriverIds]);
 
     useEffect(() => {
         let driversRef: ReturnType<typeof ref> | null = null;
@@ -85,8 +91,9 @@ export function useDriverLocations() {
 
                         const now = Date.now();
 
+                        const extDrivers = new Set(externalDriverIdsRef.current);
                         const allDrivers: DriverLocation[] = Object.entries(data)
-                            .filter(([id]) => allowedDriverIds.has(id))
+                            .filter(([id]) => allowedDriverIds.has(id) || extDrivers.has(id))
                             .map(([id, value]) => {
                                 // Normalise status: support legacy isOnline boolean
                                 let rawStatus: string =
