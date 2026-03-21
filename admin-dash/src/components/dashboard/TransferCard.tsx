@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Car
 } from "lucide-react";
+import { decryptData } from '../../utils/encryption';
 
 interface TransferCardProps {
   type: 'active' | 'pending' | 'incoming';
@@ -76,9 +77,11 @@ export const TransferCard: React.FC<TransferCardProps> = ({
   };
 
   // Standardize patient name, age, gender access
-  const patientName = type === 'incoming' ? data.patientName : (typeof data.patient === 'object' ? data.patient.name : data.patient);
-  const patientAge = type === 'incoming' ? data.age : (data.patient?.age || data.age || 'N/A');
-  const patientGender = type === 'incoming' ? data.gender : (data.patient?.gender || data.gender || 'N/A');
+  const rawName = type === 'incoming' ? data.patientName : (typeof data.patient === 'object' ? data.patient.name : data.patient);
+  const patientName = decryptData(rawName);
+  const patientAge = decryptData(type === 'incoming' ? data.age : (data.patient?.age || data.age || 'N/A'));
+  const patientGender = decryptData(type === 'incoming' ? data.gender : (data.patient?.gender || data.gender || 'N/A'));
+  const symptoms = decryptData(data.symptoms);
   const pickup = data.pickup?.hospitalName || data.from || 'N/A';
   const destination = data.destination?.hospitalName || data.to || 'N/A';
   const eta = data.eta || 'Evaluating...';
@@ -175,10 +178,10 @@ export const TransferCard: React.FC<TransferCardProps> = ({
         </div>
       </div>
 
-      {type === 'incoming' && data.symptoms && (
+      {type === 'incoming' && symptoms && (
         <div className="bg-muted/50 rounded-lg p-3 mb-4 border border-border/50">
           <p className="text-muted-foreground text-[10px] uppercase font-bold mb-1">Symptoms & Condition</p>
-          <p className="text-foreground text-sm line-clamp-2">{data.symptoms}</p>
+          <p className="text-foreground text-sm line-clamp-2">{symptoms}</p>
         </div>
       )}
 

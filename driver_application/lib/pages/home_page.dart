@@ -451,6 +451,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // A *different* request arrived while an old dialog is still open:
           // dismiss the old dialog so we can show the newer one.
           if (_activeRequestDialogId != null && context.mounted) {
+            // ignore: use_build_context_synchronously
             Navigator.of(context, rootNavigator: true).maybePop();
             _activeRequestDialogId = null;
           }

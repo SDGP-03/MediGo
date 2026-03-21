@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, database } from '../firebase';
 import { ref, onValue, off, push, update, remove, set } from 'firebase/database';
 import { apiPost } from '../api/apiClient';
+import { decryptData } from '../utils/encryption';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,6 +222,7 @@ export function useFleetData(): UseFleetDataReturn {
                     Object.entries(pndObj).map(([id, val]: [string, any]) => ({
                         id,
                         ...val,
+                        patient: decryptData(val.patient),
                     })),
                 );
 

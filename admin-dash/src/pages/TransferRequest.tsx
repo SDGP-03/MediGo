@@ -5,6 +5,7 @@ import { ref, push, set } from 'firebase/database';
 import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
+import { encryptData } from '../utils/encryption';
 import { apiPost } from '../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
@@ -230,14 +231,14 @@ export function TransferRequest() {
         priority: formData.priority,
 
         patient: {
-          name: formData.patientName,
-          age: formData.patientAge,
-          gender: formData.patientGender,
-          id: formData.patientId,
-          bloodGroup: formData.bloodGroup,
-          allergies: formData.allergies,
-          medicalHistory: formData.medicalHistory,
-          currentCondition: formData.currentCondition,
+          name: encryptData(formData.patientName),
+          age: encryptData(formData.patientAge),
+          gender: encryptData(formData.patientGender),
+          id: formData.patientId, // ID remains unencrypted as it might be used for referencing
+          bloodGroup: encryptData(formData.bloodGroup),
+          allergies: encryptData(formData.allergies),
+          medicalHistory: encryptData(formData.medicalHistory),
+          currentCondition: encryptData(formData.currentCondition),
         },
 
         destination: {

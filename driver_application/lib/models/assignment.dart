@@ -1,4 +1,5 @@
 import 'package:google_navigation_flutter/google_navigation_flutter.dart';
+import 'package:driver_application/utils/encryption_utils.dart';
 
 class Assignment {
   static double _parseDouble(dynamic value, {double fallback = 0.0}) {
@@ -68,9 +69,9 @@ class Assignment {
       status: json['status'] ?? 'pending',
       priority: json['priority'] ?? 'standard',
       ambulanceId: json['ambulanceId'],
-      patientName: patient['name'] ?? 'Unknown Patient',
-      patientAge: patient['age']?.toString(),
-      patientGender: patient['gender'],
+      patientName: EncryptionUtils.decrypt(patient['name'] ?? 'Unknown Patient'),
+      patientAge: EncryptionUtils.decrypt(patient['age']?.toString()),
+      patientGender: EncryptionUtils.decrypt(patient['gender']),
       pickupName: pickup['hospitalName'] ?? 'Pickup Location',
       pickupAddress: pickup['address'] ?? '',
       pickupLatLng: LatLng(
