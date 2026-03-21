@@ -34,6 +34,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, off, get, set } from "firebase/database";
 import { useFleetData } from "../hooks/useFleetData";
 import { TransferCard } from "../components/dashboard/TransferCard";
+import { decryptData } from "../utils/encryption";
 
 export function HospitalDashboard() {
   const navigate = useNavigate();
@@ -953,6 +954,156 @@ export function HospitalDashboard() {
               Acknowledge
             </button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- POPUP: INCOMING PATIENT DETAILS --- */}
+      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              Emergency Patient Details
+            </DialogTitle>
+            <DialogDescription>
+              Inter-hospital transfer request details for incoming emergency.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRequest && (
+            <div className="space-y-6 py-4">
+              {/* Patient Header Section */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-accent/30 rounded-2xl border border-border">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg transform -rotate-3">
+                    <User className="text-white" size={28} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground">
+                      {decryptData(selectedRequest.patientName)}
+                    </h3>
+                    <p className="text-muted-foreground text-sm flex items-center gap-2">
+                      <span className="font-mono text-xs bg-accent px-2 py-0.5 rounded">ID: {selectedRequest.id}</span>
+                      <span>•</span>
+                      <span>{decryptData(selectedRequest.age)}y</span>
+                      <span>•</span>
+                      <span className="capitalize">{decryptData(selectedRequest.gender)}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${
+                  selectedRequest.priority === 'critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' :
+                  selectedRequest.priority === 'urgent' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' :
+                  'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                }`}>
+                  {selectedRequest.priority} Priority
+                </div>
+              </div>
+
+              {/* Grid: Locations & Logistics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                    <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
+                      <MapPin size={14} /> Pickup Point
+                    </div>
+                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.pickup?.hospitalName || 'N/A'}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.pickup?.address || 'Address not provided'}</p>
+                 </div>
+                 
+                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                    <div className="flex items-center gap-2 mb-3 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest">
+                      <Navigation size={14} /> Destination
+                    </div>
+                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.destination?.hospitalName || 'N/A'}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.destination?.address || 'Address not provided'}</p>
+                 </div>
+              </div>
+
+              {/* Grid: Status & Timing */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/20 text-center">
+                  <p className="text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase mb-1">ETA</p>
+                  <p className="text-blue-700 dark:text-blue-300 font-bold text-sm">{selectedRequest.eta || 'Calculating...'}</p>
+                </div>
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/20 text-center">
+                  <p className="text-purple-600 dark:text-purple-400 text-[10px] font-bold uppercase mb-1">Distance</p>
+                  <p className="text-purple-700 dark:text-purple-300 font-bold text-sm">{selectedRequest.distance} km</p>
+                </div>
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/20 text-center">
+                  <p className="text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase mb-1">Request Time</p>
+                  <p className="text-orange-700 dark:text-orange-300 font-bold text-sm">{selectedRequest.timestamp}</p>
+                </div>
+              </div>
+
+              {/* Medical Condition Section */}
+              <div className="space-y-3">
+                <h4 className="text-foreground font-bold text-sm flex items-center gap-2">
+                  <Activity size={16} className="text-red-600" />
+                  Medical Information
+                </h4>
+                <div className="bg-muted/30 rounded-2xl p-4 border border-border/50 space-y-4">
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider mb-1">Symptoms & Current Condition</p>
+                    <p className="text-foreground text-sm leading-relaxed whitespace-pre-line">
+                      {decryptData(selectedRequest.symptoms) || 'No symptoms specified.'}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/40">
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider mb-1">Consciousness</p>
+                      <p className="text-foreground text-sm font-semibold capitalize">{selectedRequest.consciousness}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider mb-1">Incident Type</p>
+                      <p className="text-foreground text-sm font-semibold capitalize">{selectedRequest.incidentType}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit Information */}
+              <div className="flex items-center justify-between p-4 bg-accent/10 rounded-xl border border-border/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
+                    <Car className="text-muted-foreground" size={20} />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Assigned Ambulance</p>
+                    <p className="text-foreground text-sm font-bold">{selectedRequest.ambulanceNumber}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-right">
+                  <div>
+                    <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Assigned Driver</p>
+                    <p className="text-foreground text-sm font-bold">{selectedRequest.driverName || 'Unit Assigned'}</p>
+                  </div>
+                  <div className="w-10 h-10 bg-accent rounded-lg flex items-center justify-center">
+                    <User className="text-muted-foreground" size={20} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    alert(`Accepting emergency from ${decryptData(selectedRequest.patientName)}`);
+                    setSelectedRequest(null);
+                  }}
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 shadow-lg shadow-green-500/20 active:scale-95 transition-all font-bold text-sm"
+                >
+                  Accept Request
+                </button>
+                <button
+                  onClick={() => setSelectedRequest(null)}
+                  className="px-6 py-3 bg-muted text-muted-foreground rounded-xl hover:bg-accent hover:text-foreground active:scale-95 transition-all font-bold text-sm border border-border"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
