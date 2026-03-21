@@ -149,7 +149,11 @@ export function AmbulanceMap({
 
         if (activeTransfer) {
           const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
-          const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+          
+          // For inter-hospital transfers (has a destination hospital), the receiving hospital
+          // always wants to see the route to the final destination, not the sending hospital.
+          const isInterHospitalTransfer = Boolean(activeTransfer.destination?.hospitalName);
+          const target = (toPickup && !isInterHospitalTransfer) ? activeTransfer.pickup : activeTransfer.destination;
 
           console.log(`[AmbulanceMap] Routing to ${toPickup ? 'PICKUP' : 'DESTINATION'} (${activeTransfer.status}). Target:`, target);
 
@@ -702,7 +706,8 @@ export function AmbulanceMap({
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
                 const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
-                const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+                const isInterHospitalTransfer = Boolean(activeTransfer.destination?.hospitalName);
+                const target = (toPickup && !isInterHospitalTransfer) ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
                   fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
@@ -733,7 +738,8 @@ export function AmbulanceMap({
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
                 const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
-                const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
+                const isInterHospitalTransfer = Boolean(activeTransfer.destination?.hospitalName);
+                const target = (toPickup && !isInterHospitalTransfer) ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
                   fetchDirections(driver.lat, driver.lng, target.lat, target.lng);
