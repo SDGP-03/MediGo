@@ -150,7 +150,7 @@ export default function App() {
             {userRole === 'fleetofficer' ? (
               <>
                 <Route path='/' element={<Navigate to='/fleet' replace />} />
-                <Route path='/fleet' element={<AmbulanceFleet />} />
+                <Route path='/fleet' element={<AmbulanceFleet userRole={userRole} />} />
                 <Route path='/drivers' element={<DriverProfiles />} />
                 <Route path='/settings' element={<Settings />} />
               </>
@@ -158,7 +158,7 @@ export default function App() {
               <>
                 <Route path='/' element={<HospitalDashboard />} />
                 <Route path='/transfer' element={<TransferRequest />} />
-                <Route path='/fleet' element={<AmbulanceFleet />} />
+                <Route path='/fleet' element={<AmbulanceFleet userRole={userRole} />} />
                 <Route path="/drivers" element={<DriverProfiles />} />
                 <Route path='/records' element={<PatientRecords />} />
                 <Route path='/analytics' element={<Analytics />} />

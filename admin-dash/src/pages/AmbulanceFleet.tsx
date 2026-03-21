@@ -52,7 +52,11 @@ function formatEta(minutes: number): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function AmbulanceFleet() {
+interface AmbulanceFleetProps {
+  userRole?: string | null;
+}
+
+export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
   const navigate = useNavigate();
 
   // ── Firebase realtime hook ──
@@ -643,13 +647,15 @@ export function AmbulanceFleet() {
         </div>
       )}
 
-      {/* FAB */}
-      <button onClick={() => navigate('/transfer')}
-        className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
-        title="New Transfer Request">
-        <Ambulance size={22} />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm">New Request</span>
-      </button>
+      {/* FAB - Hidden for Fleet Officers */}
+      {userRole !== 'fleetofficer' && (
+        <button onClick={() => navigate('/transfer')}
+          className="fixed bottom-6 right-6 bg-red-600 text-white p-4 rounded-full shadow-lg hover:bg-red-700 transition-all hover:scale-105 z-50 flex items-center gap-2 group"
+          title="New Transfer Request">
+          <Ambulance size={22} />
+          <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap text-sm">New Request</span>
+        </button>
+      )}
 
       {/* ══════════════════════════════════════════════════════════
           DETAIL MODAL
