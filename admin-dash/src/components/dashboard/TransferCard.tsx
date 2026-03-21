@@ -82,7 +82,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
   const pickup = data.pickup?.hospitalName || data.from || 'N/A';
   const destination = data.destination?.hospitalName || data.to || 'N/A';
   const eta = data.eta || 'Evaluating...';
-  const distance = data.distance || '--';
+  const distance = data.distance || '-- km';
   const priority = data.priority || 'standard';
   const status = data.status || (type === 'incoming' ? 'incoming' : 'pending');
   const timestamp = data.timestamp || (data.createdAt ? new Date(data.createdAt).toLocaleTimeString() : 'Just now');
@@ -228,7 +228,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
 
         <div className="flex items-center gap-2 text-sm text-foreground/80 ml-auto">
           <MapPin size={16} className="text-muted-foreground" />
-          <span className="text-xs font-bold">{distance} km</span>
+          <span className="text-xs font-bold">{distance.toString().includes('km') ? distance : `${distance} km`}</span>
         </div>
 
         {(type === 'pending' || type === 'incoming') && (
