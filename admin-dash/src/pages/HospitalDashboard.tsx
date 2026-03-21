@@ -241,8 +241,9 @@ export function HospitalDashboard() {
     };
   }, [lastSeenIssueTime]);
 
-  // Live driver data from backend (filtered to this hospital)
-  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations();
+  // Live driver data from backend (filtered to this hospital + active trackable drivers)
+  const [activeDriverIds, setActiveDriverIds] = useState<string[]>([]);
+  const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations(activeDriverIds);
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
@@ -314,6 +315,12 @@ export function HospitalDashboard() {
       setDbPendingRequests(pending);
       setDbActiveTransfers(active);
       setIncomingRequests(incoming);
+
+      const newActiveDriverIds = Array.from(new Set(active.map((t: any) => t.driverId).filter(Boolean))) as string[];
+      setActiveDriverIds(prev => {
+        if (prev.join(',') === newActiveDriverIds.join(',')) return prev;
+        return newActiveDriverIds;
+      });
     }, (err) => {
       console.error('[Dashboard] Firebase transfers error:', err);
     });
