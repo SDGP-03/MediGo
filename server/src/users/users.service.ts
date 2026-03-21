@@ -61,6 +61,26 @@ export class UsersService {
                 });
             }
 
+            if (role === 'driver') {
+                // Save driver profile to both root and hospital nodes for compatibility
+                const driverMap = {
+                    id: uid,
+                    uid,
+                    name,
+                    email,
+                    role,
+                    hospitalPlaceId,
+                    hospitalName: hospitalName || '',
+                    status: 'available',
+                    createdAt: new Date().toISOString(),
+                };
+
+                await Promise.all([
+                    db.ref(`drivers/${uid}`).set(driverMap),
+                    db.ref(`hospitals/${hospitalPlaceId}/drivers/${uid}`).set(driverMap)
+                ]);
+            }
+
             if (role === 'admin' && hospitalPlaceId) {
                 // Create/update the shared hospital node (keyed by placeId)
                 // This ensures there is a primary info node if it doesn't exist

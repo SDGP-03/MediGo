@@ -4,5 +4,5 @@ export class CreateUserDto {
     hospitalName?: string;
     hospitalPlaceId?: string;
     password?: string; // We require password for manual user creation so they can sign in initially
-    role!: 'superadmin' | 'admin' | 'fleet_officer';
+    role!: 'superadmin' | 'admin' | 'fleet_officer' | 'driver';
 }

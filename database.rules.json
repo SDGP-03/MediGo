@@ -2,28 +2,34 @@
   "rules": {
     "admin": {
       "$uid": {
-        // Users can read their own profile, Superadmins can read any profile
         ".read": "auth.uid === $uid || auth.token.role === 'superadmin'",
-        // Only Superadmins can write to the admin profiles directly
         ".write": "auth.token.role === 'superadmin'"
+      }
+    },
+    "drivers": {
+      "$uid": {
+        ".read": "auth.uid === $uid || auth.token.role === 'superadmin'",
+        ".write": "auth.uid === $uid || auth.token.role === 'superadmin'"
       }
     },
     "hospitals": {
       "$hospital_id": {
-        // Superadmins OR users assigned to this hospital can read
         ".read": "auth.token.role === 'superadmin' || auth.token.hospitalId === $hospital_id",
-        
-        // Only Superadmins or the specific hospital_admin can write general hospital data
         ".write": "auth.token.role === 'superadmin' || (auth.token.role === 'admin' && auth.token.hospitalId === $hospital_id)",
         
+        "drivers": {
+          "$driver_uid": {
+            ".read": "auth.uid === $driver_uid || auth.token.role === 'superadmin' || auth.token.hospitalId === $hospital_id",
+            ".write": "auth.uid === $driver_uid || auth.token.role === 'superadmin' || (auth.token.role === 'admin' && auth.token.hospitalId === $hospital_id)"
+          }
+        },
+        
         "fleet_officers": {
-           // Admin and Superadmin can write fleet officers
            ".write": "auth.token.role === 'superadmin' || (auth.token.role === 'admin' && auth.token.hospitalId === $hospital_id)"
         },
         
         "fleet": {
-           // Fleet officers can write to the fleet section natively (as well as admins)
-           ".write": "auth.token.role === 'superadmin' || ((auth.token.role === 'admin' || auth.token.role === 'fleet_officer') && auth.token.hospitalId === $hospital_id)"
+           ".write": "auth.token.role === 'superadmin' || ((auth.token.role === 'admin' || auth.token.role === 'fleet_officer' || auth.token.role === 'driver') && auth.token.hospitalId === $hospital_id)"
         }
       }
     }

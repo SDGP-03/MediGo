@@ -37,7 +37,7 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
         lng: number;
         placeId: string;
     } | null>(null);
-    const [role, setRole] = useState<'admin' | 'fleet_officer'>('admin');
+    const [role, setRole] = useState<'admin' | 'fleet_officer' | 'driver'>('admin');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -135,8 +135,8 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label className="block text-gray-700 mb-2">Role</label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
                                     <input 
                                         type="radio" 
                                         name="role" 
@@ -146,9 +146,9 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                                         className="text-red-600 focus:ring-red-600"
                                     />
                                     <Shield size={18} className="text-gray-500" />
-                                    <span className="text-sm font-medium">Hospital Admin</span>
+                                    <span className="text-sm font-medium">Admin</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 flex-1">
+                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
                                     <input 
                                         type="radio" 
                                         name="role" 
@@ -158,7 +158,19 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                                         className="text-red-600 focus:ring-red-600"
                                     />
                                     <UserIcon size={18} className="text-gray-500" />
-                                    <span className="text-sm font-medium">Fleet Officer</span>
+                                    <span className="text-sm font-medium">Fleet</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <input 
+                                        type="radio" 
+                                        name="role" 
+                                        value="driver" 
+                                        checked={role === 'driver'} 
+                                        onChange={() => setRole('driver')}
+                                        className="text-red-600 focus:ring-red-600"
+                                    />
+                                    <Building2 size={18} className="text-gray-500" />
+                                    <span className="text-sm font-medium">Driver</span>
                                 </label>
                             </div>
                         </div>
