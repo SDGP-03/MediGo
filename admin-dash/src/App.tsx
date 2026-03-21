@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { signOut, User } from 'firebase/auth'; // Removed onAuthStateChanged
 import { ref, get } from 'firebase/database';
 import { auth, database } from './firebase';
+import { useAuth } from './hooks/useAuth';
 import { TransferRequest } from './pages/TransferRequest';
 import { AmbulanceFleet } from './pages/AmbulanceFleet';
 import { PatientRecords } from './pages/PatientRecords';
@@ -36,21 +37,17 @@ export default function App() {
   //default page is dashboard, 1. removing due to importing the router-dom
   // const [currentView, setCurrentView] = useState<View>('dashboard');
 
-
+  const { user, role, loading } = useAuth();
   const [authView, setAuthView] = useState<AuthView>('login');
-  //specifies the initially user can be null (either user object or null value)
-  const [user, setUser] = useState<User | null>(null);
+  
   const [adminName, setAdminName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
-      if (currentUser) {
+    async function fetchAdminName() {
+      if (user) {
         try {
-          const adminSnap = await get(ref(database, `admin/${currentUser.uid}`));
+          const adminSnap = await get(ref(database, `admin/${user.uid}`));
           if (adminSnap.exists()) {
             setAdminName(adminSnap.val().name);
           }
@@ -60,16 +57,12 @@ export default function App() {
       } else {
         setAdminName(null);
       }
-      
-      setLoading(false);
-    });
-    //when app closes, tell the system to stop watching
-    return () => unsubscribe();
-  }, []//run once app starts
-  );
+    }
+    fetchAdminName();
+  }, [user]);
 
   const handleLogin = () => {
-    // User state will be updated by onAuthStateChanged listener
+    // User state will be updated by useAuth
   };
 
   const handleLogout = () => {
@@ -125,13 +118,10 @@ export default function App() {
     <div className="min-h-screen bg-background text-foreground">
       <Header
         user={user}
+        role={role}
         adminName={adminName}
         onLogout={handleLogout}
       />
-
-
-
-
 
       {/* Main Content */}
       <main className="max-w-[90%] mx-auto px-6 py-8 pb-12">
@@ -145,6 +135,9 @@ export default function App() {
             <Route path='/records' element={<PatientRecords />} />
             <Route path='/analytics' element={<Analytics />} />
             <Route path='/settings' element={<Settings />} />
+            {role === 'superadmin' && (
+              <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
+            )}
 
             {/* catch all redirect to dashboard */}
             <Route path='*' element={<Navigate to='/' replace />} />

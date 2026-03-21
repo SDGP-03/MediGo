@@ -9,6 +9,8 @@ import { auth } from '../firebase';
 
 interface AuthState {
     user: User | null;
+    role: string | null;
+    hospitalId: string | null;
     loading: boolean;
     error: string | null;
 }
@@ -21,17 +23,43 @@ interface UseAuthReturn extends AuthState {
 export function useAuth(): UseAuthReturn {
     const [authState, setAuthState] = useState<AuthState>({
         user: null,
+        role: null,
+        hospitalId: null,
         loading: true,
         error: null,
     });
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setAuthState({
-                user,
-                loading: false,
-                error: null,
-            });
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const idTokenResult = await user.getIdTokenResult();
+                    setAuthState({
+                        user,
+                        role: (idTokenResult.claims.role as string) || null,
+                        hospitalId: (idTokenResult.claims.hospitalId as string) || null,
+                        loading: false,
+                        error: null,
+                    });
+                } catch (error) {
+                    console.error('Failed to get token claims', error);
+                    setAuthState({
+                        user,
+                        role: null,
+                        hospitalId: null,
+                        loading: false,
+                        error: null,
+                    });
+                }
+            } else {
+                setAuthState({
+                    user: null,
+                    role: null,
+                    hospitalId: null,
+                    loading: false,
+                    error: null,
+                });
+            }
         });
 
         return () => unsubscribe();

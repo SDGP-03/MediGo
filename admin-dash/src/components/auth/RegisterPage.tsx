@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Mail, MapPin, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
-import { auth, database } from '../../firebase';
+import { Mail, MapPin, Lock, AlertCircle, Eye, EyeOff, User as UserIcon, Building2, CheckCircle, Shield } from 'lucide-react';
+import { apiFetch } from '../../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
 
@@ -39,6 +37,7 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
         lng: number;
         placeId: string;
     } | null>(null);
+    const [role, setRole] = useState<'admin' | 'fleet_officer'>('admin');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,75 +65,21 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
         setIsLoading(true);
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
-            const placeId = hospitalDetails.placeId;
-
-            // Update Firebase Auth display name
-            await updateProfile(userCredential.user, {
-                displayName: `${name} - ${hospitalName}`,
-            });
-
-            // 1. Save admin profile — hospitalPlaceId links this user to the shared hospital node
-            const adminRef = ref(database, `admin/${uid}`);
-            await set(adminRef, {
-                uid,
-                name,
-                email,
-                hospitalName,
-                hospitalPlaceId: placeId,   // ← shared key for the hospital node
-                role: 'admin',
-                createdAt: new Date().toISOString(),
-            });
-
-            // 2. Create/update the shared hospital node (keyed by placeId)
-            //    This is where ALL admins of the same physical hospital share data.
-            const hospitalInfoRef = ref(database, `hospitals/${placeId}/info`);
-            await set(hospitalInfoRef, {
-                name: hospitalName,
-                address: hospitalDetails.address,
-                location: {
-                    lat: hospitalDetails.lat,
-                    lng: hospitalDetails.lng,
-                },
-                placeId,
-            });
-
-            // 3. Register this admin as a member of the hospital
-            const hospitalAdminRef = ref(database, `hospitals/${placeId}/admins/${uid}`);
-            await set(hospitalAdminRef, {
-                uid,
-                name,
-                email,
-                role: 'admin',
-                joinedAt: new Date().toISOString(),
+            await apiFetch('/users/register', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    role,
+                    hospitalName,
+                    hospitalPlaceId: hospitalDetails.placeId
+                })
             });
 
             setSuccess(true);
-        } catch (err: unknown) {
-            let errorMessage = 'An error occurred during registration.';
-
-            if (err && typeof err === 'object' && 'code' in err) {
-                const firebaseError = err as { code: string };
-                switch (firebaseError.code) {
-                    case 'auth/email-already-in-use':
-                        errorMessage = 'An account with this email already exists.';
-                        break;
-                    case 'auth/invalid-email':
-                        errorMessage = 'Invalid email address.';
-                        break;
-                    case 'auth/operation-not-allowed':
-                        errorMessage = 'Email/password accounts are not enabled.';
-                        break;
-                    case 'auth/weak-password':
-                        errorMessage = 'Password is too weak. Use at least 6 characters.';
-                        break;
-                    default:
-                        errorMessage = 'Failed to create account. Please try again.';
-                }
-            }
-
-            setError(errorMessage);
+        } catch (err: any) {
+            setError(err.message || 'Failed to create account. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -189,9 +134,39 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
 
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
+                            <label className="block text-gray-700 mb-2">Role</label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 flex-1">
+                                    <input 
+                                        type="radio" 
+                                        name="role" 
+                                        value="admin" 
+                                        checked={role === 'admin'} 
+                                        onChange={() => setRole('admin')}
+                                        className="text-red-600 focus:ring-red-600"
+                                    />
+                                    <Shield size={18} className="text-gray-500" />
+                                    <span className="text-sm font-medium">Hospital Admin</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 flex-1">
+                                    <input 
+                                        type="radio" 
+                                        name="role" 
+                                        value="fleet_officer" 
+                                        checked={role === 'fleet_officer'} 
+                                        onChange={() => setRole('fleet_officer')}
+                                        className="text-red-600 focus:ring-red-600"
+                                    />
+                                    <UserIcon size={18} className="text-gray-500" />
+                                    <span className="text-sm font-medium">Fleet Officer</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
                             <label className="block text-gray-700 mb-2">Full Name</label>
                             <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                                 <input
                                     type="text"
                                     required
@@ -316,9 +291,10 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                             Already have an account?{' '}
                             <button
                                 onClick={onBackToLogin}
+                                type="button"
                                 className="text-red-600 hover:underline font-medium"
                             >
-                                Sign In
+                                Back to Dashboard
                             </button>
                         </p>
                     </div>

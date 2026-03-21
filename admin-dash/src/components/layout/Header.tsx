@@ -8,11 +8,12 @@ type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 
 interface HeaderProps {
     user: User | null;
+    role?: string | null;
     adminName?: string | null;
     onLogout: () => void;
 }
 
-export function Header({ user, onLogout, adminName }: HeaderProps) {
+export function Header({ user, role, onLogout, adminName }: HeaderProps) {
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -25,7 +26,11 @@ export function Header({ user, onLogout, adminName }: HeaderProps) {
         { id: 'fleet', label: 'Fleet', icon: Ambulance },
         { id: 'drivers', label: 'Drivers', icon: UserIcon },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    ] as const;
+    ];
+
+    if (role === 'superadmin') {
+        navItems.push({ id: 'register', label: 'Manage Users', icon: UserIcon });
+    }
 
     //determine active view based on URL
     const currentView = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);
