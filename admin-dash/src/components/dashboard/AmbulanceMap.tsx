@@ -148,7 +148,7 @@ export function AmbulanceMap({
         console.log(`[AmbulanceMap] Tracking driver: ${driver.driverName}, ID: ${driver.id}, Active Transfer:`, activeTransfer?.id);
 
         if (activeTransfer) {
-          const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
+          const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
           const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
           console.log(`[AmbulanceMap] Routing to ${toPickup ? 'PICKUP' : 'DESTINATION'} (${activeTransfer.status}). Target:`, target);
@@ -701,7 +701,7 @@ export function AmbulanceMap({
               // --- UPDATED FOR MAP ROUTING ---
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
-                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
+                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
                 const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
@@ -732,7 +732,7 @@ export function AmbulanceMap({
 
               const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
               if (activeTransfer) {
-                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
+                const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
                 const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
 
                 if (target && target.lat && target.lng) {
