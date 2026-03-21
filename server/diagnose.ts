@@ -1,11 +1,11 @@
-import 'dotenv/config';
-import * as admin from 'firebase-admin';
+require('dotenv/config');
+const admin = require('firebase-admin');
 
 async function diagnose() {
-    const databaseURL = process.env.FIREBASE_DATABASE_URL;
+    const databaseURL = process.env.FIREBASE_DATABASE_URL as string;
     const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-    const initOptions: admin.AppOptions = { databaseURL };
+    const initOptions: any = { databaseURL };
     if (serviceAccountPath) {
         const serviceAccount = require(serviceAccountPath);
         initOptions.credential = admin.credential.cert(serviceAccount);
