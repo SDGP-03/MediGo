@@ -36,21 +36,21 @@ dependencies:
   cupertino_icons: ^1.0.8
   connectivity_plus: ^7.0.0
 
-  firebase_core: ^4.4.0
-  firebase_auth: ^6.1.4
-  firebase_database: ^12.1.2
-  firebase_storage: ^13.0.6
-  permission_handler:
-  geolocator:
-  google_navigation_flutter: ^0.8.2
-  image_picker: ^1.0.7
-  shared_preferences: ^2.2.2
-  firebase_messaging: ^16.1.1
-  path_provider: ^2.1.2
+  firebase_core: ^4.5.0
+  firebase_auth: ^6.2.0
+  firebase_database: ^12.1.4
+  firebase_storage: ^13.1.0
+  permission_handler: ^12.0.1
+  geolocator: ^14.0.2
+  google_navigation_flutter: ^0.8.3
+  image_picker: ^1.2.1
+  shared_preferences: ^2.5.4
+  firebase_messaging: ^16.1.2
+  path_provider: ^2.1.5
   package_info_plus: ^9.0.0
-  url_launcher: ^6.2.5
-  flutter_image_compress: ^2.1.0
-  cached_network_image: ^3.3.0
+  url_launcher: ^6.3.2
+  flutter_image_compress: ^2.4.0
+  cached_network_image: ^3.4.1
   intl: ^0.20.2
   encrypt: ^5.0.3
 
@@ -67,7 +67,7 @@ dev_dependencies:
 
   flutter_launcher_icons: ^0.14.4
 
-  flutter_native_splash: ^2.4.1
+  flutter_native_splash: ^2.4.7
 
 flutter_icons:
   android: true

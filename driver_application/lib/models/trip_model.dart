@@ -1,4 +1,4 @@
-/// Model class representing a trip in the driver's history
+// Model class representing a trip in the driver's history
 import 'package:driver_application/utils/encryption_utils.dart';
 
 class Trip {
@@ -70,7 +70,9 @@ class Trip {
       return DateTime.fromMillisecondsSinceEpoch(milliseconds);
     } else if (value is double) {
       final intValue = value.toInt();
-      final milliseconds = intValue < 1000000000000 ? intValue * 1000 : intValue;
+      final milliseconds = intValue < 1000000000000
+          ? intValue * 1000
+          : intValue;
       return DateTime.fromMillisecondsSinceEpoch(milliseconds);
     } else if (value is String) {
       final asInt = int.tryParse(value);
