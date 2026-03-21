@@ -177,12 +177,6 @@ export function Header({ user, onLogout, adminName }: HeaderProps) {
                                 <DropdownMenuSeparator />
 
 
-                                {/* Profile option */}
-                                <DropdownMenuItem onClick={() => navigate('/profile')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group'>
-                                    <UserIcon className='mr-2 h-4 w-4' />
-                                    <span>Profile</span>
-                                </DropdownMenuItem>
-
                                 {/* Settings */}
                                 <DropdownMenuItem onClick={() => navigate('/settings')} className='flex flex-row justify-start items-center py-2 transition-all duration-200 hover:bg-accent hover:text-accent-foreground hover:pl-6 focus:bg-accent focus:text-accent-foreground focus:outline-none cursor-pointer group' >
                                     <Settings className="mr-2 h-4 w-4" />
