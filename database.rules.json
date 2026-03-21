@@ -25,6 +25,33 @@
       "$uid": {
           ".write": "auth.uid === $uid || auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin' || auth.token.role === 'fleetofficer'"
       }
+    },
+    "transfer_requests": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["driverId", "fromHospitalId", "toHospitalId"]
+    },
+    "patients": {
+      ".read": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
+      ".write": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
+      ".indexOn": ["hospitalId"]
+    },
+    "analytics": {
+      ".read": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
+      ".write": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
+      ".indexOn": ["hospitalId"]
+    },
+    "driver_locations": {
+        ".read": "auth != null",
+        "$uid": {
+            ".write": "auth.uid === $uid || auth.token.role === 'superadmin'"
+        }
+    },
+    "trip_history": {
+        ".read": "auth != null",
+        "$uid": {
+            ".write": "auth.uid === $uid || auth.token.role === 'superadmin'"
+        }
     }
   }
 }
