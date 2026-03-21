@@ -4,6 +4,9 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { auth, database } from '../../firebase';
 import Autocomplete from 'react-google-autocomplete';
+import { useJsApiLoader } from '@react-google-maps/api';
+
+const libraries = ['places'] as any;
 
 interface RegisterPageProps {
     onBackToLogin: () => void;
@@ -20,6 +23,13 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    const { isLoaded } = useJsApiLoader({
+        id: 'google-map-script',
+        googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+        libraries,
+    });
+
 
     //enhanced state for Hospital
     const [hospitalName, setHospitalName] = useState('');
@@ -198,25 +208,33 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                             <label className="block text-gray-700 mb-2">Hospital Name</label>
                             <div className="relative">
                                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                                <Autocomplete
-                                    apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
-                                    onPlaceSelected={(place) => {
-                                        setHospitalName(place.name);
-                                        setHospitalDetails({
-                                            address: place.formatted_address,
-                                            lat: place.geometry.location.lat(),
-                                            lng: place.geometry.location.lng(),
-                                            placeId: place.place_id
-                                        });
-                                    }}
-                                    options={{
-                                        types: ['hospital'],
-                                        componentRestrictions: { country: 'lk' },
-                                        fields: ['name', 'formatted_address', 'geometry', 'place_id'],
-                                    }}
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                                    placeholder="Search your hospital in Sri Lanka..."
-                                />
+
+                                {isLoaded ? (
+                                    <Autocomplete
+                                        onPlaceSelected={(place) => {
+                                            setHospitalName(place.name);
+                                            setHospitalDetails({
+                                                address: place.formatted_address,
+                                                lat: place.geometry.location.lat(),
+                                                lng: place.geometry.location.lng(),
+                                                placeId: place.place_id
+                                            });
+                                        }}
+                                        options={{
+                                            types: ['hospital'],
+                                            componentRestrictions: { country: 'lk' },
+                                            fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                                        }}
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                        placeholder="Search your hospital in Sri Lanka..."
+                                    />
+                                ) : (
+                                    <input
+                                        disabled
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-gray-50 text-gray-500"
+                                        placeholder="Loading map data..."
+                                    />
+                                )}
                             </div>
                             {hospitalDetails && (
                                 <p className="mt-2 text-xs text-green-600 flex items-center gap-1">

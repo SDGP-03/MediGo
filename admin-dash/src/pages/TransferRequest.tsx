@@ -7,6 +7,9 @@ import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
 import { apiPost } from '../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
+import { useJsApiLoader } from '@react-google-maps/api';
+
+const libraries = ['places'] as any;
 
 // Patient records (mirrored from PatientRecords page)
 interface PatientRecord {
@@ -108,6 +111,12 @@ export function TransferRequest() {
   const [nameSuggestions, setNameSuggestions] = useState<PatientRecord[]>([]);
   const [isNewPatient, setIsNewPatient] = useState(false);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+  });
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -619,40 +628,47 @@ export function TransferRequest() {
                       </div>
                       <div className="relative group">
                         <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${toHospitalDetails ? 'text-green-500' : 'text-gray-400 group-focus-within:text-red-500'}`} size={20} />
-                        <Autocomplete
-                          apiKey={import.meta.env.VITE_FIREBASE_API_KEY}
-                          onPlaceSelected={(place) => {
-                            if (place && place.name && place.formatted_address && place.geometry) {
-                              setFormData({ ...formData, toHospital: place.name });
-                              setToHospitalDetails({
-                                address: place.formatted_address,
-                                lat: place.geometry.location.lat(),
-                                lng: place.geometry.location.lng(),
-                                placeId: place.place_id,
-                              });
-                              if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
-                            }
-                          }}
-                          options={{
-                            types: ['hospital'],
-                            componentRestrictions: { country: 'lk' },
-                            fields: ['name', 'formatted_address', 'geometry', 'place_id'],
-                          }}
-                          className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all bg-input-field-bg text-foreground ${formErrors.toHospital
-                            ? 'border-red-500 ring-1 ring-red-500'
-                            : toHospitalDetails
-                              ? 'border-green-500 ring-1 ring-green-500/20'
-                              : 'border-input hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
-                          placeholder="Search destination hospital..."
-                        />
+                        {isLoaded ? (
+                          <Autocomplete
+                            onPlaceSelected={(place) => {
+                              if (place && place.name && place.formatted_address && place.geometry) {
+                                setFormData({ ...formData, toHospital: place.name });
+                                setToHospitalDetails({
+                                  address: place.formatted_address,
+                                  lat: place.geometry.location.lat(),
+                                  lng: place.geometry.location.lng(),
+                                  placeId: place.place_id,
+                                });
+                                if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+                              }
+                            }}
+                            options={{
+                              types: ['hospital'],
+                              componentRestrictions: { country: 'lk' },
+                              fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+                            }}
+                            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all bg-input-field-bg text-foreground ${formErrors.toHospital
+                              ? 'border-red-500 ring-1 ring-red-500'
+                              : toHospitalDetails
+                                ? 'border-green-500 ring-1 ring-green-500/20'
+                                : 'border-input hover:border-gray-300 dark:hover:border-gray-600'
+                              }`}
+                            placeholder="Search destination hospital..."
+                          />
+                        ) : (
+                          <input
+                            disabled
+                            className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all bg-input-field-bg text-gray-500 border-input"
+                            placeholder="Loading map data..."
+                          />
+                        )}
                       </div>
                       {toHospitalDetails && (
                         <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 rounded-lg animate-in fade-in slide-in-from-top-1">
                           <p className="text-xs text-green-700 dark:text-green-400 flex items-start gap-2">
-                            <MapPin size={14} className="mt-0.5" /> 
+                            <MapPin size={14} className="mt-0.5" />
                             <span>
-                              <strong>{formData.toHospital}</strong><br/>
+                              <strong>{formData.toHospital}</strong><br />
                               {toHospitalDetails.address}
                             </span>
                           </p>

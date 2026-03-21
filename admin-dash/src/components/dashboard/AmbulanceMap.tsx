@@ -86,10 +86,13 @@ export function AmbulanceMap({
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
 
+  const libraries = useMemo(() => ['places'] as any, []);
+
   // Load Google Maps API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    libraries: libraries,
   });
 
   // --- ADDED FOR MAP ROUTING ---
@@ -100,9 +103,9 @@ export function AmbulanceMap({
       console.warn('[AmbulanceMap] Cannot fetch directions: Google Maps not loaded');
       return;
     }
-    
+
     console.log(`[AmbulanceMap] Fetching directions from (${originLat}, ${originLng}) to (${destLat}, ${destLng})`);
-    
+
     const directionsService = new google.maps.DirectionsService();
     directionsService.route(
       {
@@ -143,7 +146,7 @@ export function AmbulanceMap({
 
         const activeTransfer = activeTransfers.find(t => t.driverId === driver.id);
         console.log(`[AmbulanceMap] Tracking driver: ${driver.driverName}, ID: ${driver.id}, Active Transfer:`, activeTransfer?.id);
-        
+
         if (activeTransfer) {
           const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched', 'in_progress'].includes(activeTransfer.status);
           const target = toPickup ? activeTransfer.pickup : activeTransfer.destination;
