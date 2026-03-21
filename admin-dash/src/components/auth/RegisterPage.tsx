@@ -68,7 +68,7 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
             const idToken = await auth.currentUser?.getIdToken(true);
             if (!idToken) throw new Error("Not authenticated as Super Admin");
 
-            const response = await fetch('http://localhost:3000/auth/create-hospital-staff', {
+            const response = await fetch('http://localhost:3001/auth/create-hospital-staff', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
