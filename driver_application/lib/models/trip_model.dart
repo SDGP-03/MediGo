@@ -1,4 +1,6 @@
 /// Model class representing a trip in the driver's history
+import 'package:driver_application/utils/encryption_utils.dart';
+
 class Trip {
   final String id;
   final String pickup;
@@ -32,7 +34,7 @@ class Trip {
       id: id,
       pickup: json['pickup'] ?? json['pickupName'] ?? 'Unknown',
       dropoff: json['dropoff'] ?? json['dropName'] ?? 'Unknown',
-      patientName: json['patientName'],
+      patientName: EncryptionUtils.decrypt(json['patientName']),
       timestamp: _parseTimestamp(json['timestamp'] ?? json['date']),
       status: _normalizeStatus(json['status']),
       distance: _parseDouble(json['distance']),

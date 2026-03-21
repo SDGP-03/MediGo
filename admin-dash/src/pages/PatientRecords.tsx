@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText } from 'lucide-react';
 import { database } from '../firebase';
 import { ref, onValue, off, set, update, push } from 'firebase/database';
+import { encryptData, decryptObject, decryptData } from '../utils/encryption';
 
 interface PatientTransfer {
   date: string;
@@ -305,16 +306,16 @@ const mergePatients = (
     if (!byPatientId[id]) {
       byPatientId[id] = {
         id,
-        name: request.patient.name || 'Unknown Patient',
-        age: normalizeNumber(request.patient.age),
-        gender: request.patient.gender || 'Unknown',
-        bloodGroup: request.patient.bloodGroup || 'Unknown',
-        allergies: request.patient.allergies || 'None',
-        medicalHistory: request.patient.medicalHistory || 'No history available.',
+        name: decryptData(request.patient.name) || 'Unknown Patient',
+        age: normalizeNumber(decryptData(request.patient.age)),
+        gender: decryptData(request.patient.gender) || 'Unknown',
+        bloodGroup: decryptData(request.patient.bloodGroup) || 'Unknown',
+        allergies: decryptData(request.patient.allergies) || 'None',
+        medicalHistory: decryptData(request.patient.medicalHistory) || 'No history available.',
         medications: [],
         vitalSigns: {
           ...EMPTY_VITALS,
-          temperature: request.patient.vitalSigns || EMPTY_VITALS.temperature,
+          temperature: decryptData(request.patient.vitalSigns) || EMPTY_VITALS.temperature,
         },
         recentTransfers: [],
         documents: [],
@@ -323,9 +324,9 @@ const mergePatients = (
 
     byPatientId[id].recentTransfers.push({
       date: formatDate(request.createdAt),
-      from: request.pickup?.hospitalName || 'Unknown',
-      to: request.destination?.hospitalName || 'Unknown',
-      reason: request.reason || 'Not specified',
+      from: decryptData(request.pickup?.hospitalName) || 'Unknown',
+      to: decryptData(request.destination?.hospitalName) || 'Unknown',
+      reason: decryptData(request.reason) || 'Not specified',
       status: statusLabel(request.status),
     });
   });
@@ -383,7 +384,13 @@ export function PatientRecords() {
     });
 
     const unsubRecords = onValue(recordsRef, (snapshot) => {
-      setPatientOverrides(snapshot.val() || {});
+      const data = snapshot.val() || {};
+      // Decrypt each patient record in the overrides
+      const decryptedData: PatientOverrides = {};
+      Object.entries(data).forEach(([key, value]) => {
+        decryptedData[key] = decryptObject(value as Partial<PatientRecord>);
+      });
+      setPatientOverrides(decryptedData);
       setIsLoading(false);
     }, (err) => {
       console.error('[PatientRecords] Records error:', err);
@@ -432,15 +439,25 @@ export function PatientRecords() {
     try {
       await set(ref(database, `patient_records/${key}`), {
         id: record.id,
-        name: record.name,
-        age: record.age,
-        gender: record.gender,
-        bloodGroup: record.bloodGroup,
-        allergies: record.allergies,
-        medicalHistory: record.medicalHistory,
-        medications: record.medications,
-        vitalSigns: record.vitalSigns,
-        recentTransfers: record.recentTransfers,
+        name: encryptData(record.name),
+        age: encryptData(record.age),
+        gender: encryptData(record.gender),
+        bloodGroup: encryptData(record.bloodGroup),
+        allergies: encryptData(record.allergies),
+        medicalHistory: encryptData(record.medicalHistory),
+        medications: record.medications.map(m => encryptData(m)),
+        vitalSigns: {
+          bp: encryptData(record.vitalSigns.bp),
+          heartRate: encryptData(record.vitalSigns.heartRate),
+          temperature: encryptData(record.vitalSigns.temperature),
+          oxygen: encryptData(record.vitalSigns.oxygen),
+        },
+        recentTransfers: record.recentTransfers.map(t => ({
+          ...t,
+          reason: encryptData(t.reason),
+          from: encryptData(t.from),
+          to: encryptData(t.to),
+        })),
         documents: record.documents || [],
       });
       setIsEditing(false);
