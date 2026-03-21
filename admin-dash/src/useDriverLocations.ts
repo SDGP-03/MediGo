@@ -32,22 +32,20 @@ export interface DriverLocation {
 const FIVE_MINUTES = 5 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-export function useDriverLocations() {
+export function useDriverLocations(extraDriverIds: string[] = []) {
     const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
     const [busyDrivers, setBusyDrivers] = useState<DriverLocation[]>([]);
     const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        let driversRef: ReturnType<typeof ref> | null = null;
-        let cleanupListener: (() => void) | null = null;
+    const [hospitalDriverIds, setHospitalDriverIds] = useState<Set<string>>(new Set());
+    const [rawDriversData, setRawDriversData] = useState<Record<string, any>>({});
 
-        // Step 1: resolve the logged-in admin → hospitalId → allowed driver UIDs
+    // Step 1: Fetch allowed hospital driver IDs
+    useEffect(() => {
         const authUnsub = onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                setOnlineDrivers([]);
-                setBusyDrivers([]);
-                setOfflineDrivers([]);
+                setHospitalDriverIds(new Set());
                 setIsLoading(false);
                 return;
             }
@@ -65,82 +63,78 @@ export function useDriverLocations() {
                 const hospitalDriverData = hospitalDriversSnap.exists()
                     ? (hospitalDriversSnap.val() as Record<string, any>)
                     : {};
-                const allowedDriverIds = new Set(Object.keys(hospitalDriverData));
-
-                // Step 2: subscribe to driver_locations and filter by hospital
-                driversRef = ref(database, 'driver_locations');
-
-                const callback = onValue(
-                    driversRef,
-                    (snapshot) => {
-                        const data = snapshot.val() as Record<string, any> | null;
-
-                        if (!data) {
-                            setOnlineDrivers([]);
-                            setBusyDrivers([]);
-                            setOfflineDrivers([]);
-                            setIsLoading(false);
-                            return;
-                        }
-
-                        const now = Date.now();
-
-                        const allDrivers: DriverLocation[] = Object.entries(data)
-                            .filter(([id]) => allowedDriverIds.has(id))
-                            .map(([id, value]) => {
-                                // Normalise status: support legacy isOnline boolean
-                                let rawStatus: string =
-                                    value.status ||
-                                    (value.isOnline ? 'online' : 'offline');
-
-                                // If last update is older than 5 min, force offline
-                                const ts: number = value.timestamp || 0;
-                                if (rawStatus !== 'offline' && now - ts >= FIVE_MINUTES) {
-                                    rawStatus = 'offline';
-                                }
-
-                                return {
-                                    id,
-                                    driverName: value.driverName || 'Unknown Driver',
-                                    lat: value.lat,
-                                    lng: value.lng,
-                                    accuracy: value.accuracy || 0,
-                                    timestamp: ts,
-                                    status: rawStatus as DriverLocation['status'],
-                                };
-                            })
-                            // Must have valid coordinates; offline drivers still show last location
-                            .filter((d) => d.lat && d.lng)
-                            // Discard offline drivers older than 24 h (stale)
-                            .filter(
-                                (d) =>
-                                    d.status !== 'offline' ||
-                                    now - d.timestamp < TWENTY_FOUR_HOURS
-                            );
-
-                        setOnlineDrivers(allDrivers.filter((d) => d.status === 'online'));
-                        setBusyDrivers(allDrivers.filter((d) => d.status === 'busy'));
-                        setOfflineDrivers(allDrivers.filter((d) => d.status === 'offline'));
-                        setIsLoading(false);
-                    },
-                    (error) => {
-                        console.error('[DriverLocations] Firebase error:', error);
-                        setIsLoading(false);
-                    }
-                );
-
-                cleanupListener = () => off(driversRef!, 'value', callback);
+                setHospitalDriverIds(new Set(Object.keys(hospitalDriverData)));
             } catch (err) {
                 console.error('[DriverLocations] Setup error:', err);
                 setIsLoading(false);
             }
         });
 
-        return () => {
-            authUnsub();
-            cleanupListener?.();
-        };
+        return () => authUnsub();
     }, []);
+
+    // Step 2: Subscribe to driver_locations node
+    useEffect(() => {
+        const driversRef = ref(database, 'driver_locations');
+
+        const callback = onValue(
+            driversRef,
+            (snapshot) => {
+                const data = snapshot.val() as Record<string, any> | null;
+                setRawDriversData(data || {});
+                setIsLoading(false);
+            },
+            (error) => {
+                console.error('[DriverLocations] Firebase error:', error);
+                setIsLoading(false);
+            }
+        );
+
+        return () => off(driversRef, 'value', callback);
+    }, []);
+
+    // Step 3: Compute derived state
+    useEffect(() => {
+        const now = Date.now();
+        const extraSet = new Set(extraDriverIds);
+
+        const allDrivers: DriverLocation[] = Object.entries(rawDriversData)
+            .filter(([id]) => hospitalDriverIds.has(id) || extraSet.has(id))
+            .map(([id, value]) => {
+                // Normalise status: support legacy isOnline boolean
+                let rawStatus: string =
+                    value.status ||
+                    (value.isOnline ? 'online' : 'offline');
+
+                // If last update is older than 5 min, force offline
+                const ts: number = value.timestamp || 0;
+                if (rawStatus !== 'offline' && now - ts >= FIVE_MINUTES) {
+                    rawStatus = 'offline';
+                }
+
+                return {
+                    id,
+                    driverName: value.driverName || 'Unknown Driver',
+                    lat: value.lat,
+                    lng: value.lng,
+                    accuracy: value.accuracy || 0,
+                    timestamp: ts,
+                    status: rawStatus as DriverLocation['status'],
+                };
+            })
+            // Must have valid coordinates; offline drivers still show last location
+            .filter((d) => d.lat && d.lng)
+            // Discard offline drivers older than 24 h (stale)
+            .filter(
+                (d) =>
+                    d.status !== 'offline' ||
+                    now - d.timestamp < TWENTY_FOUR_HOURS
+            );
+
+        setOnlineDrivers(allDrivers.filter((d) => d.status === 'online'));
+        setBusyDrivers(allDrivers.filter((d) => d.status === 'busy'));
+        setOfflineDrivers(allDrivers.filter((d) => d.status === 'offline'));
+    }, [rawDriversData, hospitalDriverIds, extraDriverIds.join(',')]);
 
     return { onlineDrivers, busyDrivers, offlineDrivers, isLoading };
 }
