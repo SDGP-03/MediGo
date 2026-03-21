@@ -9,16 +9,17 @@ type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 interface HeaderProps {
     user: User | null;
     adminName?: string | null;
+    userRole?: string | null;
     onLogout: () => void;
 }
 
-export function Header({ user, onLogout, adminName }: HeaderProps) {
+export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
 
     const navigate = useNavigate();
     const location = useLocation();
     const displayName = adminName || user?.displayName?.split(' - ')[0] || user?.email?.split('@')[0] || 'User';
 
-    const navItems = [
+    const allNavItems = [
         { id: 'dashboard', label: 'Dashboard', icon: Activity },
         { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft },
         { id: 'records', label: 'Records', icon: Users },
@@ -26,6 +27,17 @@ export function Header({ user, onLogout, adminName }: HeaderProps) {
         { id: 'drivers', label: 'Drivers', icon: UserIcon },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ] as const;
+
+    let navItems = allNavItems.filter(item => {
+        if (userRole === 'fleetofficer') {
+            return ['fleet', 'drivers'].includes(item.id);
+        }
+        return true;
+    });
+
+    if (userRole === 'superadmin') {
+        navItems = [...navItems, { id: 'register', label: 'Create Staff', icon: Users }] as any;
+    }
 
     //determine active view based on URL
     const currentView = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);

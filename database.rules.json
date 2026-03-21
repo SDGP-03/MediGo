@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "hospitals": {
+      "$hospitalId": {
+        ".read": "auth.token.role === 'superadmin' || (auth != null && auth.token.hospitalId === $hospitalId)",
+        ".write": "auth.token.role === 'superadmin' || (auth.token.role === 'hospitaladmin' && auth.token.hospitalId === $hospitalId)",
+        
+        "fleet": {
+          ".write": "auth.token.role === 'superadmin' || ((auth.token.role === 'hospitaladmin' || auth.token.role === 'fleetofficer') && auth.token.hospitalId === $hospitalId)"
+        },
+        "drivers": {
+          ".write": "auth.token.role === 'superadmin' || ((auth.token.role === 'hospitaladmin' || auth.token.role === 'fleetofficer') && auth.token.hospitalId === $hospitalId)"
+        }
+      }
+    },
+    "admin": {
+      ".read": "auth.token.role === 'superadmin'",
+      "$uid": {
+          ".read": "auth.uid === $uid",
+          ".write": "auth.uid === $uid || auth.token.role === 'superadmin'"
+      }
+    },
+    "drivers": {
+      ".read": "auth != null",
+      "$uid": {
+          ".write": "auth.uid === $uid || auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin' || auth.token.role === 'fleetofficer'"
+      }
+    }
+  }
+}

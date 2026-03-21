@@ -38,8 +38,8 @@ export default function App() {
 
 
   const [authView, setAuthView] = useState<AuthView>('login');
-  //specifies the initially user can be null (either user object or null value)
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [adminName, setAdminName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -50,15 +50,23 @@ export default function App() {
       
       if (currentUser) {
         try {
+          const tokenResult = await currentUser.getIdTokenResult();
+          let currentRole = (tokenResult.claims.role as string) || null;
+
           const adminSnap = await get(ref(database, `admin/${currentUser.uid}`));
           if (adminSnap.exists()) {
             setAdminName(adminSnap.val().name);
+            if (!currentRole) {
+              currentRole = adminSnap.val().role || null;
+            }
           }
+          setUserRole(currentRole);
         } catch (error) {
-          console.error('Error fetching admin name:', error);
+          console.error('Error fetching admin data:', error);
         }
       } else {
         setAdminName(null);
+        setUserRole(null);
       }
       
       setLoading(false);
@@ -126,6 +134,7 @@ export default function App() {
       <Header
         user={user}
         adminName={adminName}
+        userRole={userRole}
         onLogout={handleLogout}
       />
 
@@ -138,16 +147,31 @@ export default function App() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* using routing */}
           <Routes>
-            <Route path='/' element={<HospitalDashboard />} />
-            <Route path='/transfer' element={<TransferRequest />} />
-            <Route path='/fleet' element={<AmbulanceFleet />} />
-            <Route path="/drivers" element={<DriverProfiles />} />
-            <Route path='/records' element={<PatientRecords />} />
-            <Route path='/analytics' element={<Analytics />} />
-            <Route path='/settings' element={<Settings />} />
+            {userRole === 'fleetofficer' ? (
+              <>
+                <Route path='/' element={<Navigate to='/fleet' replace />} />
+                <Route path='/fleet' element={<AmbulanceFleet />} />
+                <Route path='/drivers' element={<DriverProfiles />} />
+                <Route path='/settings' element={<Settings />} />
+              </>
+            ) : (
+              <>
+                <Route path='/' element={<HospitalDashboard />} />
+                <Route path='/transfer' element={<TransferRequest />} />
+                <Route path='/fleet' element={<AmbulanceFleet />} />
+                <Route path="/drivers" element={<DriverProfiles />} />
+                <Route path='/records' element={<PatientRecords />} />
+                <Route path='/analytics' element={<Analytics />} />
+                <Route path='/settings' element={<Settings />} />
+                
+                {userRole === 'superadmin' && (
+                  <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
+                )}
+              </>
+            )}
 
-            {/* catch all redirect to dashboard */}
-            <Route path='*' element={<Navigate to='/' replace />} />
+            {/* catch all redirect to dashboard (or fleet for officer) */}
+            <Route path='*' element={<Navigate to={userRole === 'fleetofficer' ? '/fleet' : '/'} replace />} />
           </Routes>
 
 

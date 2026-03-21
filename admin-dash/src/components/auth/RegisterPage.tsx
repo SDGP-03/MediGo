@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Mail, MapPin, Lock, AlertCircle, Eye, EyeOff, User, Building2, CheckCircle } from 'lucide-react';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
-import { auth, database } from '../../firebase';
+import { auth } from '../../firebase';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
 
@@ -23,6 +21,7 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [role, setRole] = useState<'hospitaladmin' | 'fleetofficer'>('hospitaladmin');
 
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
@@ -66,55 +65,40 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
         setIsLoading(true);
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const uid = userCredential.user.uid;
-            const placeId = hospitalDetails.placeId;
+            const idToken = await auth.currentUser?.getIdToken(true);
+            if (!idToken) throw new Error("Not authenticated as Super Admin");
 
-            // Update Firebase Auth display name
-            await updateProfile(userCredential.user, {
-                displayName: `${name} - ${hospitalName}`,
-            });
-
-            // 1. Save admin profile — hospitalPlaceId links this user to the shared hospital node
-            const adminRef = ref(database, `admin/${uid}`);
-            await set(adminRef, {
-                uid,
-                name,
-                email,
-                hospitalName,
-                hospitalPlaceId: placeId,   // ← shared key for the hospital node
-                role: 'admin',
-                createdAt: new Date().toISOString(),
-            });
-
-            // 2. Create/update the shared hospital node (keyed by placeId)
-            //    This is where ALL admins of the same physical hospital share data.
-            const hospitalInfoRef = ref(database, `hospitals/${placeId}/info`);
-            await set(hospitalInfoRef, {
-                name: hospitalName,
-                address: hospitalDetails.address,
-                location: {
-                    lat: hospitalDetails.lat,
-                    lng: hospitalDetails.lng,
+            const response = await fetch('http://localhost:3000/auth/create-hospital-staff', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
                 },
-                placeId,
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    hospitalName,
+                    placeId: hospitalDetails.placeId,
+                    role,
+                    address: hospitalDetails.address,
+                    lat: hospitalDetails.lat,
+                    lng: hospitalDetails.lng
+                })
             });
 
-            // 3. Register this admin as a member of the hospital
-            const hospitalAdminRef = ref(database, `hospitals/${placeId}/admins/${uid}`);
-            await set(hospitalAdminRef, {
-                uid,
-                name,
-                email,
-                role: 'admin',
-                joinedAt: new Date().toISOString(),
-            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create account');
+            }
 
             setSuccess(true);
         } catch (err: unknown) {
             let errorMessage = 'An error occurred during registration.';
 
-            if (err && typeof err === 'object' && 'code' in err) {
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (err && typeof err === 'object' && 'code' in err) {
                 const firebaseError = err as { code: string };
                 switch (firebaseError.code) {
                     case 'auth/email-already-in-use':
@@ -174,8 +158,8 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                     </div>
 
                     <div className="mb-8">
-                        <h2 className="text-gray-900 text-2xl font-semibold mb-2">Create Admin Account</h2>
-                        <p className="text-gray-600">Register as a hospital administrator</p>
+                        <h2 className="text-gray-900 text-2xl font-semibold mb-2">Create Staff Account</h2>
+                        <p className="text-gray-600">Register a hospital admin or fleet officer</p>
                     </div>
 
                     {error && (
@@ -259,6 +243,18 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
                         </div>
 
                         <div>
+                            <label className="block text-gray-700 mb-2">Role</label>
+                            <select
+                                value={role}
+                                onChange={(e) => setRole(e.target.value as any)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent bg-white"
+                            >
+                                <option value="hospitaladmin">Hospital Admin</option>
+                                <option value="fleetofficer">Fleet Officer</option>
+                            </select>
+                        </div>
+
+                        <div>
                             <label className="block text-gray-700 mb-2">Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -313,12 +309,12 @@ export function RegisterPage({ onBackToLogin }: RegisterPageProps) {
 
                     <div className="mt-6 text-center">
                         <p className="text-gray-600 text-sm">
-                            Already have an account?{' '}
                             <button
+                                type="button"
                                 onClick={onBackToLogin}
                                 className="text-red-600 hover:underline font-medium"
                             >
-                                Sign In
+                                Back to Dashboard
                             </button>
                         </p>
                     </div>
