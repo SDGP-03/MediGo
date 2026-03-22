@@ -351,9 +351,23 @@ export function PatientRecords() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>({});
-  const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>(() => {
+    try {
+      const saved = localStorage.getItem('medigo_transfer_requests');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>(() => {
+    try {
+      const saved = localStorage.getItem('medigo_patient_overrides');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [isLoading, setIsLoading] = useState(() => !localStorage.getItem('medigo_patient_overrides'));
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -376,10 +390,27 @@ export function PatientRecords() {
     const recordsRef = ref(database, 'patient_records');
 
     const unsubTransfers = onValue(transfersRef, (snapshot) => {
-      setTransferRequests(snapshot.val() || {});
+      const data = snapshot.val() || {};
+      setTransferRequests(data);
+      try {
+        localStorage.setItem('medigo_transfer_requests', JSON.stringify(data));
+      } catch (err) {
+        console.error('Failed to save transfers to local JSON storage:', err);
+      }
       if (recordsRef) setIsLoading(false);
     }, (err) => {
       console.error('[PatientRecords] Transfers error:', err);
+      const localData = localStorage.getItem('medigo_transfer_requests');
+      if (localData) {
+        try {
+          setTransferRequests(JSON.parse(localData));
+          if (recordsRef) setIsLoading(false);
+          setLoadError('Viewing offline local data for transfers.');
+          return;
+        } catch (e) {
+          console.error('Local JSON parse error:', e);
+        }
+      }
       setLoadError('Failed to load transfers');
     });
 
@@ -391,9 +422,25 @@ export function PatientRecords() {
         decryptedData[key] = decryptObject(value as Partial<PatientRecord>);
       });
       setPatientOverrides(decryptedData);
+      try {
+        localStorage.setItem('medigo_patient_overrides', JSON.stringify(decryptedData));
+      } catch (err) {
+        console.error('Failed to save records to local JSON storage:', err);
+      }
       setIsLoading(false);
     }, (err) => {
       console.error('[PatientRecords] Records error:', err);
+      const localData = localStorage.getItem('medigo_patient_overrides');
+      if (localData) {
+        try {
+          setPatientOverrides(JSON.parse(localData));
+          setIsLoading(false);
+          setLoadError('Viewing offline local data for records.');
+          return;
+        } catch (e) {
+          console.error('Local JSON parse error:', e);
+        }
+      }
       setLoadError('Failed to load records');
     });
 
