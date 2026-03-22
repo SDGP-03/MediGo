@@ -1004,10 +1004,19 @@ export function PatientRecords() {
                     {isEditing && editedPatient ? (
                       <input
                         type="number"
+                        min="0"
+                        onKeyDown={(e) => {
+                          if (e.key === '-' || e.key === 'e' || e.key === '+') {
+                            e.preventDefault();
+                          }
+                        }}
                         value={editedPatient.age}
-                        onChange={(event) =>
-                          setEditedPatient({ ...editedPatient, age: normalizeNumber(event.target.value) })
-                        }
+                        onChange={(event) => {
+                          const val = normalizeNumber(event.target.value);
+                          if (val >= 0) {
+                            setEditedPatient({ ...editedPatient, age: val });
+                          }
+                        }}
                         className="text-foreground bg-input-field-bg border border-input rounded px-2 py-1 w-20 focus:ring-2 focus:ring-red-500 outline-none"
                       />
                     ) : (
@@ -1408,8 +1417,19 @@ export function PatientRecords() {
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Age *</label>
                   <input
                     type="number"
+                    min="0"
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === '+') {
+                        e.preventDefault();
+                      }
+                    }}
                     value={newPatientData.age || ''}
-                    onChange={(e) => setNewPatientData({ ...newPatientData, age: normalizeNumber(e.target.value) })}
+                    onChange={(e) => {
+                      const val = normalizeNumber(e.target.value);
+                      if (val >= 0) {
+                        setNewPatientData({ ...newPatientData, age: val });
+                      }
+                    }}
                     placeholder="e.g. 45"
                     className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
                   />

@@ -507,9 +507,17 @@ export function TransferRequest() {
                   <input
                     type="number"
                     required
+                    min="0"
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === '+') {
+                        e.preventDefault();
+                      }
+                    }}
                     value={formData.patientAge}
                     onChange={(e) => {
-                      setFormData({ ...formData, patientAge: e.target.value });
+                      const val = e.target.value;
+                      if (Number(val) < 0) return;
+                      setFormData({ ...formData, patientAge: val });
                       if (formErrors.patientAge) setFormErrors({ ...formErrors, patientAge: '' });
                     }}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground ${formErrors.patientAge ? 'border-red-500 ring-1 ring-red-500' : 'border-input'
