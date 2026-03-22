@@ -36,7 +36,7 @@
         "toHospitalId"
       ]
     },
-    "patients": {
+    "patient_records": {
       ".read": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
       ".write": "auth.token.role === 'superadmin' || auth.token.role === 'hospitaladmin'",
       ".indexOn": [
