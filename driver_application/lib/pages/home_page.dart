@@ -25,6 +25,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   StreamSubscription<Position>? positionStream;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<DatabaseEvent>? _driverProfileSubscription;
 
   Marker? driverMarker;
   Marker? destinationMarker;
@@ -59,6 +60,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _loadLanguage();
     _initConnectivityListener();
     MapStyles.selectedStyleNotifier.addListener(_onMapStyleChanged);
+    _initDriverProfileListener();
   }
 
   @override
@@ -166,9 +168,55 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   bool _onDisconnectSetup = false;
 
+  void _initDriverProfileListener() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    if (_driverProfileSubscription != null) return;
+
+    final driverRef = FirebaseDatabase.instance
+        .ref()
+        .child('drivers')
+        .child(user.uid);
+
+    _driverProfileSubscription = driverRef.onValue.listen(
+      (event) async {
+        final value = event.snapshot.value;
+        if (value is! Map) return;
+
+        final String? latestName = value['name']?.toString().trim();
+        final String? latestHospitalId =
+            value['hospitalPlaceId']?.toString().trim();
+
+        if (latestName != null && latestName.isNotEmpty) {
+          _cachedDriverName = latestName;
+
+          // Keep driver_locations in sync so admin-dash reflects profile edits,
+          // and to prevent the heartbeat `set()` from re-writing an old name.
+          try {
+            final locationRef = _driverLocationRef ??
+                FirebaseDatabase.instance
+                    .ref()
+                    .child('driver_locations')
+                    .child(user.uid);
+            await locationRef.update({'driverName': latestName});
+          } catch (e) {
+            debugPrint('Failed to sync driverName to driver_locations: $e');
+          }
+        }
+
+        if (latestHospitalId != null && latestHospitalId.isNotEmpty) {
+          _cachedHospitalId = latestHospitalId;
+        }
+      },
+      onError: (e) => debugPrint('Driver profile listener error: $e'),
+    );
+  }
+
   void _initDriverLocationRef() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
+      _initDriverProfileListener();
+
       _driverLocationRef = FirebaseDatabase.instance
           .ref()
           .child('driver_locations')
@@ -1001,6 +1049,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _assignmentSubscription?.cancel();
     MapStyles.selectedStyleNotifier.removeListener(_onMapStyleChanged);
     _connectivitySubscription?.cancel();
+    _driverProfileSubscription?.cancel();
     positionStream?.cancel();
     _setDriverOffline();
     super.dispose();
