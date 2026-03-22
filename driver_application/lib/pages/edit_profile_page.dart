@@ -21,6 +21,8 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   File? selectedImage;
   String? networkProfileImage;
+  String? _hospitalPlaceId;
+  final DatabaseReference _rootRef = FirebaseDatabase.instance.ref();
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -111,13 +113,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
             nameController.text = data["name"] ?? "";
             phoneController.text = data["phone"] ?? "";
             emailController.text = data["email"] ?? user.email ?? "";
+            _hospitalPlaceId = data["hospitalPlaceId"]?.toString();
           });
         }
       }
     } catch (e) {
       debugPrint('Error loading profile: $e');
       if (mounted) {
-        _showErrorSnackBar(t('Failed to load profile data', 'පැතිකඩ දත්ත පූරණයට බැරි වුණා', 'சுயவிவர தகவலை ஏற்ற முடியவில்லை'));
+        _showErrorSnackBar(
+          t(
+            'Failed to load profile data',
+            'පැතිකඩ දත්ත පූරණයට බැරි වුණා',
+            'சுயவிவர தகவலை ஏற்ற முடியவில்லை',
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -146,7 +155,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
     } catch (e) {
       debugPrint('Error picking image: $e');
-      _showErrorSnackBar(t('Failed to select image', 'පින්තූරය තෝරාගැනීමට බැරි වුණා', 'படத்தை தேர்வு செய்ய முடியவில்லை'));
+      _showErrorSnackBar(
+        t(
+          'Failed to select image',
+          'පින්තූරය තෝරාගැනීමට බැරි වුණා',
+          'படத்தை தேர்வு செய்ய முடியவில்லை',
+        ),
+      );
     }
   }
 
@@ -230,7 +245,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (user == null) return;
     final email = user.email;
     if (email == null || email.isEmpty) {
-      throw Exception('This account cannot change password with email credentials');
+      throw Exception(
+        'This account cannot change password with email credentials',
+      );
     }
 
     String currentPassword = currentPasswordController.text.trim();
@@ -247,11 +264,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
     } on FirebaseAuthException catch (e) {
       // Re-throw with more context
       if (e.code == 'wrong-password') {
-        throw Exception(t('Current password is incorrect', 'වත්මන් මුරපදය වැරදියි', 'தற்போதைய கடவுச்சொல் தவறு'));
+        throw Exception(
+          t(
+            'Current password is incorrect',
+            'වත්මන් මුරපදය වැරදියි',
+            'தற்போதைய கடவுச்சொல் தவறு',
+          ),
+        );
       } else if (e.code == 'weak-password') {
-        throw Exception(t('New password is too weak', 'නව මුරපදය දුර්වලයි', 'புதிய கடவுச்சொல் பலவீனம்'));
+        throw Exception(
+          t(
+            'New password is too weak',
+            'නව මුරපදය දුර්වලයි',
+            'புதிய கடவுச்சொல் பலவீனம்',
+          ),
+        );
       } else if (e.code == 'requires-recent-login') {
-        throw Exception(t('Please log in again to change your password', 'මුරපදය වෙනස් කිරීමට නැවත පිවිසෙන්න', 'கடவுச்சொல் மாற்ற மீண்டும் உள்நுழையவும்'));
+        throw Exception(
+          t(
+            'Please log in again to change your password',
+            'මුරපදය වෙනස් කිරීමට නැවත පිවිසෙන්න',
+            'கடவுச்சொல் மாற்ற மீண்டும் உள்நுழையவும்',
+          ),
+        );
       } else {
         throw Exception('Failed to change password: ${e.message}');
       }
@@ -259,6 +294,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   // ================= SAVE PROFILE =================
+
+  Future<void> _syncTransferRequestsDriverName({
+    required String driverId,
+    required String driverName,
+  }) async {
+    // Best-effort: keep existing/past transfer_requests rows consistent.
+    // Admin dashboard shows `transfer_requests/*/driverName` (set when request is created).
+    try {
+      final query = _rootRef
+          .child('transfer_requests')
+          .orderByChild('driverId')
+          .equalTo(driverId);
+
+      final snapshot = await query.get();
+      final value = snapshot.value;
+      if (!snapshot.exists || value == null) return;
+
+      if (value is! Map) return;
+
+      final Map<String, Object?> updates = {};
+      for (final entry in value.entries) {
+        final requestId = entry.key.toString();
+        if (requestId.isEmpty) continue;
+        updates['transfer_requests/$requestId/driverName'] = driverName;
+      }
+
+      if (updates.isEmpty) return;
+      await _rootRef.update(updates);
+    } catch (e) {
+      debugPrint('Failed to sync driverName in transfer_requests: $e');
+    }
+  }
 
   Future<void> saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
@@ -281,17 +348,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
         imageUrl = await uploadProfileImage(uid);
       }
 
-      // Update database
-      Map<String, dynamic> updates = {
-        "name": nameController.text.trim(),
-        "phone": phoneController.text.trim(),
+      final String nextName = nameController.text.trim();
+      final String nextPhone = phoneController.text.trim();
+
+      // Ensure we have the driver's hospital id (used by admin dashboard lists).
+      String? hospitalPlaceId = _hospitalPlaceId;
+      if (hospitalPlaceId == null || hospitalPlaceId.isEmpty) {
+        final snapshot = await driversRef.child(uid).get();
+        if (snapshot.exists && snapshot.value is Map) {
+          final data = snapshot.value as Map;
+          hospitalPlaceId = data["hospitalPlaceId"]?.toString();
+        }
+      }
+
+      // Multi-location update so duplicated driver data stays in sync.
+      final Map<String, Object?> updates = {
+        "drivers/$uid/name": nextName,
+        "drivers/$uid/phone": nextPhone,
+        // Used by admin-dash real-time map/list (driver_locations/${uid}.driverName)
+        "driver_locations/$uid/driverName": nextName,
       };
 
       if (imageUrl != null) {
-        updates["profileImage"] = imageUrl;
+        updates["drivers/$uid/profileImage"] = imageUrl;
       }
 
-      await driversRef.child(uid).update(updates);
+      if (hospitalPlaceId != null && hospitalPlaceId.isNotEmpty) {
+        updates["hospitals/$hospitalPlaceId/drivers/$uid/name"] = nextName;
+        updates["hospitals/$hospitalPlaceId/drivers/$uid/phone"] = nextPhone;
+        if (imageUrl != null) {
+          updates["hospitals/$hospitalPlaceId/drivers/$uid/profileImage"] =
+              imageUrl;
+        }
+      }
+
+      await _rootRef.update(updates);
+
+      // Best-effort sync for duplicated request rows (doesn't block profile save).
+      await _syncTransferRequestsDriverName(
+        driverId: uid,
+        driverName: nextName,
+      );
 
       // Update UI instantly
       if (imageUrl != null) {
@@ -308,7 +405,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
       if (!mounted) return;
 
-      _showSuccessSnackBar(t("Profile updated successfully", "පැතිකඩ සාර්ථකව යාවත්කාලීන කළා", "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது"));
+      _showSuccessSnackBar(
+        t(
+          "Profile updated successfully",
+          "පැතිකඩ සාර්ථකව යාවත්කාලීන කළා",
+          "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது",
+        ),
+      );
 
       // Clear password fields
       currentPasswordController.clear();
@@ -386,7 +489,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
             },
           ),
         ),
-        title: Text(t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          t("Edit Profile", "පැතිකඩ වෙනස් කරන්න", "சுயவிவரம் திருத்து"),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.red.shade700,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -397,7 +503,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   CircularProgressIndicator(color: Colors.red.shade700),
                   const SizedBox(height: 12),
-                  Text(t("Loading profile...", "පැතිකඩ පූරණය වෙයි...", "சுயவிவரம் ஏற்றப்படுகிறது...")),
+                  Text(
+                    t(
+                      "Loading profile...",
+                      "පැතිකඩ පූරණය වෙයි...",
+                      "சுயவிவரம் ஏற்றப்படுகிறது...",
+                    ),
+                  ),
                 ],
               ),
             )
@@ -437,25 +549,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     fit: BoxFit.cover,
                   )
                 : (networkProfileImage != null
-                    ? CachedNetworkImage(
-                        imageUrl: networkProfileImage!,
-                        width: 154,
-                        height: 154,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
-                          child: CircularProgressIndicator(),
-                        ),
-                        errorWidget: (context, url, error) => const Icon(
+                      ? CachedNetworkImage(
+                          imageUrl: networkProfileImage!,
+                          width: 154,
+                          height: 154,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) =>
+                              const Center(child: CircularProgressIndicator()),
+                          errorWidget: (context, url, error) => const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
                           Icons.person,
                           size: 60,
                           color: Colors.white,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.white,
-                      )),
+                        )),
           ),
         ),
         Positioned(
@@ -468,11 +579,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               border: Border.all(color: Colors.white, width: 2),
             ),
             child: IconButton(
-              icon: const Icon(
-                Icons.camera_alt,
-                size: 18,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
               onPressed: isUploadingImage ? null : pickProfileImage,
             ),
           ),
@@ -548,7 +655,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 SizedBox(height: 5),
                 Text(
-                  t("Update your driver information", "ඔබගේ රියදුරු තොරතුරු යාවත්කාලීන කරන්න", "உங்கள் டிரைவர் தகவலை புதுப்பிக்கவும்"),
+                  t(
+                    "Update your driver information",
+                    "ඔබගේ රියදුරු තොරතුරු යාවත්කාලීන කරන්න",
+                    "உங்கள் டிரைவர் தகவலை புதுப்பிக்கவும்",
+                  ),
                   style: TextStyle(color: Colors.white70),
                 ),
               ],
@@ -584,7 +695,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildInput(
                     controller: phoneController,
-                    hint: t("Phone Number (e.g., 0771234567)", "දුරකථන අංකය (උදා: 0771234567)", "தொலைபேசி எண் (உ.தா.: 0771234567)"),
+                    hint: t(
+                      "Phone Number (e.g., 0771234567)",
+                      "දුරකථන අංකය (උදා: 0771234567)",
+                      "தொலைபேசி எண் (உ.தா.: 0771234567)",
+                    ),
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     validator: Validators.validatePhone,
@@ -600,7 +715,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      t("Change Password (Optional)", "මුරපදය වෙනස් කරන්න (විකල්ප)", "கடவுச்சொல் மாற்று (விருப்பம்)"),
+                      t(
+                        "Change Password (Optional)",
+                        "මුරපදය වෙනස් කරන්න (විකල්ප)",
+                        "கடவுச்சொல் மாற்று (விருப்பம்)",
+                      ),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -613,7 +732,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: currentPasswordController,
-                    hint: t("Current Password", "වත්මන් මුරපදය", "தற்போதைய கடவுச்சொல்"),
+                    hint: t(
+                      "Current Password",
+                      "වත්මන් මුරපදය",
+                      "தற்போதைய கடவுச்சொல்",
+                    ),
                     icon: Icons.lock_outline,
                     obscureText: _obscureCurrentPassword,
                     onToggleVisibility: () {
@@ -631,7 +754,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: newPasswordController,
-                    hint: t("New Password (min 8 chars)", "නව මුරපදය (අකුරු 8ක් වත්)", "புதிய கடவுச்சொல் (குறைந்தது 8 எழுத்து)"),
+                    hint: t(
+                      "New Password (min 8 chars)",
+                      "නව මුරපදය (අකුරු 8ක් වත්)",
+                      "புதிய கடவுச்சொல் (குறைந்தது 8 எழுத்து)",
+                    ),
                     icon: Icons.lock_reset,
                     obscureText: _obscureNewPassword,
                     onToggleVisibility: () {
@@ -646,7 +773,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                   buildPasswordInput(
                     controller: confirmPasswordController,
-                    hint: t("Confirm New Password", "නව මුරපදය නැවත දාන්න", "புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்"),
+                    hint: t(
+                      "Confirm New Password",
+                      "නව මුරපදය නැවත දාන්න",
+                      "புதிய கடவுச்சொல்லை மீண்டும் உள்ளிடவும்",
+                    ),
                     icon: Icons.lock,
                     obscureText: _obscureConfirmPassword,
                     onToggleVisibility: () {
@@ -656,9 +787,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     },
                     validator: (value) =>
                         Validators.validatePasswordConfirmation(
-                      value,
-                      newPasswordController.text,
-                    ),
+                          value,
+                          newPasswordController.text,
+                        ),
                   ),
 
                   const SizedBox(height: 30),
@@ -668,8 +799,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isSaving ? Colors.grey : Colors.red.shade700,
+                        backgroundColor: isSaving
+                            ? Colors.grey
+                            : Colors.red.shade700,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -686,7 +818,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             )
                           : Text(
-                              t("Save Changes", "වෙනස්කම් සුරකින්න", "மாற்றங்களை சேமிக்கவும்"),
+                              t(
+                                "Save Changes",
+                                "වෙනස්කම් සුරකින්න",
+                                "மாற்றங்களை சேமிக்கவும்",
+                              ),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
