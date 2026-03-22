@@ -25,6 +25,8 @@ export interface AmbulanceUnit {
     nextServiceDue?: string;
     maintenanceNotes?: string;
     currentTransfer?: string;
+    patientId?: string;
+    destination?: string;
     etaMinutes?: number;
     equipment: string[];
     hasDoctor: boolean;

@@ -114,16 +114,40 @@ export class TransfersService implements OnModuleInit {
                 if (status === 'in_progress') {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'busy' });
                     await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'busy' });
-                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'on_trip' });
+                    await this.syncAmbulanceState(hospitalId, ambulanceId, 'on_trip', data, snapshot.key!);
                 } else if (status === 'completed' || status === 'cancelled') {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
                     await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
-                    await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`).update({ status: 'available' });
+                    await this.syncAmbulanceState(hospitalId, ambulanceId, 'available');
                 }
             } catch (err: any) {
                 this.logger.error(`Failed to update fleet statuses for transfer ${snapshot.key}: ${err.message}`);
             }
         });
+    }
+
+    /** Helper to keep ambulance metadata in sync with transfer state */
+    private async syncAmbulanceState(hospitalId: string, ambId: string, status: string, transferData?: any, transferId?: string) {
+        try {
+            const updates: any = { status };
+            
+            if (transferData && (status === 'assigned' || status === 'on_trip')) {
+                updates.currentTransfer = transferId || 'Active Transfer';
+                updates.patientId = transferData.patient?.id || 'Unknown';
+                updates.destination = transferData.destination?.hospitalName || transferData.destination?.address || 'Unknown';
+                if (transferData.driverName) updates.driver = transferData.driverName;
+            } else if (status === 'available') {
+                updates.currentTransfer = null;
+                updates.patientId = null;
+                updates.destination = null;
+                updates.etaMinutes = null;
+            }
+
+            await this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambId}`).update(updates);
+            this.logger.debug(`Synced ambulance ${ambId} state to ${status}`);
+        } catch (err: any) {
+            this.logger.error(`Failed to sync ambulance ${ambId} state: ${err.message}`);
+        }
     }
 
     private async triggerEtaUpdate(driverId: string, activeTransfer: ActiveTransfer, locationData?: any) {
@@ -257,7 +281,7 @@ export class TransfersService implements OnModuleInit {
                 await Promise.all([
                     this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' }),
                     this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' }),
-                    this.firebase.ref(`hospitals/${hospitalId}/ambulances/${targetAmbulanceId}`).update({ status: 'assigned' })
+                    this.syncAmbulanceState(hospitalId, targetAmbulanceId, 'assigned', enrichedData, newRef.key!)
                 ]);
             } catch (err: any) {
                 this.logger.error(`Failed to assign for transfer ${newRef.key}: ${err.message}`);
