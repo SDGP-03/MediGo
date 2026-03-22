@@ -11,6 +11,10 @@
           "$driverId": {
             ".write": "auth.uid === $driverId || auth.token.role === 'superadmin' || ((auth.token.role === 'hospitaladmin' || auth.token.role === 'fleetofficer') && auth.token.hospitalId === $hospitalId)"
           }
+        },
+        "patient_records": {
+          ".read": "auth.token.role === 'superadmin' || (auth.token.role === 'hospitaladmin' && auth.token.hospitalId === $hospitalId)",
+          ".write": "auth.token.role === 'superadmin' || (auth.token.role === 'hospitaladmin' && auth.token.hospitalId === $hospitalId)"
         }
       }
     },
