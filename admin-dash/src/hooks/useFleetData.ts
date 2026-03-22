@@ -25,6 +25,8 @@ export interface AmbulanceUnit {
     nextServiceDue?: string;
     maintenanceNotes?: string;
     currentTransfer?: string;
+    patientId?: string;
+    destination?: string;
     etaMinutes?: number;
     equipment: string[];
     hasDoctor: boolean;
@@ -134,6 +136,7 @@ export interface UseFleetDataReturn {
 
     addPendingTransfer: (transfer: Omit<PendingTransfer, 'id'>) => Promise<void>;
     removePendingTransfer: (id: string) => Promise<void>;
+    hospitalId: string | null;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -325,5 +328,6 @@ export function useFleetData(): UseFleetDataReturn {
         completeMaintenance,
         addPendingTransfer,
         removePendingTransfer,
+        hospitalId,
     };
 }

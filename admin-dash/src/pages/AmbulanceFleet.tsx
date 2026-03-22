@@ -69,6 +69,7 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
     loading,
     error,
     addAmbulance,
+    updateAmbulance,
     deleteAmbulance,
     assignAmbulanceToTransfer,
     scheduleMaintenance,
@@ -81,8 +82,14 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [detailAmbulance, setDetailAmbulance] = useState<AmbulanceUnit | null>(null);
-  const [assignTarget, setAssignTarget] = useState<AmbulanceUnit | null>(null);
-  const [selectedTransferId, setSelectedTransferId] = useState('');
+  const [updateTarget, setUpdateTarget] = useState<AmbulanceUnit | null>(null);
+  const [updateForm, setUpdateForm] = useState({
+    driver: '', driverGender: 'Male',
+    attendant: '', attendantGender: 'Male',
+    location: '',
+    equipment: [] as string[],
+    hasDoctor: false, hasVentilator: false,
+  });
   const [maintenanceTarget, setMaintenanceTarget] = useState<AmbulanceUnit | null>(null);
   const [maintenanceDate, setMaintenanceDate] = useState('');
   const [maintenanceNotes, setMaintenanceNotes] = useState('');
@@ -231,18 +238,25 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
 
   // ── Firebase actions ──
 
-  const handleAssignConfirm = async () => {
-    if (!assignTarget || !selectedTransferId) return;
-    const transfer = pendingTransfers.find(t => t.id === selectedTransferId);
-    if (!transfer) return;
+  const handleUpdateCondition = async () => {
+    if (!updateTarget) return;
     setActionLoading(true);
     try {
-      await assignAmbulanceToTransfer(assignTarget.id, transfer);
-      showToast(`${assignTarget.id} assigned to transfer ${selectedTransferId} ✓`);
-      setAssignTarget(null);
-      setSelectedTransferId('');
+      const { id } = updateTarget;
+      await updateAmbulance(id, {
+        driver: updateForm.driver,
+        driverGender: updateForm.driverGender,
+        attendant: updateForm.attendant,
+        attendantGender: updateForm.attendantGender,
+        location: updateForm.location,
+        equipment: updateForm.equipment,
+        hasDoctor: updateForm.hasDoctor,
+        hasVentilator: updateForm.hasVentilator,
+      });
+      showToast(`${id} condition updated successfully ✓`);
+      setUpdateTarget(null);
     } catch {
-      showToast('Failed to assign ambulance.', 'error');
+      showToast('Failed to update ambulance condition.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -332,13 +346,15 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
     }
   };
 
-  const toggleEquipment = (item: string) =>
-    setAddForm(f => ({
+  const toggleEquipment = (item: string, type: 'add' | 'update' = 'add') => {
+    const setter = type === 'add' ? setAddForm : setUpdateForm;
+    setter((f: any) => ({
       ...f,
       equipment: f.equipment.includes(item)
-        ? f.equipment.filter(e => e !== item)
+        ? f.equipment.filter((e: string) => e !== item)
         : [...f.equipment, item],
     }));
+  };
 
   // ─── Loading / Error states ───────────────────────────────────────────────
 
@@ -523,51 +539,142 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
             className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900/50 group flex flex-col h-full"
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-lg ${ambulance.status === 'available' ? 'bg-green-50 dark:bg-green-900/20' : ambulance.status === 'in_service' ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
                   <Ambulance size={22} className={ambulance.status === 'available' ? 'text-green-600' : ambulance.status === 'in_service' ? 'text-blue-600' : 'text-orange-600'} />
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold">{ambulance.id}</h3>
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs border font-medium ${getStatusColor(ambulance.status)}`}>
-                    {ambulance.status.replace('_', ' ').toUpperCase()}
-                  </span>
+                  <h3 className="text-foreground font-bold text-base leading-tight">{ambulance.id}</h3>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Fleet ID</p>
                 </div>
               </div>
-              <button onClick={() => setDetailAmbulance(ambulance)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 opacity-0 group-hover:opacity-100" title="View details">
-                <ChevronRight size={18} />
-              </button>
+              <div className="flex items-center gap-3">
+                <span className={`inline-block px-2.5 py-1 rounded-full text-[13px] border font-medium tracking-wide ${getStatusColor(ambulance.status)}`}>
+                  {ambulance.status.replace('_', ' ').toUpperCase()}
+                </span>
+                <button onClick={() => setDetailAmbulance(ambulance)}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1" title="View details">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Info */}
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center gap-2">
-                <User size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">Driver: <span className="text-foreground">{ambulance.driver}</span> ({ambulance.driverGender})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <User size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">Attendant: <span className="text-foreground">{ambulance.attendant}</span> ({ambulance.attendantGender})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">{ambulance.location}</span>
-              </div>
-              {ambulance.status === 'in_service' && ambulance.etaMinutes !== undefined && (
-                <div className="flex items-center gap-2">
-                  <Clock size={14} className="text-blue-400 shrink-0" />
-                  <span className="text-blue-600 font-medium">ETA: {formatEta(ambulance.etaMinutes)}</span>
-                  {ambulance.currentTransfer && <span className="text-muted-foreground">— {ambulance.currentTransfer}</span>}
+            {/* Info — Two Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-[15px]">
+              {/* Left Column: Assigned Personnel */}
+              <div className="space-y-3.5 border-r border-border/40 pr-2">
+                <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest mb-1.5 px-1.5 bg-muted/30 rounded inline-block">Assigned Personnel</p>
+                
+                {/* Driver */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-emerald-50 dark:bg-emerald-900/40 rounded-md shrink-0">
+                    <User size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Driver</p>
+                    <p className="text-foreground font-semibold truncate text-[13px]">
+                      {ambulance.driver || <span className="text-muted-foreground/40 italic font-normal">N/A</span>}
+                      {ambulance.driverGender && <span className={`ml-1.5 text-[10px] ${ambulance.driverGender === 'Male' ? 'text-blue-500' : 'text-pink-500'} font-bold`}>
+                        ({ambulance.driverGender[0]})
+                      </span>}
+                    </p>
+                  </div>
                 </div>
-              )}
-              {ambulance.status === 'maintenance' && ambulance.maintenanceNotes && (
-                <div className="flex items-center gap-2">
-                  <Wrench size={14} className="text-orange-400 shrink-0" />
-                  <span className="text-orange-600 text-xs">{ambulance.maintenanceNotes}</span>
+
+                {/* Attendant */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-violet-50 dark:bg-violet-900/40 rounded-md shrink-0">
+                    <User size={13} className="text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Attendant</p>
+                    <p className="text-foreground font-semibold truncate text-[13px]">
+                      {ambulance.attendant === 'Not Assigned' || !ambulance.attendant ? (
+                        <span className="text-muted-foreground/40 italic font-normal">N/A</span>
+                      ) : (
+                        <>
+                          {ambulance.attendant}
+                          {ambulance.attendantGender && <span className={`ml-1.5 text-[10px] ${ambulance.attendantGender === 'Male' ? 'text-blue-500' : 'text-pink-500'} font-bold`}>
+                            ({ambulance.attendantGender[0]})
+                          </span>}
+                        </>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              )}
+
+                {/* Location */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-amber-50 dark:bg-amber-900/40 rounded-md shrink-0">
+                    <MapPin size={13} className="text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Station / Base</p>
+                    <p className="text-foreground font-medium text-[12px] line-clamp-2 leading-tight">{ambulance.location}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Mission Details */}
+              <div className="space-y-3.5">
+                <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest mb-1.5 px-1.5 bg-muted/30 rounded inline-block">Current Mission</p>
+
+                {/* Active Patient */}
+                {ambulance.patientId ? (
+                  <div className="flex items-start gap-2.5">
+                    <div className="mt-0.5 p-1 bg-red-50 dark:bg-red-900/40 rounded-md shrink-0">
+                      <User size={13} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-red-600 dark:text-red-400 text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Patient</p>
+                      <p className="text-foreground font-bold text-[13px] truncate">{ambulance.patientId}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2.5 opacity-50">
+                    <div className="mt-0.5 p-1 bg-gray-50 rounded-md shrink-0">
+                      <User size={13} className="text-gray-400" />
+                    </div>
+                    <p className="text-muted-foreground text-[12px] italic mt-1 font-medium">Standby — No trip</p>
+                  </div>
+                )}
+
+                {/* Destination */}
+                {ambulance.destination && (
+                  <div className="flex items-start gap-2.5">
+                    <div className="mt-0.5 p-1 bg-blue-50 dark:bg-blue-900/40 rounded-md shrink-0">
+                      <MapPin size={13} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Destination To</p>
+                      <p className="text-foreground font-bold text-[13px] truncate">{ambulance.destination}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status-specific Alerts (ETA / Maintenance) */}
+                {ambulance.status === 'in_service' && ambulance.etaMinutes !== undefined && (
+                  <div className="p-2.5 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Clock size={11} className="text-blue-600 dark:text-blue-400" />
+                      <span className="text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase tracking-wider">ETA Status</span>
+                    </div>
+                    <p className="text-blue-600 dark:text-blue-400 text-[13px] font-bold leading-none mt-1">{formatEta(ambulance.etaMinutes)}</p>
+                    {ambulance.currentTransfer && <p className="text-muted-foreground text-[9px] truncate mt-1">Ref: #{ambulance.currentTransfer}</p>}
+                  </div>
+                )}
+
+                {ambulance.status === 'maintenance' && ambulance.maintenanceNotes && (
+                  <div className="p-2.5 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-900/30">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Wrench size={11} className="text-orange-600 dark:text-orange-400" />
+                      <span className="text-orange-700 dark:text-orange-300 font-bold text-[10px] uppercase tracking-wider">Condition Note</span>
+                    </div>
+                    <p className="text-orange-700 dark:text-orange-300 text-[11px] leading-snug line-clamp-3 mt-1">{ambulance.maintenanceNotes}</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Equipment — card */}
@@ -584,7 +691,7 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
 
             {/* Badges */}
             {(ambulance.hasDoctor || ambulance.hasVentilator) && (
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 text-[13px]">
                 {ambulance.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">Doctor On Board</span>}
                 {ambulance.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">Ventilator</span>}
               </div>
@@ -594,9 +701,21 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
             <div className="pt-3 border-t border-border flex flex-col gap-2 mt-auto">
               {ambulance.status === 'available' && (
                 <>
-                  <button onClick={() => { setAssignTarget(ambulance); setSelectedTransferId(''); }}
+                  <button onClick={() => {
+                    setUpdateTarget(ambulance);
+                    setUpdateForm({
+                      driver: ambulance.driver,
+                      driverGender: ambulance.driverGender,
+                      attendant: ambulance.attendant,
+                      attendantGender: ambulance.attendantGender,
+                      location: ambulance.location,
+                      equipment: ambulance.equipment || [],
+                      hasDoctor: ambulance.hasDoctor,
+                      hasVentilator: ambulance.hasVentilator,
+                    });
+                  }}
                     className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
-                    Assign to Transfer
+                    Update Condition
                   </button>
                   <button onClick={() => { setMaintenanceTarget(ambulance); setMaintenanceDate(''); setMaintenanceNotes(''); }}
                     className="w-full px-4 py-2 bg-card border border-border text-muted-foreground rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-2">
@@ -704,6 +823,18 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
                     <span className="text-muted-foreground">Transfer: <span className="text-foreground font-medium">{detailAmbulance.currentTransfer}</span></span>
                   </div>
                 )}
+                {detailAmbulance.patientId && (
+                  <div className="flex items-center gap-2">
+                    <User size={14} className="text-red-400 shrink-0" />
+                    <span className="text-muted-foreground">Patient ID: <span className="text-foreground font-medium">{detailAmbulance.patientId}</span></span>
+                  </div>
+                )}
+                {detailAmbulance.destination && (
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} className="text-blue-400 shrink-0" />
+                    <span className="text-muted-foreground">Destination: <span className="text-foreground font-medium">{detailAmbulance.destination}</span></span>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {detailAmbulance.year && (
@@ -764,9 +895,23 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
           <DialogFooter>
             <button onClick={() => setDetailAmbulance(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm">Close</button>
             {detailAmbulance?.status === 'available' && (
-              <button onClick={() => { setDetailAmbulance(null); setAssignTarget(detailAmbulance!); }}
+              <button onClick={() => {
+                const amb = detailAmbulance!;
+                setDetailAmbulance(null);
+                setUpdateTarget(amb);
+                setUpdateForm({
+                  driver: amb.driver,
+                  driverGender: amb.driverGender,
+                  attendant: amb.attendant,
+                  attendantGender: amb.attendantGender,
+                  location: amb.location,
+                  equipment: amb.equipment || [],
+                  hasDoctor: amb.hasDoctor,
+                  hasVentilator: amb.hasVentilator,
+                });
+              }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                Assign to Transfer
+                Update Condition
               </button>
             )}
           </DialogFooter>
@@ -774,38 +919,100 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
       </Dialog>
 
       {/* ══════════════════════════════════════════════════════════
-          ASSIGN DIALOG
+          UPDATE CONDITION DIALOG
       ══════════════════════════════════════════════════════════ */}
-      <Dialog open={!!assignTarget} onOpenChange={open => !open && setAssignTarget(null)}>
-        <DialogContent className="max-w-md">
+      <Dialog open={!!updateTarget} onOpenChange={open => !open && setUpdateTarget(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Assign {assignTarget?.id} to Transfer</DialogTitle>
-            <DialogDescription>Select a pending transfer request to assign this ambulance.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity size={18} className="text-red-600" /> Update Condition — {updateTarget?.id}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            {pendingTransfers.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-6">No pending transfers at the moment.</p>
-            ) : pendingTransfers.map(t => (
-              <label key={t.id}
-                className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedTransferId === t.id ? 'border-red-600 bg-red-50 dark:bg-red-900/10' : 'border-border hover:border-red-300'}`}>
-                <input type="radio" name="transfer" value={t.id} checked={selectedTransferId === t.id}
-                  onChange={() => setSelectedTransferId(t.id)} className="mt-0.5" />
-                <div className="flex-1 text-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-foreground">{t.patient}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${getPriorityColor(t.priority)}`}>{t.priority.toUpperCase()}</span>
-                  </div>
-                  <p className="text-muted-foreground text-xs">{t.id} · {t.from} → {t.to}</p>
+          <div className="space-y-4 py-2 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-foreground mb-1.5">Driver Name</label>
+                <select value={drivers.find(d => d.name === updateForm.driver)?.id ?? ''}
+                  onChange={e => {
+                    const id = e.target.value;
+                    const drv = drivers.find(d => d.id === id);
+                    setUpdateForm(f => ({ ...f, driver: drv ? drv.name : '', driverGender: drv ? drv.gender : f.driverGender }));
+                  }}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
+                  <option value="">Select driver</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-foreground mb-1.5">Driver Gender</label>
+                <select value={updateForm.driverGender}
+                  onChange={e => setUpdateForm(f => ({ ...f, driverGender: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
+                  <option>Male</option><option>Female</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-foreground mb-1.5">Attendant Name</label>
+                <input type="text" value={updateForm.attendant}
+                  onChange={e => setUpdateForm(f => ({ ...f, attendant: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
+              </div>
+              <div>
+                <label className="block text-foreground mb-1.5">Attendant Gender</label>
+                <select value={updateForm.attendantGender}
+                  onChange={e => setUpdateForm(f => ({ ...f, attendantGender: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground">
+                  <option>Male</option><option>Female</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-foreground mb-1.5">Current Location</label>
+              <input type="text" value={updateForm.location}
+                onChange={e => setUpdateForm(f => ({ ...f, location: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-input-field-bg text-foreground" />
+            </div>
+            <div>
+              <label className="block text-foreground mb-2">Equipment</label>
+              <div className="grid grid-cols-2 gap-2">
+                {EQUIPMENT_OPTIONS.map(item => (
+                  <label key={item} className="flex items-center gap-2 p-2 border border-border rounded-lg cursor-pointer hover:bg-accent text-xs">
+                    <input type="checkbox" checked={updateForm.equipment.includes(item)}
+                      onChange={() => toggleEquipment(item, 'update')} className="w-3.5 h-3.5 text-red-600" />
+                    {item}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent">
+                <input type="checkbox" checked={updateForm.hasDoctor}
+                  onChange={e => setUpdateForm(f => ({ ...f, hasDoctor: e.target.checked }))} className="w-4 h-4 text-red-600" />
+                <div>
+                  <p className="text-foreground font-medium">Doctor On Board</p>
+                  <p className="text-muted-foreground text-xs">Unit carries an attending physician</p>
                 </div>
               </label>
-            ))}
+              <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent">
+                <input type="checkbox" checked={updateForm.hasVentilator}
+                  onChange={e => setUpdateForm(f => ({ ...f, hasVentilator: e.target.checked }))} className="w-4 h-4 text-red-600" />
+                <div>
+                  <p className="text-foreground font-medium">Ventilator Support</p>
+                  <p className="text-muted-foreground text-xs">Unit equipped with mechanical ventilator</p>
+                </div>
+              </label>
+            </div>
           </div>
           <DialogFooter>
-            <button onClick={() => setAssignTarget(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
-            <button onClick={handleAssignConfirm} disabled={!selectedTransferId || actionLoading}
-              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${selectedTransferId && !actionLoading ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>
+            <button onClick={() => setUpdateTarget(null)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-sm">Cancel</button>
+            <button onClick={handleUpdateCondition} disabled={actionLoading}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-2 disabled:opacity-60">
               {actionLoading && <Loader2 size={14} className="animate-spin" />}
-              Confirm Assignment
+              Save Changes
             </button>
           </DialogFooter>
         </DialogContent>
