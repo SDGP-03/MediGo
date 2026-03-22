@@ -194,20 +194,9 @@ export function LoginPage({ onLogin, onRegister, onForgotPassword, onSupport }: 
               </button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-              <p className="text-gray-600 text-sm mb-4">
-                Don't have an account?{' '}
-                <button
-                  onClick={onRegister}
-                  className="text-red-600 hover:underline font-medium"
-                >
-                  Register as Admin
-                </button>
-              </p>
               <p className="text-gray-500 text-xs">
                 Need help? <button onClick={onSupport} className="text-red-600 hover:underline">Contact Support</button>
               </p>
-            </div>
           </div>
         </div>
       </div>
