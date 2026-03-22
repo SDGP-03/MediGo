@@ -8,7 +8,8 @@ import {
     deleteUser,
     updateProfile,
 } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, database } from '../firebase';
+import { ref, update } from 'firebase/database';
 
 // ── password strength helper ──────────────────────────────────────────────
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
@@ -25,7 +26,13 @@ function getPasswordStrength(password: string): { score: number; label: string; 
     return { score, label: 'Very Strong', color: 'bg-green-500' };
 }
 
-export function Settings() {
+export function Settings({ 
+    adminName, 
+    setAdminName 
+}: { 
+    adminName: string | null; 
+    setAdminName: (name: string) => void; 
+}) {
     const [notifications, setNotifications] = useState({
         email: true,
         push: false,
@@ -73,12 +80,12 @@ export function Settings() {
         const user = auth.currentUser;
         if (user) {
             setCurrentUserData({
-                displayName: user.displayName || 'Admin User',
+                displayName: adminName || user.displayName || 'Admin User',
                 email: user.email || '',
                 photoURL: user.photoURL || '',
             });
             setProfileForm({
-                displayName: user.displayName || 'Admin User',
+                displayName: adminName || user.displayName || 'Admin User',
                 email: user.email || '',
             });
         }
@@ -233,12 +240,19 @@ export function Settings() {
         setProfileToast(null);
 
         try {
-            // Update display name in Firebase
-            if (profileForm.displayName !== user.displayName) {
-                await updateProfile(user, {
-                    displayName: profileForm.displayName,
-                });
-            }
+            // Update display name in Firebase Database
+            const adminRef = ref(database, `admin/${user.uid}`);
+            await update(adminRef, {
+                name: profileForm.displayName
+            });
+
+            // Update main app state (which updates the header)
+            setAdminName(profileForm.displayName);
+
+            // Update display name in Firebase Auth Profile (for fallback)
+            await updateProfile(user, {
+                displayName: profileForm.displayName,
+            });
 
             // Update local state
             setCurrentUserData(prev => ({
