@@ -15,9 +15,10 @@ import 'package:intl/intl.dart';
 enum NavigationExitResult { completed, cancelled }
 
 class NavigationPage extends StatefulWidget {
-  const NavigationPage({super.key, required this.assignment});
+  const NavigationPage({super.key, required this.assignment, this.autoStart = false});
 
   final Assignment assignment;
+  final bool autoStart;
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -31,22 +32,44 @@ class _NavigationPageState extends State<NavigationPage> {
   String? _initError;
   String? _permissionError;
 
-  bool get _isReady => _nav.sessionReady && _nav.hasLocationFix;
-
   StreamSubscription<OnArrivalEvent>? _arrivalSub;
   bool _arrivalSheetOpen = false;
   bool _disposedSession = false;
+  bool _autoStartTriggered = false;
 
   @override
   void initState() {
     super.initState();
+    _nav.addListener(_maybeAutoStart);
     _boot();
+  }
+
+  void _maybeAutoStart() {
+    if (!widget.autoStart) return;
+    if (_autoStartTriggered) return;
+    if (_initializing) return;
+    if (_initError != null) return;
+    if (!_nav.canStartNavigation) return;
+
+    _autoStartTriggered = true;
+    unawaited(() async {
+      try {
+        await _startTrip();
+        await _nav.startNavigation();
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _initError = e.toString();
+        });
+      }
+    }());
   }
 
   Future<void> _boot() async {
     setState(() {
       _initializing = true;
       _initError = null;
+      _autoStartTriggered = false;
     });
 
     try {
@@ -90,6 +113,7 @@ class _NavigationPageState extends State<NavigationPage> {
     } finally {
       if (context.mounted) {
         setState(() => _initializing = false);
+        _maybeAutoStart();
       }
     }
   }
@@ -207,6 +231,7 @@ class _NavigationPageState extends State<NavigationPage> {
   @override
   void dispose() {
     _arrivalSub?.cancel();
+    _nav.removeListener(_maybeAutoStart);
     if (!_disposedSession) {
       _nav.disposeSession();
     }
@@ -475,15 +500,25 @@ class _NavigationPageState extends State<NavigationPage> {
                     isLoading: _initializing || !_nav.sessionReady,
                     primaryCtaLabel: _initError != null
                         ? 'Retry'
-                        : (_isReady ? 'Start Navigation' : 'Getting GPS…'),
+                        : (widget.autoStart
+                              ? (_nav.isStartingNavigation || _autoStartTriggered
+                                    ? 'Starting…'
+                                    : (_nav.hasLocationFix
+                                          ? 'Preparing route…'
+                                          : 'Getting GPS…'))
+                              : (_nav.canStartNavigation
+                                    ? 'Start Navigation'
+                                    : 'Getting GPS…')),
                     onPrimaryCta: (_initError != null)
                         ? _boot
-                        : (_isReady
-                              ? () async {
-                                  await _startTrip();
-                                  await _nav.startNavigation();
-                                }
-                              : null),
+                        : (widget.autoStart
+                              ? null
+                              : (_nav.canStartNavigation
+                                    ? () async {
+                                        await _startTrip();
+                                        await _nav.startNavigation();
+                                      }
+                                    : null)),
                   ),
                 ),
 
