@@ -24,6 +24,7 @@ import {
   Shield,
   Car
 } from "lucide-react";
+import { toast } from "sonner";
 import { Switch } from "../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
 import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
@@ -54,7 +55,7 @@ export function HospitalDashboard() {
 
   const viewDriverDetails = async (driverId: string) => {
     if (!driverId || driverId === 'Unknown') {
-      alert('No driver assigned to this request.');
+      toast.error('No driver assigned to this request.');
       return;
     }
     setDriverPopupOpen(true);
@@ -109,7 +110,7 @@ export function HospitalDashboard() {
 
   const handleTrackLive = (transfer: any) => {
     if (!transfer.driverId) {
-      alert("No driver assigned to this transfer yet.");
+      toast.error("No driver assigned to this transfer yet.");
       return;
     }
     setMapView("map");
@@ -153,7 +154,7 @@ export function HospitalDashboard() {
         setDbActiveTransfers(prev => prev.filter(req => req.id !== requestId));
       } catch (error) {
         console.error("Error cancelling request:", error);
-        alert("Failed to cancel request. Please try again.");
+        toast.error("Failed to cancel request. Please try again.");
       }
     }
   };
@@ -728,8 +729,8 @@ export function HospitalDashboard() {
                   key={request.id}
                   type="incoming"
                   data={request}
-                  onAccept={(req) => alert(`Accepting emergency from ${req.patientName}`)}
-                  onDecline={(req) => alert(`Declining emergency from ${req.patientName}`)}
+                  onAccept={(req) => toast.success(`Accepting emergency from ${req.patientName}`)}
+                  onDecline={(req) => toast.error(`Declining emergency from ${req.patientName}`)}
                   onViewDetails={(req) => setSelectedRequest(req)}
                 />
               ))

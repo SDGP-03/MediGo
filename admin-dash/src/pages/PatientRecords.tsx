@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText, Plus, X, FileJson, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { database, auth } from '../firebase';
 import { ref, onValue, off, set, update, push, get } from 'firebase/database';
 import { encryptData, decryptObject, decryptData } from '../utils/encryption';
@@ -372,6 +373,18 @@ const mergePatients = (
   return Object.values(byPatientId).sort((a, b) => a.name.localeCompare(b.name));
 };
 
+const getNextPatientId = (patients: PatientRecord[]): string => {
+  const maxNum = patients.reduce((max, p) => {
+    const match = p.id.match(/PT-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return num > max ? num : max;
+    }
+    return max;
+  }, 20250);
+  return `PT-${maxNum + 1}`;
+};
+
 export function PatientRecords() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -450,9 +463,27 @@ export function PatientRecords() {
     documents: [],
   });
 
+  const openAddModal = () => {
+    const nextId = getNextPatientId(patients);
+    setNewPatientData({
+      name: '',
+      age: 0,
+      id: nextId,
+      gender: 'Male',
+      bloodGroup: 'A+',
+      allergies: 'None',
+      medicalHistory: '',
+      medications: [],
+      vitalSigns: { ...EMPTY_VITALS },
+      recentTransfers: [],
+      documents: [],
+    });
+    setIsAddModalOpen(true);
+  };
+
   const handleAddPatient = async () => {
     if (!newPatientData.name || !newPatientData.id || !newPatientData.age) {
-      alert('Please fill in Name, Age, and Patient ID.');
+      toast.error('Please fill in Name, Age, and Patient ID.');
       return;
     }
 
@@ -476,7 +507,7 @@ export function PatientRecords() {
       setSelectedPatientId(newPatientData.id!);
     } catch (error) {
       console.error('Failed to add patient:', error);
-      alert('Failed to add patient. Please check your connection.');
+      toast.error('Failed to add patient. Please check your connection.');
     } finally {
       setIsSaving(false);
     }
@@ -610,7 +641,7 @@ export function PatientRecords() {
       await savePatient(editedPatient);
     } catch (error) {
       console.error('Failed to save patient record:', error);
-      alert('Failed to save patient changes. Please try again.');
+      toast.error('Failed to save patient changes. Please try again.');
     }
   };
 
@@ -623,7 +654,7 @@ export function PatientRecords() {
     const oversized = selectedFiles.filter((file) => file.size > maxSize);
 
     if (oversized.length > 0) {
-      alert(`Some files are too large (max 5MB): ${oversized.map((file) => file.name).join(', ')}`);
+      toast.error(`Some files are too large (max 5MB): ${oversized.map((file) => file.name).join(', ')}`);
       event.target.value = '';
       return;
     }
@@ -657,7 +688,7 @@ export function PatientRecords() {
       await savePatient(updatedRecord);
     } catch (error) {
       console.error('Failed to upload files:', error);
-      alert('File upload failed. Please try again.');
+      toast.error('File upload failed. Please try again.');
     } finally {
       setIsUploading(false);
       event.target.value = '';
@@ -674,7 +705,7 @@ export function PatientRecords() {
       await savePatient(updatedRecord);
     } catch (error) {
       console.error('Failed to remove file:', error);
-      alert('Failed to remove file. Please try again.');
+      toast.error('Failed to remove file. Please try again.');
     }
   };
 
@@ -690,7 +721,7 @@ export function PatientRecords() {
 
   const sendPatientReportToHospital = async (patient: PatientRecord) => {
     if (!selectedHospital) {
-      alert('Please select a destination hospital first.');
+      toast.error('Please select a destination hospital first.');
       return;
     }
 
@@ -723,10 +754,10 @@ export function PatientRecords() {
         },
       });
 
-      alert(`Report sent to ${selectedHospital} successfully.`);
+      toast.success(`Report sent to ${selectedHospital} successfully.`);
     } catch (error) {
       console.error('Failed to send report:', error);
-      alert('Failed to send report to hospital. Please try again.');
+      toast.error('Failed to send report to hospital. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -768,7 +799,7 @@ export function PatientRecords() {
         }
       } catch (err) {
         console.error('Import failed:', err);
-        alert('Failed to extract data: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        toast.error('Failed to extract data: ' + (err instanceof Error ? err.message : 'Unknown error'));
       } finally {
         setIsSaving(false);
         event.target.value = '';
@@ -843,13 +874,13 @@ export function PatientRecords() {
                     >
                       <Download size={18} />
                     </button>
-                    <button
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold shadow-sm ml-2"
-                    >
-                      <Plus size={14} />
-                      New Patient
-                    </button>
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <Plus size={20} />
+            <span>Add Patient</span>
+          </button>
                   </div>
                 </div>
               </div>
@@ -1404,12 +1435,20 @@ export function PatientRecords() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Patient ID *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-muted-foreground">Patient ID *</label>
+                    <button 
+                      onClick={() => setNewPatientData({ ...newPatientData, id: getNextPatientId(patients) })}
+                      className="text-[10px] text-red-600 hover:underline"
+                    >
+                      Suggest New
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={newPatientData.id}
                     onChange={(e) => setNewPatientData({ ...newPatientData, id: e.target.value })}
-                    placeholder="e.g. P-123456"
+                    placeholder="e.g. PT-20251"
                     className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
                   />
                 </div>

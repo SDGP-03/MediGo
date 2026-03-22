@@ -5,14 +5,14 @@ import { ref, push, set } from 'firebase/database';
 import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
-import { encryptData } from '../utils/encryption';
+import { encryptData, decryptData, decryptObject } from '../utils/encryption';
+import { onValue, off } from 'firebase/database';
 import { apiPost, apiFetch } from '../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
 
 const libraries = ['places'] as any;
 
-// Patient records (mirrored from PatientRecords page)
 interface PatientRecord {
   id: string;
   name: string;
@@ -23,39 +23,10 @@ interface PatientRecord {
   medicalHistory: string;
 }
 
-const patientRecords: PatientRecord[] = [
-  {
-    id: 'PT-20251',
-    name: 'Sarah Johnson',
-    age: 45,
-    gender: 'Female',
-    bloodGroup: 'A+',
-    allergies: 'Penicillin',
-    medicalHistory: 'Hypertension, Diabetes Type 2',
-  },
-  {
-    id: 'PT-20252',
-    name: 'David Miller',
-    age: 62,
-    gender: 'Male',
-    bloodGroup: 'O+',
-    allergies: 'None',
-    medicalHistory: 'Coronary Artery Disease, Previous MI',
-  },
-  {
-    id: 'PT-20253',
-    name: 'Emma Davis',
-    age: 28,
-    gender: 'Female',
-    bloodGroup: 'B+',
-    allergies: 'Latex, Shellfish',
-    medicalHistory: 'Asthma, Seasonal Allergies',
-  },
-];
 
 // Compute the next patient ID based on the highest existing numeric suffix
-function getNextPatientId(): string {
-  const maxNum = patientRecords.reduce((max, p) => {
+function getNextPatientId(records: PatientRecord[]): string {
+  const maxNum = records.reduce((max, p) => {
     const match = p.id.match(/PT-(\d+)/);
     if (match) {
       const num = parseInt(match[1], 10);
@@ -84,8 +55,35 @@ export function TransferRequest() {
   const [hospitalResources, setHospitalResources] = useState<any[]>([]);
 
   // Fleet data from Firebase (ambulances + drivers)
-  const { ambulances, drivers, hospitalName } = useFleetData();
+  const { ambulances, drivers, hospitalName, hospitalId } = useFleetData();
   const { onlineDrivers, busyDrivers } = useDriverLocations();
+
+  const [patientRecords, setPatientRecords] = useState<PatientRecord[]>([]);
+
+  // Fetch real patient records
+  useEffect(() => {
+    if (!hospitalId) return;
+
+    const recordsRef = ref(database, `hospitals/${hospitalId}/patient_records`);
+    const unsubscribe = onValue(recordsRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const decryptedRecords: PatientRecord[] = Object.entries(data).map(([key, value]) => {
+        const decrypted = decryptObject(value as any);
+        return {
+          id: decrypted.id || key,
+          name: decrypted.name || 'Unknown',
+          age: Number(decrypted.age) || 0,
+          gender: decrypted.gender || 'Unknown',
+          bloodGroup: decrypted.bloodGroup || '',
+          allergies: decrypted.allergies || '',
+          medicalHistory: decrypted.medicalHistory || '',
+        };
+      });
+      setPatientRecords(decryptedRecords);
+    });
+
+    return () => off(recordsRef, 'value', unsubscribe);
+  }, [hospitalId]);
 
   // Ambulances that are available AND not assigned to any driver AND have no active transfer
   const assignedAmbulanceIds = new Set(
@@ -412,13 +410,14 @@ export function TransferRequest() {
                       if (formErrors.patientName) setFormErrors({ ...formErrors, patientName: '' });
                       if (val.trim().length > 0) {
                         const matches = patientRecords.filter(p =>
-                          p.name.toLowerCase().includes(val.toLowerCase())
+                          p.name.toLowerCase().includes(val.toLowerCase()) ||
+                          p.id.toLowerCase().includes(val.toLowerCase())
                         );
                         setNameSuggestions(matches);
                         setShowSuggestions(matches.length > 0);
                         // New (unregistered) patient – suggest next ID
                         if (matches.length === 0) {
-                          const nextId = getNextPatientId();
+                          const nextId = getNextPatientId(patientRecords);
                           setFormData(prev => ({ ...prev, patientName: val, patientId: nextId }));
                           setIsNewPatient(true);
                         } else {

@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './components/ui/alert-dialog';
+import { Toaster } from './components/ui/sonner';
 
 
 // type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
@@ -209,6 +210,7 @@ export default function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Toaster position="top-right" expand={true} richColors />
     </div>
   );
 }

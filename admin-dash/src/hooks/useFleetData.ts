@@ -136,6 +136,7 @@ export interface UseFleetDataReturn {
 
     addPendingTransfer: (transfer: Omit<PendingTransfer, 'id'>) => Promise<void>;
     removePendingTransfer: (id: string) => Promise<void>;
+    hospitalId: string | null;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -327,5 +328,6 @@ export function useFleetData(): UseFleetDataReturn {
         completeMaintenance,
         addPendingTransfer,
         removePendingTransfer,
+        hospitalId,
     };
 }
