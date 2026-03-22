@@ -1,9 +1,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText } from 'lucide-react';
-import { database } from '../firebase';
-import { ref, onValue, off, set, update, push } from 'firebase/database';
+import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText, Plus, X, FileJson, Share2 } from 'lucide-react';
+import { database, auth } from '../firebase';
+import { ref, onValue, off, set, update, push, get } from 'firebase/database';
 import { encryptData, decryptObject, decryptData } from '../utils/encryption';
 
 interface PatientTransfer {
@@ -299,6 +299,7 @@ const mergePatients = (
 ): PatientRecord[] => {
   const byPatientId: Record<string, PatientRecord> = {};
 
+  // 1. Process transfer requests first (to collect transfer history)
   Object.values(transferRequests).forEach((request) => {
     if (!request?.patient) return;
 
@@ -331,17 +332,41 @@ const mergePatients = (
     });
   });
 
-  Object.entries(byPatientId).forEach(([id, patient]) => {
-    patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
-    const override = overrides[id] || overrides[sanitizeKey(id)] || {};
+  // 2. Process ALL overrides (patient_records from Firebase)
+  // This ensures that manually added patients show up even if they have no transfer history
+  Object.entries(overrides).forEach(([key, override]) => {
+    const id = override.id || key;
+    if (!byPatientId[id]) {
+      // Create new record if it doesn't exist in transferRequests
+      byPatientId[id] = {
+        id,
+        name: override.name || 'Unknown Patient',
+        age: normalizeNumber(override.age),
+        gender: override.gender || 'Unknown',
+        bloodGroup: override.bloodGroup || 'Unknown',
+        allergies: override.allergies || 'None',
+        medicalHistory: override.medicalHistory || 'No history available.',
+        medications: [],
+        vitalSigns: { ...EMPTY_VITALS },
+        recentTransfers: [],
+        documents: [],
+      };
+    }
+
+    // Merge override data into the record
     byPatientId[id] = {
-      ...patient,
+      ...byPatientId[id],
       ...override,
-      medications: Array.isArray(override.medications) ? override.medications : patient.medications,
-      recentTransfers: Array.isArray(override.recentTransfers) ? override.recentTransfers : patient.recentTransfers,
-      vitalSigns: { ...patient.vitalSigns, ...(override.vitalSigns || {}) },
+      medications: Array.isArray(override.medications) ? override.medications : byPatientId[id].medications,
+      recentTransfers: Array.isArray(override.recentTransfers) ? override.recentTransfers : byPatientId[id].recentTransfers,
+      vitalSigns: { ...byPatientId[id].vitalSigns, ...(override.vitalSigns || {}) },
       documents: toDocumentsArray(override.documents),
     };
+  });
+
+  // 3. Final sorting
+  Object.values(byPatientId).forEach((patient) => {
+    patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
   });
 
   return Object.values(byPatientId).sort((a, b) => a.name.localeCompare(b.name));
@@ -351,24 +376,49 @@ export function PatientRecords() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>(() => {
-    try {
-      const saved = localStorage.getItem('medigo_transfer_requests');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>(() => {
-    try {
-      const saved = localStorage.getItem('medigo_patient_overrides');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [isLoading, setIsLoading] = useState(() => !localStorage.getItem('medigo_patient_overrides'));
+  const [hospitalId, setHospitalId] = useState<string | null>(null);
+  const [hospitalName, setHospitalName] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>({});
+  const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>({});
+
+  // Resolve Hospital ID first
+  useEffect(() => {
+    const fetchHospitalId = async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        setLoadError('User not authenticated');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const adminSnap = await get(ref(database, `admin/${user.uid}`));
+        const adminData = adminSnap.exists() ? adminSnap.val() : {};
+        const id = adminData.hospitalPlaceId || user.uid;
+        const hName = adminData.hospitalName || null;
+        
+        setHospitalId(id);
+        setHospitalName(hName);
+
+        // Load thermal data from localStorage for this specific hospital
+        const savedTransfers = localStorage.getItem(`medigo_transfers_${id}`);
+        if (savedTransfers) setTransferRequests(JSON.parse(savedTransfers));
+
+        const savedOverrides = localStorage.getItem(`medigo_records_${id}`);
+        if (savedOverrides) setPatientOverrides(JSON.parse(savedOverrides));
+
+      } catch (err) {
+        console.error('Error resolving hospital ID:', err);
+        setLoadError('Failed to initialize hospital system');
+        setIsLoading(false);
+      }
+    };
+
+    fetchHospitalId();
+  }, []);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedPatient, setEditedPatient] = useState<PatientRecord | null>(null);
@@ -385,70 +435,109 @@ export function PatientRecords() {
     status: 'In Progress',
   });
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newPatientData, setNewPatientData] = useState<Partial<PatientRecord>>({
+    name: '',
+    age: 0,
+    id: '',
+    gender: 'Male',
+    bloodGroup: 'A+',
+    allergies: 'None',
+    medicalHistory: '',
+    medications: [],
+    vitalSigns: { ...EMPTY_VITALS },
+    recentTransfers: [],
+    documents: [],
+  });
+
+  const handleAddPatient = async () => {
+    if (!newPatientData.name || !newPatientData.id || !newPatientData.age) {
+      alert('Please fill in Name, Age, and Patient ID.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await savePatient(newPatientData as PatientRecord);
+      setIsAddModalOpen(false);
+      setNewPatientData({
+        name: '',
+        age: 0,
+        id: '',
+        gender: 'Male',
+        bloodGroup: 'A+',
+        allergies: 'None',
+        medicalHistory: '',
+        medications: [],
+        vitalSigns: { ...EMPTY_VITALS },
+        recentTransfers: [],
+        documents: [],
+      });
+      setSelectedPatientId(newPatientData.id!);
+    } catch (error) {
+      console.error('Failed to add patient:', error);
+      alert('Failed to add patient. Please check your connection.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   useEffect(() => {
+    if (!hospitalId) return;
+
     const transfersRef = ref(database, 'transfer_requests');
-    const recordsRef = ref(database, 'patient_records');
+    const recordsRef = ref(database, `hospitals/${hospitalId}/patient_records`);
 
     const unsubTransfers = onValue(transfersRef, (snapshot) => {
       const data = snapshot.val() || {};
-      setTransferRequests(data);
+      
+      // Filter transfers to only show those involving this hospital
+      const filteredTransfers: Record<string, TransferRequestRecord> = {};
+      if (hospitalName) {
+        Object.entries(data).forEach(([key, val]: [string, any]) => {
+          if (val.pickup?.hospitalName === hospitalName || val.destination?.hospitalName === hospitalName) {
+            filteredTransfers[key] = val;
+          }
+        });
+      } else {
+        // Fallback for superadmin or if name is missing (shows all)
+        Object.assign(filteredTransfers, data);
+      }
+
+      setTransferRequests(filteredTransfers);
       try {
-        localStorage.setItem('medigo_transfer_requests', JSON.stringify(data));
+        localStorage.setItem(`medigo_transfers_${hospitalId}`, JSON.stringify(filteredTransfers));
       } catch (err) {
         console.error('Failed to save transfers to local JSON storage:', err);
       }
-      if (recordsRef) setIsLoading(false);
     }, (err) => {
       console.error('[PatientRecords] Transfers error:', err);
-      const localData = localStorage.getItem('medigo_transfer_requests');
-      if (localData) {
-        try {
-          setTransferRequests(JSON.parse(localData));
-          if (recordsRef) setIsLoading(false);
-          setLoadError('Viewing offline local data for transfers.');
-          return;
-        } catch (e) {
-          console.error('Local JSON parse error:', e);
-        }
-      }
-      setLoadError('Failed to load transfers');
     });
 
     const unsubRecords = onValue(recordsRef, (snapshot) => {
       const data = snapshot.val() || {};
-      // Decrypt each patient record in the overrides
       const decryptedData: PatientOverrides = {};
       Object.entries(data).forEach(([key, value]) => {
         decryptedData[key] = decryptObject(value as Partial<PatientRecord>);
       });
       setPatientOverrides(decryptedData);
       try {
-        localStorage.setItem('medigo_patient_overrides', JSON.stringify(decryptedData));
+        localStorage.setItem(`medigo_records_${hospitalId}`, JSON.stringify(decryptedData));
       } catch (err) {
         console.error('Failed to save records to local JSON storage:', err);
       }
       setIsLoading(false);
     }, (err) => {
       console.error('[PatientRecords] Records error:', err);
-      const localData = localStorage.getItem('medigo_patient_overrides');
-      if (localData) {
-        try {
-          setPatientOverrides(JSON.parse(localData));
-          setIsLoading(false);
-          setLoadError('Viewing offline local data for records.');
-          return;
-        } catch (e) {
-          console.error('Local JSON parse error:', e);
-        }
-      }
-      setLoadError('Failed to load records');
+      setIsLoading(false);
+      setLoadError('Failed to load records from cloud. Using local data if available.');
     });
 
     return () => {
       off(transfersRef);
       off(recordsRef);
     };
-  }, []);
+  }, [hospitalId]);
 
   const patients = useMemo(
     () => mergePatients(transferRequests, patientOverrides),
@@ -481,10 +570,11 @@ export function PatientRecords() {
   }, [patients, selectedPatientId]);
 
   const savePatient = async (record: PatientRecord) => {
+    if (!hospitalId) return;
     const key = sanitizeKey(record.id);
     setIsSaving(true);
     try {
-      await set(ref(database, `patient_records/${key}`), {
+      await set(ref(database, `hospitals/${hospitalId}/patient_records/${key}`), {
         id: record.id,
         name: encryptData(record.name),
         age: encryptData(record.age),
@@ -641,6 +731,51 @@ export function PatientRecords() {
       setIsSending(false);
     }
   };
+  const handleExportJSON = () => {
+    const dataStr = JSON.stringify(Object.values(patients), null, 2);
+    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+    const fileName = `medigo_patients_${hospitalId}_${new Date().toISOString().slice(0, 10)}.json`;
+
+    const linkElement = window.document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', fileName);
+    linkElement.click();
+  };
+
+  const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedPatients = JSON.parse(content);
+
+        if (!Array.isArray(importedPatients)) {
+          throw new Error('Invalid JSON format. Expected an array of patients.');
+        }
+
+        if (window.confirm(`Found ${importedPatients.length} patients in the file. Import them into your hospital records system?`)) {
+          setIsSaving(true);
+          for (const patient of importedPatients) {
+            // Basic validation and mapping
+            if (patient.id && patient.name) {
+              await savePatient(patient);
+            }
+          }
+          alert('Extraction complete. All valid records have been added to your system.');
+        }
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert('Failed to extract data: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      } finally {
+        setIsSaving(false);
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <div className="space-y-6">
@@ -690,10 +825,32 @@ export function PatientRecords() {
             <div className="bg-card rounded-lg shadow-sm border border-border">
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-foreground">Patient List</h3>
-                  <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-                    {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-foreground">Patient List</h3>
+                    <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
+                      {filteredPatients.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="p-2 hover:bg-accent rounded-lg text-muted-foreground cursor-pointer transition-colors" title="Extract from JSON file">
+                      <Upload size={18} />
+                      <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+                    </label>
+                    <button
+                      onClick={handleExportJSON}
+                      className="p-2 hover:bg-accent rounded-lg text-muted-foreground transition-colors"
+                      title="Save to local device (JSON)"
+                    >
+                      <Download size={18} />
+                    </button>
+                    <button
+                      onClick={() => setIsAddModalOpen(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold shadow-sm ml-2"
+                    >
+                      <Plus size={14} />
+                      New Patient
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1097,12 +1254,12 @@ export function PatientRecords() {
                             {transfer.date}
                           </span>
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${transfer.status.toLowerCase() === 'completed'
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${(transfer.status || 'unknown').toLowerCase() === 'completed'
                               ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
                               : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
                               }`}
                           >
-                            {transfer.status}
+                            {transfer.status || 'Unknown'}
                           </span>
                         </div>
                         <p className="text-foreground mb-1 font-medium">{transfer.reason}</p>
@@ -1206,6 +1363,139 @@ export function PatientRecords() {
         <Ambulance size={24} />
         <span className="hidden group-hover:block transition-all duration-300">New Request</span>
       </button>
+
+      {/* Add Patient Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-2 text-red-600">
+                <Plus size={20} />
+                <h3 className="font-bold text-foreground">Add New Patient</h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 hover:bg-accent rounded-full transition-colors text-muted-foreground"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Patient Name *</label>
+                <input
+                  type="text"
+                  value={newPatientData.name}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, name: e.target.value })}
+                  placeholder="e.g. John Doe"
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Patient ID *</label>
+                  <input
+                    type="text"
+                    value={newPatientData.id}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, id: e.target.value })}
+                    placeholder="e.g. P-123456"
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Age *</label>
+                  <input
+                    type="number"
+                    value={newPatientData.age || ''}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, age: normalizeNumber(e.target.value) })}
+                    placeholder="e.g. 45"
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Gender</label>
+                  <select
+                    value={newPatientData.gender}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, gender: e.target.value })}
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Blood Group</label>
+                  <select
+                    value={newPatientData.bloodGroup}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, bloodGroup: e.target.value })}
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    <option>A+</option>
+                    <option>A-</option>
+                    <option>B+</option>
+                    <option>B-</option>
+                    <option>AB+</option>
+                    <option>AB-</option>
+                    <option>O+</option>
+                    <option>O-</option>
+                    <option>Unknown</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Allergies</label>
+                <input
+                  type="text"
+                  value={newPatientData.allergies}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, allergies: e.target.value })}
+                  placeholder="e.g. Penicillin, Peanuts"
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none placeholder:text-red-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Medical History</label>
+                <textarea
+                  value={newPatientData.medicalHistory}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, medicalHistory: e.target.value })}
+                  placeholder="Brief summary of patient's medical history..."
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none min-h-[100px] resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted/30 border-t border-border flex gap-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="flex-1 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddPatient}
+                disabled={isSaving}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  'Create Patient'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
