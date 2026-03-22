@@ -539,63 +539,142 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
             className="bg-card rounded-xl shadow-sm border border-border p-5 hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900/50 group flex flex-col h-full"
           >
             {/* Header */}
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-lg ${ambulance.status === 'available' ? 'bg-green-50 dark:bg-green-900/20' : ambulance.status === 'in_service' ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-orange-50 dark:bg-orange-900/20'}`}>
                   <Ambulance size={22} className={ambulance.status === 'available' ? 'text-green-600' : ambulance.status === 'in_service' ? 'text-blue-600' : 'text-orange-600'} />
                 </div>
                 <div>
-                  <h3 className="text-foreground font-semibold">{ambulance.id}</h3>
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs border font-medium ${getStatusColor(ambulance.status)}`}>
-                    {ambulance.status.replace('_', ' ').toUpperCase()}
-                  </span>
+                  <h3 className="text-foreground font-bold text-base leading-tight">{ambulance.id}</h3>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight opacity-70">Fleet ID</p>
                 </div>
               </div>
-              <button onClick={() => setDetailAmbulance(ambulance)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 opacity-0 group-hover:opacity-100" title="View details">
-                <ChevronRight size={18} />
-              </button>
+              <div className="flex items-center gap-3">
+                <span className={`inline-block px-2.5 py-1 rounded-full text-[13px] border font-medium tracking-wide ${getStatusColor(ambulance.status)}`}>
+                  {ambulance.status.replace('_', ' ').toUpperCase()}
+                </span>
+                <button onClick={() => setDetailAmbulance(ambulance)}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1" title="View details">
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Info */}
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex items-center gap-2">
-                <User size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">Driver: <span className="text-foreground">{ambulance.driver}</span> ({ambulance.driverGender})</span>
+            {/* Info — Two Column Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-[15px]">
+              {/* Left Column: Assigned Personnel */}
+              <div className="space-y-3.5 border-r border-border/40 pr-2">
+                <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest mb-1.5 px-1.5 bg-muted/30 rounded inline-block">Assigned Personnel</p>
+                
+                {/* Driver */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-emerald-50 dark:bg-emerald-900/40 rounded-md shrink-0">
+                    <User size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Driver</p>
+                    <p className="text-foreground font-semibold truncate text-[13px]">
+                      {ambulance.driver || <span className="text-muted-foreground/40 italic font-normal">N/A</span>}
+                      {ambulance.driverGender && <span className={`ml-1.5 text-[10px] ${ambulance.driverGender === 'Male' ? 'text-blue-500' : 'text-pink-500'} font-bold`}>
+                        ({ambulance.driverGender[0]})
+                      </span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Attendant */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-violet-50 dark:bg-violet-900/40 rounded-md shrink-0">
+                    <User size={13} className="text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Attendant</p>
+                    <p className="text-foreground font-semibold truncate text-[13px]">
+                      {ambulance.attendant === 'Not Assigned' || !ambulance.attendant ? (
+                        <span className="text-muted-foreground/40 italic font-normal">N/A</span>
+                      ) : (
+                        <>
+                          {ambulance.attendant}
+                          {ambulance.attendantGender && <span className={`ml-1.5 text-[10px] ${ambulance.attendantGender === 'Male' ? 'text-blue-500' : 'text-pink-500'} font-bold`}>
+                            ({ambulance.attendantGender[0]})
+                          </span>}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 p-1 bg-amber-50 dark:bg-amber-900/40 rounded-md shrink-0">
+                    <MapPin size={13} className="text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Station / Base</p>
+                    <p className="text-foreground font-medium text-[12px] line-clamp-2 leading-tight">{ambulance.location}</p>
+                  </div>
+                </div>
               </div>
-              {ambulance.patientId && (
-                <div className="flex items-center gap-2">
-                  <User size={14} className="text-red-400 shrink-0" />
-                  <span className="text-muted-foreground">Patient: <span className="text-foreground font-medium">{ambulance.patientId}</span></span>
-                </div>
-              )}
-              {ambulance.destination && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} className="text-blue-400 shrink-0" />
-                  <span className="text-muted-foreground">To: <span className="text-foreground font-medium">{ambulance.destination}</span></span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <User size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">Attendant: <span className="text-foreground">{ambulance.attendant}</span> ({ambulance.attendantGender})</span>
+
+              {/* Right Column: Mission Details */}
+              <div className="space-y-3.5">
+                <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest mb-1.5 px-1.5 bg-muted/30 rounded inline-block">Current Mission</p>
+
+                {/* Active Patient */}
+                {ambulance.patientId ? (
+                  <div className="flex items-start gap-2.5">
+                    <div className="mt-0.5 p-1 bg-red-50 dark:bg-red-900/40 rounded-md shrink-0">
+                      <User size={13} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-red-600 dark:text-red-400 text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Patient</p>
+                      <p className="text-foreground font-bold text-[13px] truncate">{ambulance.patientId}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2.5 opacity-50">
+                    <div className="mt-0.5 p-1 bg-gray-50 rounded-md shrink-0">
+                      <User size={13} className="text-gray-400" />
+                    </div>
+                    <p className="text-muted-foreground text-[12px] italic mt-1 font-medium">Standby — No trip</p>
+                  </div>
+                )}
+
+                {/* Destination */}
+                {ambulance.destination && (
+                  <div className="flex items-start gap-2.5">
+                    <div className="mt-0.5 p-1 bg-blue-50 dark:bg-blue-900/40 rounded-md shrink-0">
+                      <MapPin size={13} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-blue-600 dark:text-blue-400 text-[11px] font-bold uppercase tracking-tight leading-none mb-1">Destination To</p>
+                      <p className="text-foreground font-bold text-[13px] truncate">{ambulance.destination}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Status-specific Alerts (ETA / Maintenance) */}
+                {ambulance.status === 'in_service' && ambulance.etaMinutes !== undefined && (
+                  <div className="p-2.5 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Clock size={11} className="text-blue-600 dark:text-blue-400" />
+                      <span className="text-blue-700 dark:text-blue-300 font-bold text-[10px] uppercase tracking-wider">ETA Status</span>
+                    </div>
+                    <p className="text-blue-600 dark:text-blue-400 text-[13px] font-bold leading-none mt-1">{formatEta(ambulance.etaMinutes)}</p>
+                    {ambulance.currentTransfer && <p className="text-muted-foreground text-[9px] truncate mt-1">Ref: #{ambulance.currentTransfer}</p>}
+                  </div>
+                )}
+
+                {ambulance.status === 'maintenance' && ambulance.maintenanceNotes && (
+                  <div className="p-2.5 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-900/30">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Wrench size={11} className="text-orange-600 dark:text-orange-400" />
+                      <span className="text-orange-700 dark:text-orange-300 font-bold text-[10px] uppercase tracking-wider">Condition Note</span>
+                    </div>
+                    <p className="text-orange-700 dark:text-orange-300 text-[11px] leading-snug line-clamp-3 mt-1">{ambulance.maintenanceNotes}</p>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin size={14} className="text-gray-400 shrink-0" />
-                <span className="text-muted-foreground">{ambulance.location}</span>
-              </div>
-              {ambulance.status === 'in_service' && ambulance.etaMinutes !== undefined && (
-                <div className="flex items-center gap-2">
-                  <Clock size={14} className="text-blue-400 shrink-0" />
-                  <span className="text-blue-600 font-medium">ETA: {formatEta(ambulance.etaMinutes)}</span>
-                  {ambulance.currentTransfer && <span className="text-muted-foreground">— {ambulance.currentTransfer}</span>}
-                </div>
-              )}
-              {ambulance.status === 'maintenance' && ambulance.maintenanceNotes && (
-                <div className="flex items-center gap-2">
-                  <Wrench size={14} className="text-orange-400 shrink-0" />
-                  <span className="text-orange-600 text-xs">{ambulance.maintenanceNotes}</span>
-                </div>
-              )}
             </div>
 
             {/* Equipment — card */}
@@ -612,7 +691,7 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
 
             {/* Badges */}
             {(ambulance.hasDoctor || ambulance.hasVentilator) && (
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2 mb-4 text-[13px]">
                 {ambulance.hasDoctor && <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded text-xs">Doctor On Board</span>}
                 {ambulance.hasVentilator && <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs">Ventilator</span>}
               </div>
