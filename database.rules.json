@@ -65,6 +65,18 @@
       "$uid": {
         ".write": "auth.uid === $uid || auth.token.role === 'superadmin'"
       }
+    },
+    "hospital_issues": {
+      "$hospitalId": {
+        ".read": "auth.token.role === 'superadmin' || (auth.token.role === 'hospitaladmin' && auth.token.hospitalId === $hospitalId)",
+        ".write": "auth != null"
+      }
+    },
+    "hospital_notifications": {
+      "$hospitalId": {
+        ".read": "auth.token.role === 'superadmin' || (auth.token.role === 'hospitaladmin' && auth.token.hospitalId === $hospitalId)",
+        ".write": "auth != null"
+      }
     }
   }
 }
