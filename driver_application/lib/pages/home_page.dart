@@ -12,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:driver_application/global/global_var.dart';
 import '../widgets/side_menu.dart';
 import 'package:driver_application/pages/navigation_page.dart';
-import 'package:driver_application/services/trip_history_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -978,35 +977,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  /// Mark trip as started (in_progress)
-  Future<void> _startTrip() async {
-    if (currentAssignment == null) return;
-
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    final requestRef = FirebaseDatabase.instance
-        .ref()
-        .child('transfer_requests')
-        .child(currentAssignment!.requestId);
-
-    await requestRef.update({
-      'status': 'in_progress',
-      'startedAt': ServerValue.timestamp,
-    });
-
-    if (uid != null) {
-      await TripHistoryService().upsertTrip(
-        driverId: uid,
-        assignment: currentAssignment!,
-        status: 'in_progress',
-        extra: {'startedAt': ServerValue.timestamp},
-      );
-    }
-  }
-
-  Future<void> _clearCurrentAssignmentUi() async {
-    if (!mounted) return;
-    setState(() {
-      currentAssignment = null;
+	  Future<void> _clearCurrentAssignmentUi() async {
+	    if (!mounted) return;
+	    setState(() {
+	      currentAssignment = null;
       destinationMarker = null;
     });
 
@@ -1572,13 +1546,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                           onPressed: () async {
                             final navigator = Navigator.of(context);
-                            // Update trip status to in_progress
-                            await _startTrip();
-                            if (!mounted) return;
                             final result = await navigator.push(
                               MaterialPageRoute(
                                 builder: (_) => NavigationPage(
                                   assignment: currentAssignment!,
+                                  autoStart: true,
                                 ),
                               ),
                             );
