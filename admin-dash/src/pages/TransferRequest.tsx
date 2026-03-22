@@ -10,6 +10,7 @@ import { onValue, off } from 'firebase/database';
 import { apiPost, apiFetch } from '../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
+import { toast } from 'sonner';
 
 const libraries = ['places'] as any;
 
@@ -280,7 +281,7 @@ export function TransferRequest() {
 
       await apiPost('/transfers', payload);
 
-      setFormErrors({ submitSuccess: 'Transfer request sent to driver! They will receive a notification shortly.' });
+      toast.success('Transfer request sent to driver! They will receive a notification shortly.');
 
       // Reset form
       setStep('patient');
@@ -309,53 +310,16 @@ export function TransferRequest() {
       setSelectedDocumentIndices([]);
       setToHospitalDetails(null);
 
-      // Clear success message after 5 seconds
-      setTimeout(() => {
-        setFormErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.submitSuccess;
-          return newErrors;
-        });
-      }, 5000);
-
     } catch (error) {
       console.error('Error submitting transfer request:', error);
-      setFormErrors({ submitError: 'Failed to submit transfer request. Please try again.' });
-      // Clear error message after 5 seconds
-      setTimeout(() => {
-        setFormErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.submitError;
-          return newErrors;
-        });
-      }, 5000);
+      toast.error('Failed to submit transfer request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto relative">
-      {/* Success Notification */}
-      {formErrors.submitSuccess && (
-        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-3 px-6 py-4 bg-green-50 border border-green-200 text-green-700 rounded-lg shadow-lg">
-            <CheckCircle2 size={24} className="text-green-600" />
-            <p className="font-medium text-green-900">{formErrors.submitSuccess}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Error Notification */}
-      {formErrors.submitError && (
-        <div className="absolute top-0 right-0 z-50 animate-in fade-in slide-in-from-top-4">
-          <div className="flex items-center gap-3 px-6 py-4 bg-red-50 border border-red-200 text-red-700 rounded-lg shadow-lg">
-            <XCircle size={24} className="text-red-600" />
-            <p className="font-medium text-red-900">{formErrors.submitError}</p>
-          </div>
-        </div>
-      )}
-
+    <div className="max-w-4xl mx-auto relative text-foreground">
       {/* Progress Steps */}
       <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
         <div className="flex items-center justify-between">

@@ -22,7 +22,12 @@ import {
   Phone,
   Mail,
   Shield,
-  Car
+  Car,
+  Bed,
+  Baby,
+  Stethoscope,
+  Zap,
+  HeartPulse
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "../components/ui/switch";
@@ -130,6 +135,15 @@ export function HospitalDashboard() {
     { id: 'telemetry', name: 'Telemetry Bed Availability', available: false },
     { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
+
+  const resourceIcons: Record<string, any> = {
+    icu: HeartPulse,
+    nicu: Activity,
+    picu: Activity,
+    med_surg: Bed,
+    telemetry: Zap,
+    er: Shield
+  };
 
   const toggleResource = async (id: string) => {
     const updatedResources = resources.map(r => r.id === id ? { ...r, available: !r.available } : r);
@@ -747,50 +761,53 @@ export function HospitalDashboard() {
             </div>
             <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {resources.map((resource) => (
-              <div
-                key={resource.id}
-                onClick={() => toggleResource(resource.id)}
-                className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 cursor-pointer transform hover: scale-[1.02] hover: shadow-md ${resource.available
-                  ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
-                  : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
-                  }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-2.5 rounded-xl shadow-sm transition-colors ${resource.available
-                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                      : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                      }`}
-                  >
-                    {resource.available ? <CheckCircle size={20} strokeWidth={2.5} /> : <AlertCircle size={20} strokeWidth={2.5} />}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <h4 className="font-semibold text-foreground text-sm tracking-tight">{resource.name}</h4>
-                    <div className="flex">
-                      <span
-                        className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full transition-colors duration-300 ${resource.available
-                          ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
-                          : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
-                          }`}
-                      >
-                        {resource.available ? 'Available' : 'Unavailable'}
-                      </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {resources.map((resource) => {
+              const IconComponent = resourceIcons[resource.id] || Stethoscope;
+              return (
+                <div
+                  key={resource.id}
+                  onClick={() => toggleResource(resource.id)}
+                  className={`flex items-center justify-between p-5 rounded-xl border transition-all duration-300 cursor-pointer transform hover:scale-[1.02] hover:shadow-md ${resource.available
+                    ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
+                    : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
+                    }`}
+                >
+                  <div className="flex items-center gap-5">
+                    <div
+                      className={`p-3 rounded-xl shadow-sm transition-colors ${resource.available
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                        }`}
+                    >
+                      <IconComponent size={22} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <h4 className="font-bold text-foreground text-sm tracking-tight">{resource.name}</h4>
+                      <div className="flex">
+                        <span
+                          className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full transition-colors duration-300 ${resource.available
+                            ? 'bg-white text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900'
+                            : 'bg-white text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-900 '
+                            }`}
+                        >
+                          {resource.available ? 'Available' : 'Full / Critical'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3">
-                  <div className={`h-8 w-[1px] transition-colors duration-300 ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'} `}></div>
-                  <Switch
-                    checked={resource.available}
-                    onCheckedChange={() => toggleResource(resource.id)}
-                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-110 shadow-sm pointer-events-none"
-                  />
+                  <div className="flex items-center gap-6 ml-4">
+                    <div className={`h-10 w-[1.5px] transition-colors duration-300 ${resource.available ? 'bg-emerald-200 dark:bg-emerald-800' : 'bg-red-200 dark:bg-red-800'} `}></div>
+                    <Switch
+                      checked={resource.available}
+                      onCheckedChange={() => toggleResource(resource.id)}
+                      className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-red-500 scale-125 shadow-sm pointer-events-none"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
