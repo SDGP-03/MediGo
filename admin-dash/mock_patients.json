@@ -1,0 +1,81 @@
+[
+  {
+    "id": "P-2024-101",
+    "name": "Sarah J. Miller",
+    "age": 34,
+    "gender": "Female",
+    "bloodGroup": "O+",
+    "allergies": "Penicillin, Latex",
+    "medicalHistory": "Type 1 Diabetes, Asthma",
+    "medications": [
+      "Insulin Glargine 20mg",
+      "Albuterol Inhaler"
+    ],
+    "vitalSigns": {
+      "bp": "118/72",
+      "heartRate": "72 bpm",
+      "temperature": "98.6 °F",
+      "oxygen": "99%"
+    },
+    "recentTransfers": [
+      {
+        "date": "2024-03-10",
+        "reason": "Asthma exacerbation",
+        "from": "City Clinic",
+        "to": "Central Hospital",
+        "status": "Completed"
+      }
+    ],
+    "documents": []
+  },
+  {
+    "id": "P-2024-102",
+    "name": "Robert Chen",
+    "age": 58,
+    "gender": "Male",
+    "bloodGroup": "AB-",
+    "allergies": "None",
+    "medicalHistory": "Hypertension, Coronary Artery Disease",
+    "medications": [
+      "Amlodipine 5mg",
+      "Lisinopril 10mg",
+      "Aspirin 81mg"
+    ],
+    "vitalSigns": {
+      "bp": "142/88",
+      "heartRate": "78 bpm",
+      "temperature": "98.4 °F",
+      "oxygen": "97%"
+    },
+    "recentTransfers": [],
+    "documents": []
+  },
+  {
+    "id": "P-2024-103",
+    "name": "Elena Rodriguez",
+    "age": 27,
+    "gender": "Female",
+    "bloodGroup": "A+",
+    "allergies": "Peanuts, Shellfish",
+    "medicalHistory": "Migraines",
+    "medications": [
+      "Sumatriptan 50mg"
+    ],
+    "vitalSigns": {
+      "bp": "110/68",
+      "heartRate": "65 bpm",
+      "temperature": "98.8 °F",
+      "oxygen": "100%"
+    },
+    "recentTransfers": [
+      {
+        "date": "2024-02-15",
+        "reason": "Concussion",
+        "from": "State Sports Medical Center",
+        "to": "City General Hospital",
+        "status": "Completed"
+      }
+    ],
+    "documents": []
+  }
+]
