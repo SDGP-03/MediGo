@@ -6,7 +6,7 @@ import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
 import { encryptData } from '../utils/encryption';
-import { apiPost } from '../api/apiClient';
+import { apiPost, apiFetch } from '../api/apiClient';
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
 
@@ -79,6 +79,9 @@ export function TransferRequest() {
     lng: number;
     placeId: string;
   } | null>(null);
+  const [isDestinationRegistered, setIsDestinationRegistered] = useState<boolean | null>(null);
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [hospitalResources, setHospitalResources] = useState<any[]>([]);
 
   // Fleet data from Firebase (ambulances + drivers)
   const { ambulances, drivers, hospitalName } = useFleetData();
@@ -192,7 +195,14 @@ export function TransferRequest() {
 
   const validateTransferStep = () => {
     const errors: Record<string, string> = {};
-    if (!formData.toHospital || !toHospitalDetails) errors.toHospital = 'Destination hospital is required. Please select from suggestions.';
+    if (!formData.toHospital || !toHospitalDetails) {
+      errors.toHospital = 'Destination hospital is required. Please select from suggestions.';
+    } else if (isDestinationRegistered === false) {
+      errors.toHospital = 'The selected hospital is not registered with MediGo. Please select a registered facility.';
+    } else if (checkingRegistration) {
+      errors.toHospital = 'Verifying hospital registration. Please wait...';
+    }
+
     if (!formData.priority) errors.priority = 'Priority level is required';
     if (!formData.reason) errors.reason = 'Reason for transfer is required';
 
@@ -629,9 +639,14 @@ export function TransferRequest() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <label className="block text-foreground font-medium">To Hospital *</label>
-                        {toHospitalDetails && (
+                        {toHospitalDetails && isDestinationRegistered === true && (
                           <span className="text-[10px] uppercase tracking-wider bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-2 py-0.5 rounded font-bold">
-                            Verified Destination
+                            MediGo Partner Verified
+                          </span>
+                        )}
+                        {toHospitalDetails && isDestinationRegistered === false && !checkingRegistration && (
+                          <span className="text-[10px] uppercase tracking-wider bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 px-2 py-0.5 rounded font-bold">
+                            Unregistered Facility
                           </span>
                         )}
                       </div>
@@ -639,7 +654,7 @@ export function TransferRequest() {
                         <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${toHospitalDetails ? 'text-green-500' : 'text-gray-400 group-focus-within:text-red-500'}`} size={20} />
                         {isLoaded ? (
                           <Autocomplete
-                            onPlaceSelected={(place) => {
+                            onPlaceSelected={(place: any) => {
                               if (place && place.name && place.formatted_address && place.geometry) {
                                 setFormData({ ...formData, toHospital: place.name });
                                 setToHospitalDetails({
@@ -649,6 +664,28 @@ export function TransferRequest() {
                                   placeId: place.place_id,
                                 });
                                 if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
+
+                                // Check registration and get real-time resources from BACKEND
+                                setCheckingRegistration(true);
+                                setIsDestinationRegistered(null);
+                                setHospitalResources([]);
+                                
+                                apiFetch(`/hospitals/${place.place_id}/availability`)
+                                  .then((data) => {
+                                    if (data.registered) {
+                                      setIsDestinationRegistered(true);
+                                      setHospitalResources(data.resources || []);
+                                    } else {
+                                      setIsDestinationRegistered(false);
+                                    }
+                                  })
+                                  .catch((err) => {
+                                    console.error("Error fetching hospital info from backend:", err);
+                                    setIsDestinationRegistered(false);
+                                  })
+                                  .finally(() => {
+                                    setCheckingRegistration(false);
+                                  });
                               }
                             }}
                             options={{
@@ -856,6 +893,25 @@ export function TransferRequest() {
                       <Building2 size={48} className="text-muted-foreground mb-4 opacity-50" />
                       <p className="text-muted-foreground text-sm max-w-xs">Select a destination hospital to view its real-time resource availability.</p>
                     </div>
+                  ) : checkingRegistration ? (
+                    <div className="flex flex-col items-center justify-center p-8 border border-border rounded-xl bg-accent/10 py-16">
+                      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-muted-foreground text-sm">Verifying hospital registration...</p>
+                    </div>
+                  ) : isDestinationRegistered === false ? (
+                    <div className="flex flex-col items-center justify-center p-8 border-2 border-red-100 dark:border-red-900/30 rounded-xl text-center bg-red-50/50 dark:bg-red-900/10 py-12 animate-in zoom-in-95 duration-300">
+                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mb-4 border-4 border-white dark:border-gray-800 shadow-sm">
+                        <AlertCircle size={32} className="text-red-600 dark:text-red-400" />
+                      </div>
+                      <h3 className="text-red-900 dark:text-red-300 font-bold text-lg mb-2">Not a MediGo Hospital</h3>
+                      <p className="text-red-700 dark:text-red-400 text-sm max-w-[240px] leading-relaxed">
+                        The selected hospital <strong>{formData.toHospital}</strong> is not registered on the MediGo platform.
+                      </p>
+                      <div className="mt-6 p-3 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-900/50 text-left">
+                        <p className="text-[10px] text-red-500 font-bold uppercase tracking-wider mb-1">Notice</p>
+                        <p className="text-[11px] text-muted-foreground leading-tight">Resources and real-time tracking are only available for registered facilities.</p>
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-4 animate-in fade-in duration-300">
                       <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg mb-6 shadow-inner">
@@ -863,36 +919,30 @@ export function TransferRequest() {
                         <p className="text-blue-700 dark:text-blue-400 font-bold text-lg">{formData.toHospital}</p>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 content-start">
-                        {[
-                          { id: 'icu', name: 'ICU Beds', status: formData.toHospital.includes('Central') ? 'full' : 'available' },
-                          { id: 'nicu', name: 'NICU Beds', status: formData.toHospital.includes('Specialist') ? 'limited' : 'available' },
-                          { id: 'picu', name: 'PICU Beds', status: 'available' },
-                          { id: 'er', name: 'Emergency Room', status: formData.toHospital.includes('East') ? 'full' : 'available' },
-                          { id: 'med_surg', name: 'Med/Surg Beds', status: formData.toHospital.includes('Metro') ? 'limited' : 'available' },
-                        ].map((resource) => (
-                          <div key={resource.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
-                            <span className="text-foreground font-medium text-sm">{resource.name}</span>
-                            <div className="flex items-center gap-2">
-                              {resource.status === 'available' && (
-                                <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                                  <CheckCircle2 size={16} /> Available
-                                </span>
-                              )}
-                              {resource.status === 'limited' && (
-                                <span className="flex items-center gap-1.5 text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                                  <AlertTriangle size={16} /> Limited
-                                </span>
-                              )}
-                              {resource.status === 'full' && (
-                                <span className="flex items-center gap-1.5 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
-                                  <XCircle size={16} /> Full
-                                </span>
-                              )}
+                      {hospitalResources.length === 0 ? (
+                        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-lg">
+                          <p className="text-yellow-800 dark:text-yellow-400 text-xs italic text-center">No resource availability data reported by this hospital yet.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 content-start">
+                          {hospitalResources.map((resource) => (
+                            <div key={resource.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                              <span className="text-foreground font-medium text-sm">{resource.name}</span>
+                              <div className="flex items-center gap-2">
+                                {resource.available ? (
+                                  <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                                    <CheckCircle2 size={16} /> Available
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                                    <XCircle size={16} /> Full
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
