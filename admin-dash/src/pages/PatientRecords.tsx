@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, Upload, Download, File, Ambulance, Loader2, FileText, Plus, X } from 'lucide-react';
 import { database } from '../firebase';
 import { ref, onValue, off, set, update, push } from 'firebase/database';
 import { encryptData, decryptObject, decryptData } from '../utils/encryption';
@@ -299,6 +299,7 @@ const mergePatients = (
 ): PatientRecord[] => {
   const byPatientId: Record<string, PatientRecord> = {};
 
+  // 1. Process transfer requests first (to collect transfer history)
   Object.values(transferRequests).forEach((request) => {
     if (!request?.patient) return;
 
@@ -331,17 +332,41 @@ const mergePatients = (
     });
   });
 
-  Object.entries(byPatientId).forEach(([id, patient]) => {
-    patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
-    const override = overrides[id] || overrides[sanitizeKey(id)] || {};
+  // 2. Process ALL overrides (patient_records from Firebase)
+  // This ensures that manually added patients show up even if they have no transfer history
+  Object.entries(overrides).forEach(([key, override]) => {
+    const id = override.id || key;
+    if (!byPatientId[id]) {
+      // Create new record if it doesn't exist in transferRequests
+      byPatientId[id] = {
+        id,
+        name: override.name || 'Unknown Patient',
+        age: normalizeNumber(override.age),
+        gender: override.gender || 'Unknown',
+        bloodGroup: override.bloodGroup || 'Unknown',
+        allergies: override.allergies || 'None',
+        medicalHistory: override.medicalHistory || 'No history available.',
+        medications: [],
+        vitalSigns: { ...EMPTY_VITALS },
+        recentTransfers: [],
+        documents: [],
+      };
+    }
+
+    // Merge override data into the record
     byPatientId[id] = {
-      ...patient,
+      ...byPatientId[id],
       ...override,
-      medications: Array.isArray(override.medications) ? override.medications : patient.medications,
-      recentTransfers: Array.isArray(override.recentTransfers) ? override.recentTransfers : patient.recentTransfers,
-      vitalSigns: { ...patient.vitalSigns, ...(override.vitalSigns || {}) },
+      medications: Array.isArray(override.medications) ? override.medications : byPatientId[id].medications,
+      recentTransfers: Array.isArray(override.recentTransfers) ? override.recentTransfers : byPatientId[id].recentTransfers,
+      vitalSigns: { ...byPatientId[id].vitalSigns, ...(override.vitalSigns || {}) },
       documents: toDocumentsArray(override.documents),
     };
+  });
+
+  // 3. Final sorting
+  Object.values(byPatientId).forEach((patient) => {
+    patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
   });
 
   return Object.values(byPatientId).sort((a, b) => a.name.localeCompare(b.name));
@@ -384,6 +409,53 @@ export function PatientRecords() {
     reason: '',
     status: 'In Progress',
   });
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newPatientData, setNewPatientData] = useState<Partial<PatientRecord>>({
+    name: '',
+    age: 0,
+    id: '',
+    gender: 'Male',
+    bloodGroup: 'A+',
+    allergies: 'None',
+    medicalHistory: '',
+    medications: [],
+    vitalSigns: { ...EMPTY_VITALS },
+    recentTransfers: [],
+    documents: [],
+  });
+
+  const handleAddPatient = async () => {
+    if (!newPatientData.name || !newPatientData.id || !newPatientData.age) {
+      alert('Please fill in Name, Age, and Patient ID.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await savePatient(newPatientData as PatientRecord);
+      setIsAddModalOpen(false);
+      setNewPatientData({
+        name: '',
+        age: 0,
+        id: '',
+        gender: 'Male',
+        bloodGroup: 'A+',
+        allergies: 'None',
+        medicalHistory: '',
+        medications: [],
+        vitalSigns: { ...EMPTY_VITALS },
+        recentTransfers: [],
+        documents: [],
+      });
+      setSelectedPatientId(newPatientData.id!);
+    } catch (error) {
+      console.error('Failed to add patient:', error);
+      alert('Failed to add patient. Please check your connection.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useEffect(() => {
     const transfersRef = ref(database, 'transfer_requests');
@@ -690,10 +762,19 @@ export function PatientRecords() {
             <div className="bg-card rounded-lg shadow-sm border border-border">
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-foreground">Patient List</h3>
-                  <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
-                    {filteredPatients.length} {filteredPatients.length === 1 ? 'patient' : 'patients'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-foreground">Patient List</h3>
+                    <span className="px-3 py-1 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
+                      {filteredPatients.length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs font-semibold shadow-sm"
+                  >
+                    <Plus size={14} />
+                    New Patient
+                  </button>
                 </div>
               </div>
 
@@ -1206,6 +1287,139 @@ export function PatientRecords() {
         <Ambulance size={24} />
         <span className="hidden group-hover:block transition-all duration-300">New Request</span>
       </button>
+
+      {/* Add Patient Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-card w-full max-w-lg rounded-xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-2 text-red-600">
+                <Plus size={20} />
+                <h3 className="font-bold text-foreground">Add New Patient</h3>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 hover:bg-accent rounded-full transition-colors text-muted-foreground"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Patient Name *</label>
+                <input
+                  type="text"
+                  value={newPatientData.name}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, name: e.target.value })}
+                  placeholder="e.g. John Doe"
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Patient ID *</label>
+                  <input
+                    type="text"
+                    value={newPatientData.id}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, id: e.target.value })}
+                    placeholder="e.g. P-123456"
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Age *</label>
+                  <input
+                    type="number"
+                    value={newPatientData.age || ''}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, age: normalizeNumber(e.target.value) })}
+                    placeholder="e.g. 45"
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Gender</label>
+                  <select
+                    value={newPatientData.gender}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, gender: e.target.value })}
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    <option>Male</option>
+                    <option>Female</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Blood Group</label>
+                  <select
+                    value={newPatientData.bloodGroup}
+                    onChange={(e) => setNewPatientData({ ...newPatientData, bloodGroup: e.target.value })}
+                    className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none"
+                  >
+                    <option>A+</option>
+                    <option>A-</option>
+                    <option>B+</option>
+                    <option>B-</option>
+                    <option>AB+</option>
+                    <option>AB-</option>
+                    <option>O+</option>
+                    <option>O-</option>
+                    <option>Unknown</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Allergies</label>
+                <input
+                  type="text"
+                  value={newPatientData.allergies}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, allergies: e.target.value })}
+                  placeholder="e.g. Penicillin, Peanuts"
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none placeholder:text-red-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Medical History</label>
+                <textarea
+                  value={newPatientData.medicalHistory}
+                  onChange={(e) => setNewPatientData({ ...newPatientData, medicalHistory: e.target.value })}
+                  placeholder="Brief summary of patient's medical history..."
+                  className="w-full bg-input-field-bg border border-input rounded-lg px-4 py-2 text-foreground focus:ring-2 focus:ring-red-500 outline-none min-h-[100px] resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted/30 border-t border-border flex gap-3">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="flex-1 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddPatient}
+                disabled={isSaving}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold disabled:opacity-50 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  'Create Patient'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
