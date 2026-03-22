@@ -58,6 +58,9 @@ export function HospitalDashboard() {
   const [latestIssue, setLatestIssue] = useState<any>(null);
   const [lastSeenIssueTime, setLastSeenIssueTime] = useState<number>(Date.now());
 
+  // --- STATE: TRANSFER NOTIFICATION ---
+  const [lastSeenTransferNotifTime, setLastSeenTransferNotifTime] = useState<number>(Date.now());
+
   const viewDriverDetails = async (driverId: string) => {
     if (!driverId || driverId === 'Unknown') {
       toast.error('No driver assigned to this request.');
@@ -255,6 +258,60 @@ export function HospitalDashboard() {
       issueUnsub();
     };
   }, [lastSeenIssueTime]);
+
+  // --- EFFECT: LISTEN FOR INCOMING TRANSFER NOTIFICATIONS ---
+  useEffect(() => {
+    let notifUnsub: () => void = () => { };
+
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const adminSnap = await get(ref(database, `admin/${user.uid}`));
+          const adminData = adminSnap.exists() ? adminSnap.val() : {};
+          const hospitalPlaceId: string = adminData.hospitalPlaceId || user.uid;
+
+          const notifRef = ref(database, `hospital_notifications/${hospitalPlaceId}`);
+
+          const unsubNotif = onValue(notifRef, (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              const notifsArray = Object.values(data) as any[];
+
+              // Sort by timestamp descending to get the newest
+              notifsArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+              const newest = notifsArray[0];
+
+              // Only toast for NEW notifications (arrived after dashboard loaded)
+              if (newest && newest.type === 'incoming_transfer' && newest.timestamp > lastSeenTransferNotifTime) {
+                setLastSeenTransferNotifTime(newest.timestamp);
+
+                const priorityLabel = (newest.priority || 'standard').charAt(0).toUpperCase() + (newest.priority || 'standard').slice(1);
+
+                toast(`🚨 Incoming Transfer from ${newest.fromHospital}`, {
+                  description: `Priority: ${priorityLabel} • Patient ID: ${newest.patientId}`,
+                  duration: 10000,
+                  action: {
+                    label: 'View',
+                    onClick: () => {
+                      document.getElementById('incoming-emergency')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    },
+                  },
+                });
+              }
+            }
+          });
+          notifUnsub = () => off(notifRef, 'value', unsubNotif);
+        } catch (err) {
+          console.error('Error setting up transfer notification listener:', err);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      notifUnsub();
+    };
+  }, [lastSeenTransferNotifTime]);
 
   const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
   const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);

@@ -288,6 +288,28 @@ export class TransfersService implements OnModuleInit {
             }
         }
 
+        // --- NOTIFICATION: Alert the receiving hospital ---
+        try {
+            const destPlaceId = data.destination?.placeId;
+            if (destPlaceId) {
+                const notificationRef = this.firebase.ref(`hospital_notifications/${destPlaceId}`).push();
+                await notificationRef.set({
+                    type: 'incoming_transfer',
+                    transferId: newRef.key,
+                    fromHospital: enrichedData.pickup.hospitalName,
+                    patientId: data.patient?.id || 'Unknown',
+                    priority: data.priority || 'standard',
+                    timestamp: Date.now(),
+                    read: false,
+                });
+                this.logger.log(`Notification sent to receiving hospital ${destPlaceId} for transfer ${newRef.key}`);
+            } else {
+                this.logger.warn(`No destination placeId found — skipping notification for transfer ${newRef.key}`);
+            }
+        } catch (err: any) {
+            this.logger.error(`Failed to send notification for transfer ${newRef.key}: ${err.message}`);
+        }
+
         this.logger.log(`Transfer created: ${newRef.key}`);
         return { id: newRef.key! };
     }
