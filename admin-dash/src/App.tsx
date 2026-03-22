@@ -30,7 +30,7 @@ import { Toaster } from './components/ui/sonner';
 
 
 // type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
-type AuthView = 'login' | 'register' | 'forgot-password' | 'support';
+type AuthView = 'login' | 'forgot-password' | 'support';
 
 export default function App() {
 
@@ -109,9 +109,6 @@ export default function App() {
 
   // Show login or register page if not authenticated
   if (!user) {
-    if (authView === 'register') {
-      return <RegisterPage onBackToLogin={() => setAuthView('login')} />;
-    }
     if (authView === 'forgot-password') {
       return <ForgotPassword onBackToLogin={() => setAuthView('login')} />;
     }
@@ -122,7 +119,7 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
-        onRegister={() => setAuthView('register')}
+        onRegister={() => {}} // No-op as the button is removed
         onForgotPassword={() => setAuthView('forgot-password')}
         onSupport={() => setAuthView('support')}
       />
