@@ -114,4 +114,68 @@ export class DriversService {
         }
         return { id, ...snapshot.val() };
     }
+
+    /** Resolve an admin's UID to their hospital's placeId */
+    async getHospitalId(adminUid: string): Promise<string> {
+        const adminSnap = await this.firebase.ref(`admin/${adminUid}`).get();
+        if (adminSnap.exists() && adminSnap.val()?.hospitalPlaceId) {
+            return adminSnap.val().hospitalPlaceId;
+        }
+        return adminUid; // fallback for legacy accounts
+    }
+
+    /** Create a new driver profile */
+    async createDriver(adminUid: string, driverData: any): Promise<void> {
+        const hospitalId = await this.getHospitalId(adminUid);
+        const driverId = driverData.id || `DRV-${Date.now()}`;
+        
+        // Ensure consistent ID
+        const payload = { ...driverData, id: driverId };
+
+        // Double-write: root drivers node and hospital-specific node
+        await Promise.all([
+            this.firebase.ref(`drivers/${driverId}`).set(payload),
+            this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).set(payload),
+        ]);
+        
+        this.logger.log(`Driver ${driverId} created for hospital ${hospitalId}`);
+    }
+
+    /** Update an existing driver profile */
+    async updateDriver(adminUid: string, driverId: string, changes: any): Promise<void> {
+        const hospitalId = await this.getHospitalId(adminUid);
+        
+        // Security check: Verify driver belongs to this hospital
+        const driverSnap = await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).get();
+        if (!driverSnap.exists()) {
+            throw new Error(`Driver ${driverId} not found in hospital ${hospitalId}`);
+        }
+
+        // Apply updates to both locations
+        await Promise.all([
+            this.firebase.ref(`drivers/${driverId}`).update(changes),
+            this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update(changes),
+        ]);
+
+        this.logger.log(`Driver ${driverId} updated for hospital ${hospitalId}`);
+    }
+
+    /** Remove a driver profile */
+    async deleteDriver(adminUid: string, driverId: string): Promise<void> {
+        const hospitalId = await this.getHospitalId(adminUid);
+
+        // Security check: Verify driver belongs to this hospital
+        const driverSnap = await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).get();
+        if (!driverSnap.exists()) {
+            throw new Error(`Driver ${driverId} not found in hospital ${hospitalId}`);
+        }
+
+        // Remove from both locations
+        await Promise.all([
+            this.firebase.ref(`drivers/${driverId}`).remove(),
+            this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).remove(),
+        ]);
+
+        this.logger.log(`Driver ${driverId} deleted from hospital ${hospitalId}`);
+    }
 }

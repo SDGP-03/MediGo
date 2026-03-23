@@ -69,6 +69,14 @@ export async function apiPut<T = any>(path: string, body: any): Promise<T> {
     });
 }
 
+/** Convenience PATCH */
+export async function apiPatch<T = any>(path: string, body: any): Promise<T> {
+    return apiFetch<T>(path, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+    });
+}
+
 /** Convenience DELETE */
 export async function apiDelete<T = any>(path: string): Promise<T> {
     return apiFetch<T>(path, { method: 'DELETE' });

@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, database } from '../firebase';
 import { ref, onValue, off, push, update, remove, set } from 'firebase/database';
-import { apiPost } from '../api/apiClient';
+import { apiPost, apiPatch, apiDelete } from '../api/apiClient';
 import { decryptData } from '../utils/encryption';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ export interface AmbulanceUnit {
     monthlyFuelData?: { [month: string]: number };
 }
 
-export type DriverStatus = 'active' | 'off_duty' | 'on_leave';
+export type DriverStatus = 'active' | 'inactive';
 
 export interface Driver {
     id: string;
@@ -79,9 +79,8 @@ function normalizeDriver(id: string, raw: any): Driver {
     };
 
     const statusFromRaw = (v: any): DriverStatus => {
-        if (v === 'active' || v === 'off_duty' || v === 'on_leave') return v;
-        if (v === 'blocked') return 'off_duty';
-        return 'active';
+        if (v === 'active') return 'active';
+        return 'inactive';
     };
 
     return {
@@ -260,19 +259,16 @@ export function useFleetData(): UseFleetDataReturn {
     }, [hospitalId]);
 
     const addDriver = useCallback(async (driver: Driver) => {
-        if (!hospitalId) return;
-        await set(ref(database, `hospitals/${hospitalId}/drivers/${driver.id}`), driver);
-    }, [hospitalId]);
+        await apiPost('/drivers', driver);
+    }, []);
 
     const updateDriver = useCallback(async (id: string, changes: Partial<Driver>) => {
-        if (!hospitalId) return;
-        await update(ref(database, `hospitals/${hospitalId}/drivers/${id}`), changes);
-    }, [hospitalId]);
+        await apiPatch(`/drivers/${id}`, changes);
+    }, []);
 
     const deleteDriver = useCallback(async (id: string) => {
-        if (!hospitalId) return;
-        await remove(ref(database, `hospitals/${hospitalId}/drivers/${id}`));
-    }, [hospitalId]);
+        await apiDelete(`/drivers/${id}`);
+    }, []);
 
     const assignAmbulanceToTransfer = useCallback(async (ambId: string, transfer: PendingTransfer) => {
         if (!hospitalId) return;
