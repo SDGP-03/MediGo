@@ -11,8 +11,6 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '../components/ui/dialog';
-import { auth, database } from '../firebase';
-import { ref, get } from 'firebase/database';
 import { useFleetData } from '../hooks/useFleetData';
 import type { AmbulanceUnit } from '../hooks/useFleetData';
 
@@ -565,7 +563,7 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
               {/* Left Column: Assigned Personnel */}
               <div className="space-y-3.5 border-r border-border/40 pr-2">
                 <p className="text-[11px] text-muted-foreground/60 uppercase font-black tracking-widest mb-1.5 px-1.5 bg-muted/30 rounded inline-block">Assigned Personnel</p>
-                
+
                 {/* Driver */}
                 <div className="flex items-start gap-2.5">
                   <div className="mt-0.5 p-1 bg-emerald-50 dark:bg-emerald-900/40 rounded-md shrink-0">

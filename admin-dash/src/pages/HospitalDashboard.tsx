@@ -1,34 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Ambulance,
-  Clock,
-  Users,
-  AlertCircle,
-  TrendingUp,
-  MapPin,
-  Layers,
-  List,
-  Plus,
-  Minus,
-  Navigation,
-  Maximize2,
-  AlertTriangle,
-  Wrench,
-  Activity,
-  CheckCircle,
-  User,
-  ArrowRightLeft,
-  Phone,
-  Mail,
-  Shield,
-  Car,
-  Bed,
-  Baby,
-  Stethoscope,
-  Zap,
-  HeartPulse
-} from "lucide-react";
+import { Ambulance, Clock, AlertCircle, MapPin, Layers, List, Navigation, AlertTriangle, Activity, CheckCircle, User, ArrowRightLeft, Shield, Car, Bed, Stethoscope, Zap, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "../components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
@@ -38,7 +10,6 @@ import { apiFetch } from "../api/apiClient";
 import { database, auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, off, get, set } from "firebase/database";
-import { useFleetData } from "../hooks/useFleetData";
 import { TransferCard } from "../components/dashboard/TransferCard";
 import { decryptData } from "../utils/encryption";
 
@@ -78,7 +49,7 @@ export function HospitalDashboard() {
       const adminData = adminSnap.exists() ? adminSnap.val() : {};
       const hospitalId: string = adminData.hospitalPlaceId || user.uid;
 
-       // 2. Fetch static/membership data from the hospital's driver list
+      // 2. Fetch static/membership data from the hospital's driver list
       const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`);
       const driverSnap = await get(driverRef);
       const driverData = driverSnap.exists() ? driverSnap.val() : {};
@@ -327,7 +298,7 @@ export function HospitalDashboard() {
   const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations(externalDriverIds);
 
   useEffect(() => {
-    let unsub = () => {};
+    let unsub = () => { };
     const authUnsub = onAuthStateChanged(auth, (user) => {
       if (!user) {
         setDbPendingRequests([]);
@@ -340,70 +311,70 @@ export function HospitalDashboard() {
 
       unsub = onValue(transfersRef, (snapshot) => {
         const data = snapshot.val() || {};
-      const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+        const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
 
-      // Filter pending requests:
-      // 1. 'pending' (waiting for admin to assign driver)
-      // 2. 'dispatched' (waiting for driver to accept)
-      const pending = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        (t.status === 'pending' || t.status === 'dispatched') &&
-        (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
-      );
+        // Filter pending requests:
+        // 1. 'pending' (waiting for admin to assign driver)
+        // 2. 'dispatched' (waiting for driver to accept)
+        const pending = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          (t.status === 'pending' || t.status === 'dispatched') &&
+          (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        );
 
-      // Active transfers: Driver has accepted and is on the move
-      const active = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        (t.status === 'accepted' ||
-          t.status === 'in_progress' ||
-          t.status === 'on_way' ||
-          t.status === 'at_pickup' ||
-          t.status === 'patient_loaded' ||
-          t.status === 'in_transit' ||
-          t.status === 'arrived_at_destination') &&
-        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
-      );
+        // Active transfers: Driver has accepted and is on the move
+        const active = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          (t.status === 'accepted' ||
+            t.status === 'in_progress' ||
+            t.status === 'on_way' ||
+            t.status === 'at_pickup' ||
+            t.status === 'patient_loaded' ||
+            t.status === 'in_transit' ||
+            t.status === 'arrived_at_destination') &&
+          (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        );
 
-      // Incoming transfers directed to this hospital
-      const incoming = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        t.destination?.hospitalName === currentHospitalName
-      ).map(t => ({
-        id: t.id,
-        patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
-        age: t.patient?.age || t.age || 'N/A',
-        gender: t.patient?.gender || t.gender || 'N/A',
-        incidentType: t.reason || 'Emergency Transfer',
-        priority: t.priority || 'standard',
-        pickup: t.pickup,
-        destination: t.destination,
-        eta: t.eta || 'Evaluating...',
-        distance: t.distance || 'N/A',
-        ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
-        contactNumber: 'N/A',
-        symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
-        consciousness: 'conscious',
-        breathing: 'normal',
-        driverId: t.driverId,
-        driverName: t.driverName,
-        timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
-      })).reverse();
+        // Incoming transfers directed to this hospital
+        const incoming = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          t.destination?.hospitalName === currentHospitalName
+        ).map(t => ({
+          id: t.id,
+          patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
+          age: t.patient?.age || t.age || 'N/A',
+          gender: t.patient?.gender || t.gender || 'N/A',
+          incidentType: t.reason || 'Emergency Transfer',
+          priority: t.priority || 'standard',
+          pickup: t.pickup,
+          destination: t.destination,
+          eta: t.eta || 'Evaluating...',
+          distance: t.distance || 'N/A',
+          ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
+          contactNumber: 'N/A',
+          symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
+          consciousness: 'conscious',
+          breathing: 'normal',
+          driverId: t.driverId,
+          driverName: t.driverName,
+          timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
+        })).reverse();
 
-      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
-      if (allTransfers.length > 0) {
-        const sample = allTransfers[allTransfers.length - 1]; // look at newest
-        console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
-      }
+        console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
+        if (allTransfers.length > 0) {
+          const sample = allTransfers[allTransfers.length - 1]; // look at newest
+          console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
+        }
 
-      setDbPendingRequests(pending);
-      setDbActiveTransfers(active);
-      setIncomingRequests(incoming);
-    }, (err) => {
-      console.error('[Dashboard] Firebase transfers error:', err);
-    });
+        setDbPendingRequests(pending);
+        setDbActiveTransfers(active);
+        setIncomingRequests(incoming);
+      }, (err) => {
+        console.error('[Dashboard] Firebase transfers error:', err);
+      });
 
     });
 
@@ -933,19 +904,17 @@ export function HospitalDashboard() {
                     {driverPopupData.driverName || 'Unknown Driver'}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2.5 h-2.5 rounded-full ${
-                      driverPopupData.status === 'online' ? 'bg-emerald-500 animate-pulse' :
+                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.status === 'online' ? 'bg-emerald-500 animate-pulse' :
                       driverPopupData.status === 'busy' ? 'bg-orange-500' :
-                      'bg-gray-400'
-                    }`} />
-                    <span className={`text-xs font-medium ${
-                      driverPopupData.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
+                        'bg-gray-400'
+                      }`} />
+                    <span className={`text-xs font-medium ${driverPopupData.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
                       driverPopupData.status === 'busy' ? 'text-orange-600 dark:text-orange-400' :
-                      'text-muted-foreground'
-                    }`}>
+                        'text-muted-foreground'
+                      }`}>
                       {driverPopupData.status === 'online' ? 'Online' :
-                       driverPopupData.status === 'busy' ? 'Busy' :
-                       'Offline'}
+                        driverPopupData.status === 'busy' ? 'Busy' :
+                          'Offline'}
                     </span>
                   </div>
                 </div>
@@ -1089,32 +1058,31 @@ export function HospitalDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${
-                  selectedRequest.priority === 'critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' :
+                <div className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${selectedRequest.priority === 'critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' :
                   selectedRequest.priority === 'urgent' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' :
-                  'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                }`}>
+                    'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                  }`}>
                   {selectedRequest.priority} Priority
                 </div>
               </div>
 
               {/* Grid: Locations & Logistics */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
-                    <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
-                      <MapPin size={14} /> Pickup Point
-                    </div>
-                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.pickup?.hospitalName || 'N/A'}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.pickup?.address || 'Address not provided'}</p>
-                 </div>
-                 
-                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
-                    <div className="flex items-center gap-2 mb-3 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest">
-                      <Navigation size={14} /> Destination
-                    </div>
-                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.destination?.hospitalName || 'N/A'}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.destination?.address || 'Address not provided'}</p>
-                 </div>
+                <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
+                    <MapPin size={14} /> Pickup Point
+                  </div>
+                  <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.pickup?.hospitalName || 'N/A'}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.pickup?.address || 'Address not provided'}</p>
+                </div>
+
+                <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-2 mb-3 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest">
+                    <Navigation size={14} /> Destination
+                  </div>
+                  <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.destination?.hospitalName || 'N/A'}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.destination?.address || 'Address not provided'}</p>
+                </div>
               </div>
 
               {/* Grid: Status & Timing */}
