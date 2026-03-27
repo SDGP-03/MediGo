@@ -325,20 +325,20 @@ export function HospitalDashboard() { // The main functional component for the d
 
         // 1. Filter PENDING requests: 
         // These are requests that belong to this hospital and are waiting for a driver or admin action.
+        // 'accepted' stays here so the admin can see the driver accepted, but hasn't started navigation yet.
         const pending = allTransfers.filter(t =>
           t.status !== 'cancelled' &&
           t.status !== 'completed' &&
-          (t.status === 'pending' || t.status === 'dispatched') &&
+          (t.status === 'pending' || t.status === 'dispatched' || t.status === 'accepted') &&
           (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
         );
 
         // 2. Filter ACTIVE transfers: 
-        // These are ambulances currently on a mission involving this hospital (either as pickup or destination).
+        // Only transfers where the driver has started navigation (in_progress or beyond).
         const active = allTransfers.filter(t =>
           t.status !== 'cancelled' &&
           t.status !== 'completed' &&
-          (t.status === 'accepted' ||
-            t.status === 'in_progress' ||
+          (t.status === 'in_progress' ||
             t.status === 'on_way' ||
             t.status === 'at_pickup' ||
             t.status === 'patient_loaded' ||
