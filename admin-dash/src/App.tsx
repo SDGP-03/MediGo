@@ -40,20 +40,24 @@ export default function App() {
 
   const [authView, setAuthView] = useState<AuthView>('login');
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);//Getting the User's "Badge" (Role)...First creating an empty pocketand then storing the role
   const [adminName, setAdminName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
+
+  //Checks if a user is logged in, if yes, it checks their role and name
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
+
       if (currentUser) {
         try {
+          //Role is fetched in two ways
+          //1.From JWT Token (claims),This comes from Firebase Auth token
           const tokenResult = await currentUser.getIdTokenResult();
           let currentRole = (tokenResult.claims.role as string) || null;
-
+          //2.From Realtime Database (admin node)
           const adminSnap = await get(ref(database, `admin/${currentUser.uid}`));
           if (adminSnap.exists()) {
             setAdminName(adminSnap.val().name);
@@ -61,6 +65,7 @@ export default function App() {
               currentRole = adminSnap.val().role || null;
             }
           }
+          //Now app knows:“This user is a fleetofficer / superadmin / etc.”
           setUserRole(currentRole);
         } catch (error) {
           console.error('Error fetching admin data:', error);
@@ -69,7 +74,7 @@ export default function App() {
         setAdminName(null);
         setUserRole(null);
       }
-      
+
       setLoading(false);
     });
     //when app closes, tell the system to stop watching
@@ -107,7 +112,8 @@ export default function App() {
     );
   }
 
-  // Show login or register page if not authenticated
+  // Show login or register page if not authenticated,Block Unauthenticated Users
+  //No login → no access to app
   if (!user) {
     if (authView === 'forgot-password') {
       return <ForgotPassword onBackToLogin={() => setAuthView('login')} />;
@@ -119,7 +125,7 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
-        onRegister={() => {}} // No-op as the button is removed
+        onRegister={() => { }} // No-op as the button is removed
         onForgotPassword={() => setAuthView('forgot-password')}
         onSupport={() => setAuthView('support')}
       />
@@ -140,12 +146,21 @@ export default function App() {
 
 
 
-      {/* Main Content */}
+      {/* Main Content of RBAC*/}
       <main className="max-w-[90%] mx-auto px-6 py-8 pb-12">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* using routing */}
           <Routes>
-            {userRole === 'fleetofficer' ? (
+            //Case 1: Fleet Officer-an ONLY access:Fleet,Drivers,Settings
+            {userRole === 'superadmin' ? (
+              // Case 1: Super Admin - ONLY Registration
+              <>
+                <Route path='/' element={<Navigate to='/register' replace />} />
+                <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
+                <Route path='/settings' element={<Settings adminName={adminName} setAdminName={setAdminName} />} />
+              </>
+            ) : userRole === 'fleetofficer' ? (
+              // Case 2: Fleet Officer - ONLY Fleet, Drivers, Settings
               <>
                 <Route path='/' element={<Navigate to='/fleet' replace />} />
                 <Route path='/fleet' element={<AmbulanceFleet userRole={userRole} />} />
@@ -153,6 +168,7 @@ export default function App() {
                 <Route path='/settings' element={<Settings adminName={adminName} setAdminName={setAdminName} />} />
               </>
             ) : (
+              // Case 3: Hospital Admin (Default) - Everything except /register
               <>
                 <Route path='/' element={<HospitalDashboard />} />
                 <Route path='/transfer' element={<TransferRequest />} />
@@ -161,15 +177,22 @@ export default function App() {
                 <Route path='/records' element={<PatientRecords />} />
                 <Route path='/analytics' element={<Analytics />} />
                 <Route path='/settings' element={<Settings adminName={adminName} setAdminName={setAdminName} />} />
-                
-                {userRole === 'superadmin' && (
-                  <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
-                )}
               </>
             )}
 
-            {/* catch all redirect to dashboard (or fleet for officer) */}
-            <Route path='*' element={<Navigate to={userRole === 'fleetofficer' ? '/fleet' : '/'} replace />} />
+            {/* Catch-all redirect based on role */}
+            <Route
+              path='*'
+              element={
+                <Navigate
+                  to={
+                    userRole === 'superadmin' ? '/register' :
+                    userRole === 'fleetofficer' ? '/fleet' : '/'
+                  }
+                  replace
+                />
+              }
+            />
           </Routes>
 
 

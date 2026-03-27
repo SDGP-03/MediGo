@@ -530,9 +530,6 @@ export function PatientRecords() {
             filteredTransfers[key] = val;
           }
         });
-      } else {
-        // Fallback for superadmin or if name is missing (shows all)
-        Object.assign(filteredTransfers, data);
       }
 
       setTransferRequests(filteredTransfers);

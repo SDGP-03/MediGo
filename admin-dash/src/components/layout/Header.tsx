@@ -6,6 +6,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 type View = 'dashboard' | 'transfer' | 'fleet' | 'records' | 'analytics';
 
+interface NavItem {
+    id: string;
+    label: string;
+    icon: React.ElementType;
+}
+
 interface HeaderProps {
     user: User | null;
     adminName?: string | null;
@@ -19,7 +25,7 @@ export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
     const location = useLocation();
     const displayName = adminName || user?.displayName?.split(' - ')[0] || user?.email?.split('@')[0] || 'User';
 
-    const allNavItems = [
+    const allNavItems: readonly NavItem[] = [
         { id: 'dashboard', label: 'Dashboard', icon: Activity },
         { id: 'transfer', label: 'Transfer', icon: ArrowRightLeft },
         { id: 'records', label: 'Records', icon: Users },
@@ -28,15 +34,15 @@ export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     ] as const;
 
-    let navItems = allNavItems.filter(item => {
-        if (userRole === 'fleetofficer') {
-            return ['fleet', 'drivers'].includes(item.id);
-        }
-        return true;
-    });
+    let navItems: NavItem[] = [];
 
     if (userRole === 'superadmin') {
-        navItems = [...navItems, { id: 'register', label: 'Create Staff', icon: Users }] as any;
+        navItems = [{ id: 'register', label: 'Create Staff', icon: Users }];
+    } else if (userRole === 'fleetofficer') {
+        navItems = allNavItems.filter(item => ['fleet', 'drivers'].includes(item.id));
+    } else {
+        // Hospital Admin (and others)
+        navItems = allNavItems.filter(item => item.id !== 'register') as NavItem[];
     }
 
     //determine active view based on URL
