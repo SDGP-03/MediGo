@@ -129,9 +129,12 @@ export function HospitalDashboard() { // The main functional component for the d
     const updatedResources = resources.map(r => r.id === id ? { ...r, available: !r.available } : r);
     setResources(updatedResources); // Update the UI immediately (Optimistic Update)
 
-    if (auth.currentUser) { // If the admin is logged in
-      const resourcesRef = ref(database, `hospitals/${auth.currentUser.uid}/resources`); // Reference to the hospital's resources in Firebase
-      await set(resourcesRef, updatedResources); // Overwrite the data in Firebase with the new list
+    // Use the resolved hospitalPlaceId (same path the backend & TransferRequest read from)
+    const hospitalKey = resolvedHospitalId || auth.currentUser?.uid;
+    if (hospitalKey) {
+      const resourcesRef = ref(database, `hospitals/${hospitalKey}/resources`);
+      await set(resourcesRef, updatedResources);
+      toast.success('Resource availability updated.');
     }
   };
 
@@ -156,6 +159,7 @@ export function HospitalDashboard() { // The main functional component for the d
 
   // --- STATE: HOSPITAL PROFILE ---
   const [currentHospitalName, setCurrentHospitalName] = useState<string>(""); // Stores the name of the hospital currently logged in
+  const [resolvedHospitalId, setResolvedHospitalId] = useState<string>(""); // The placeId (or uid fallback) used as the Firebase key for this hospital
 
   // Effect: Run when the component loads to fetch the hospital's profile and initial resource status
   useEffect(() => {
@@ -169,17 +173,20 @@ export function HospitalDashboard() { // The main functional component for the d
           if (snapshot.exists()) {
             const data = snapshot.val(); // Extract the profile data
             setCurrentHospitalName(data.hospitalName || ""); // Save the hospital's name to state
+
+            // Resolve the correct hospital key: placeId takes priority, uid is the fallback
+            const hospitalKey: string = data.hospitalPlaceId || user.uid;
+            setResolvedHospitalId(hospitalKey);
+
+            // Subscribe to live resource updates under the CORRECT hospital key (placeId-based)
+            const resourcesRef = ref(database, `hospitals/${hospitalKey}/resources`);
+            const unsubRes = onValue(resourcesRef, (resSnapshot) => {
+              if (resSnapshot.exists()) {
+                setResources(resSnapshot.val()); // Update the UI whenever Firebase data changes
+              }
+            });
+            resourcesUnsub = () => off(resourcesRef, 'value', unsubRes);
           }
-
-          // Fetch resources using a live listener
-          const resourcesRef = ref(database, `hospitals/${user.uid}/resources`); // Reference to the hospital's bed availability
-          const unsubRes = onValue(resourcesRef, (resSnapshot) => { // Start listening for live changes
-            if (resSnapshot.exists()) {
-              setResources(resSnapshot.val()); // Update the UI whenever the data in Firebase changes
-            }
-          });
-          resourcesUnsub = () => off(resourcesRef, 'value', unsubRes); // Define how to stop listening when we leave the page
-
         } catch (err) {
           console.error("Error fetching admin profile:", err); // Log errors
         }
