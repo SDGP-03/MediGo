@@ -149,7 +149,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
             )}
           </div>
           <p className="text-muted-foreground text-sm">
-            ID: <span className="text-foreground/70 font-mono">{data.id}</span> • {patientAge}y • {patientGender}
+            ID: <span className="text-foreground/70 font-mono">{data.patientFormId || (typeof data.patient === 'object' ? data.patient.id : (data.patientId || data.id))}</span> • {patientAge}y • {patientGender}
             {type === 'incoming' && ` • ${data.incidentType || 'Emergency'}`}
           </p>
         </div>

@@ -354,7 +354,7 @@ export function HospitalDashboard() { // The main functional component for the d
           t.status !== 'completed' &&
           t.destination?.hospitalName === currentHospitalName
         ).map(t => ({ // Format the data for our "Incoming Emergency" cards
-          id: t.id,
+          patientFormId: t.patient?.id || t.id, // Display user-provided PT-ID if available, else database ID
           patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
           age: t.patient?.age || t.age || 'N/A',
           gender: t.patient?.gender || t.gender || 'N/A',
@@ -1092,7 +1092,7 @@ export function HospitalDashboard() { // The main functional component for the d
                       {decryptData(selectedRequest.patientName)}
                     </h3>
                     <p className="text-muted-foreground text-sm flex items-center gap-2">
-                      <span className="font-mono text-xs bg-accent px-2 py-0.5 rounded">ID: {selectedRequest.id}</span>
+                      <span className="font-mono text-xs bg-accent px-2 py-0.5 rounded">ID: {selectedRequest.patientFormId || (typeof selectedRequest.patient === 'object' ? selectedRequest.patient.id : selectedRequest.id)}</span>
                       <span>•</span>
                       <span>{decryptData(selectedRequest.age)}y</span>
                       <span>•</span>
