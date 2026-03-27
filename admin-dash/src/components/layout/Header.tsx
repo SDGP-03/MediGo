@@ -29,6 +29,9 @@ export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
     ] as const;
 
     let navItems = allNavItems.filter(item => {
+        if (userRole === 'superadmin') {
+            return false;
+        }
         if (userRole === 'fleetofficer') {
             return ['fleet', 'drivers'].includes(item.id);
         }
@@ -36,7 +39,7 @@ export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
     });
 
     if (userRole === 'superadmin') {
-        navItems = [...navItems, { id: 'register', label: 'Create Staff', icon: Users }] as any;
+        navItems = [{ id: 'register', label: 'Create Staff', icon: Users }] as any;
     }
 
     //determine active view based on URL

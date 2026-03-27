@@ -145,7 +145,13 @@ export default function App() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* using routing */}
           <Routes>
-            {userRole === 'fleetofficer' ? (
+            {userRole === 'superadmin' ? (
+              <>
+                <Route path='/' element={<Navigate to='/register' replace />} />
+                <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
+                <Route path='/settings' element={<Settings adminName={adminName} setAdminName={setAdminName} />} />
+              </>
+            ) : userRole === 'fleetofficer' ? (
               <>
                 <Route path='/' element={<Navigate to='/fleet' replace />} />
                 <Route path='/fleet' element={<AmbulanceFleet userRole={userRole} />} />
@@ -161,15 +167,11 @@ export default function App() {
                 <Route path='/records' element={<PatientRecords />} />
                 <Route path='/analytics' element={<Analytics />} />
                 <Route path='/settings' element={<Settings adminName={adminName} setAdminName={setAdminName} />} />
-                
-                {userRole === 'superadmin' && (
-                  <Route path='/register' element={<RegisterPage onBackToLogin={() => window.location.href = '/'} />} />
-                )}
               </>
             )}
 
             {/* catch all redirect to dashboard (or fleet for officer) */}
-            <Route path='*' element={<Navigate to={userRole === 'fleetofficer' ? '/fleet' : '/'} replace />} />
+            <Route path='*' element={<Navigate to={userRole === 'superadmin' ? '/register' : userRole === 'fleetofficer' ? '/fleet' : '/'} replace />} />
           </Routes>
 
 
