@@ -1,18 +1,29 @@
 import React from 'react';
-import { 
-  Ambulance, 
-  Clock, 
-  User, 
-  MapPin, 
-  Navigation, 
-  Shield, 
-  Users, 
-  ArrowRightLeft, 
+import {
+  Ambulance,
+  Clock,
+  User,
+  MapPin,
+  Navigation,
+  Shield,
+  Users,
+  ArrowRightLeft,
   AlertCircle,
   Car
 } from "lucide-react";
 import { decryptData } from '../../utils/encryption';
 
+/**
+ * Props for the TransferCard component.
+ * @property type - The category of the transfer: 'active' (currently moving), 'pending' (requested), or 'incoming' (new emergency).
+ * @property data - The transfer/emergency data object containing patient and ambulance info.
+ * @property onTrackLive - Callback to open the live tracking view.
+ * @property onViewDriverDetails - Callback to see details about the assigned driver.
+ * @property onCancelRequest - Callback to cancel a pending transfer request.
+ * @property onAccept - Callback for accepting an incoming emergency request.
+ * @property onDecline - Callback for declining an incoming emergency request.
+ * @property onViewDetails - Callback for viewing full emergency/transfer details.
+ */
 interface TransferCardProps {
   type: 'active' | 'pending' | 'incoming';
   data: any;
@@ -24,6 +35,12 @@ interface TransferCardProps {
   onViewDetails?: (data: any) => void;
 }
 
+/**
+ * TransferCard Component
+ * Renders a detailed card for patient transfers and emergencies.
+ * Handles three states: active transfers, pending requests, and incoming emergency alerts.
+ * Features data decryption for patient confidentiality and dynamic styling based on priority/status.
+ */
 export const TransferCard: React.FC<TransferCardProps> = ({
   type,
   data,
@@ -34,6 +51,9 @@ export const TransferCard: React.FC<TransferCardProps> = ({
   onDecline,
   onViewDetails
 }) => {
+  /**
+   * Returns a Tailwind CSS background color class based on the transfer/ambulance status.
+   */
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case "available":
@@ -61,6 +81,10 @@ export const TransferCard: React.FC<TransferCardProps> = ({
     }
   };
 
+  /**
+   * Returns a Tailwind CSS background color class based on the priority level.
+   * Higher priorities (critical, urgent) get red/orange tones.
+   */
   const getPriorityColor = (priority: string) => {
     switch (priority?.toLowerCase()) {
       case "critical":
@@ -76,7 +100,10 @@ export const TransferCard: React.FC<TransferCardProps> = ({
     }
   };
 
-  // Standardize patient name, age, gender access
+  // --- Data Extraction & Decryption ---
+  // Many patient fields are encrypted for security. We decrypt them before display.
+  // We also handle structural differences between incoming emergencies and standard transfers.
+
   const rawName = type === 'incoming' ? data.patientName : (typeof data.patient === 'object' ? data.patient.name : data.patient);
   const patientName = decryptData(rawName);
   const patientAge = decryptData(type === 'incoming' ? data.age : (data.patient?.age || data.age || 'N/A'));
@@ -97,7 +124,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={`p-6 bg-card border rounded-xl transition-all duration-300 ${cardStyles[type]} ${type === 'incoming' ? 'cursor-pointer border-2' : ''}`}
       onClick={() => type === 'incoming' && onViewDetails?.(data)}
     >
@@ -122,11 +149,12 @@ export const TransferCard: React.FC<TransferCardProps> = ({
             )}
           </div>
           <p className="text-muted-foreground text-sm">
-            ID: <span className="text-foreground/70 font-mono">{data.id}</span> • {patientAge}y • {patientGender}
+            ID: <span className="text-foreground/70 font-mono">{data.patientFormId || (typeof data.patient === 'object' ? data.patient.id : (data.patientId || data.id))}</span> • {patientAge}y • {patientGender}
             {type === 'incoming' && ` • ${data.incidentType || 'Emergency'}`}
           </p>
         </div>
 
+        {/* Action Buttons: Tracking (active) or Accept/Decline (incoming) */}
         <div className="flex items-center gap-2 self-start md:self-center">
           {type === 'active' && (
             <button
@@ -137,25 +165,11 @@ export const TransferCard: React.FC<TransferCardProps> = ({
               Track Live
             </button>
           )}
-          {type === 'incoming' && (
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => { e.stopPropagation(); onAccept?.(data); }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all active:scale-95 text-sm font-semibold"
-              >
-                Accept
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDecline?.(data); }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all active:scale-95 text-sm font-semibold"
-              >
-                Decline
-              </button>
-            </div>
-          )}
+          {/* Note: Accept/Decline actions removed per user request */}
         </div>
       </div>
 
+      {/* Location and ETA Information Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 p-4 bg-accent/30 rounded-xl border border-border/50">
         <div className="relative pl-6 border-l-2 border-emerald-500">
           <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-widest mb-1">
@@ -185,12 +199,14 @@ export const TransferCard: React.FC<TransferCardProps> = ({
         </div>
       )}
 
+      {/* Footer Details: Ambulance, Driver, and Distance */}
       <div className="flex flex-wrap items-center gap-y-3 gap-x-6 pt-4 border-t border-border/40">
         <div className="flex items-center gap-2 text-sm text-foreground/80">
           <Ambulance size={16} className="text-muted-foreground" />
           <span className="font-medium text-xs">{data.ambulance || data.ambulanceNumber || data.ambulanceId || 'Unit Assigned'}</span>
         </div>
-        
+
+        {/* Conditional rendering for Driver/RequestedBy info */}
         {(data.driverName || data.driverId || data.driver) ? (
           <div
             className={`flex items-center gap-2 text-sm ${onViewDriverDetails ? 'text-blue-600 dark:text-blue-400 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md transition-colors' : 'text-foreground/80'}`}
@@ -215,6 +231,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
           )
         )}
 
+        {/* Display attendant for active transfers */}
         {type === 'active' && (
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <Shield size={16} className="text-muted-foreground" />
@@ -222,6 +239,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
           </div>
         )}
 
+        {/* Display consciousness status for incoming emergencies */}
         {type === 'incoming' && (
           <div className="flex items-center gap-2 text-sm text-foreground/80">
             <User size={16} className="text-muted-foreground" />
@@ -234,6 +252,7 @@ export const TransferCard: React.FC<TransferCardProps> = ({
           <span className="text-xs font-bold">{distance.toString().includes('km') ? distance : `${distance} km`}</span>
         </div>
 
+        {/* Secondary Action Buttons (Details, View Details, Cancel) */}
         {(type === 'pending' || type === 'incoming') && (
           <div className='flex items-center gap-3 ml-auto md:ml-0'>
             {type === 'pending' && (
