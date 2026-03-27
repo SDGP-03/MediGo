@@ -64,6 +64,7 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
     ambulances,
     drivers,
     pendingTransfers,
+    tripHistory,
     loading,
     error,
     addAmbulance,
@@ -138,77 +139,80 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
       (amb.currentTransfer ?? '').toLowerCase().includes(q));
   });
 
-  // ── Calculate fuel efficiency from Firebase ──
-  // Fuel efficiency = (fuel consumed / 100km) per 100km traveled
-  // From real ambulance data: fuelConsumed (liters) and mileage (km)
-  const calculateFuelEfficiency = (): { avgEfficiency: number; monthlyData: { month: string; value: number }[] } => {
-    if (ambulances.length === 0) {
-      return { avgEfficiency: 0, monthlyData: [] };
-    }
+  // ── Calculate monthly fuel consumption ──
+  const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    // Calculate average fuel efficiency (L/100km) for all ambulances
-    let totalEfficiency = 0;
-    let validCount = 0;
-
-    ambulances.forEach(amb => {
-      if (amb.mileage && amb.mileage > 0 && amb.fuelConsumed && amb.fuelConsumed > 0) {
-        const efficiency = (amb.fuelConsumed / amb.mileage) * 100; // L/100km
-        totalEfficiency += efficiency;
-        validCount++;
-      }
-    });
-
-    const avgEfficiency = validCount > 0 ? Math.round(totalEfficiency / validCount * 10) / 10 : 0;
-
-    // Aggregate monthly fuel data from all ambulances
-    const monthlyAgg: { [month: string]: number } = {};
-    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const calculateMonthlyFuel = () => {
+    // Aggregate monthly fuel from all ambulances
+    const monthlyFuelAgg: { [month: string]: number } = {};
 
     ambulances.forEach(amb => {
       if (amb.monthlyFuelData) {
         Object.entries(amb.monthlyFuelData).forEach(([month, fuel]) => {
-          monthlyAgg[month] = (monthlyAgg[month] || 0) + fuel;
+          monthlyFuelAgg[month] = (monthlyFuelAgg[month] || 0) + fuel;
         });
       }
     });
 
-    // Calculate monthly efficiency (L/100km) and convert to sorted array
+    // Build sorted monthly data
     const monthlyData = monthOrder
-      .filter(m => monthlyAgg[m])
+      .filter(m => monthlyFuelAgg[m] && monthlyFuelAgg[m] > 0)
       .map(month => ({
         month,
-        value: Math.round((monthlyAgg[month] / 5500) * 100 * 10) / 10, // Assuming ~5500km per month fleet-wide
+        value: Math.round(monthlyFuelAgg[month] * 10) / 10,
       }));
 
-    return { avgEfficiency, monthlyData };
+    // Current month total
+    const currentMonthName = monthOrder[new Date().getMonth()];
+    const currentMonthFuel = Math.round((monthlyFuelAgg[currentMonthName] || 0) * 10) / 10;
+
+    // Fuel saved = previous month - current month (positive = saved)
+    let fuelSaved = 0;
+    let hasPrevMonth = false;
+    if (monthlyData.length >= 2) {
+      const lastTwo = monthlyData.slice(-2);
+      fuelSaved = Math.round((lastTwo[0].value - lastTwo[1].value) * 10) / 10;
+      hasPrevMonth = true;
+    }
+
+    return { monthlyData, currentMonthFuel, fuelSaved, hasPrevMonth };
   };
 
-  const { avgEfficiency, monthlyData: calculatedFuelData } = calculateFuelEfficiency();
+  const { monthlyData: fuelMonthlyData, currentMonthFuel, fuelSaved, hasPrevMonth } = calculateMonthlyFuel();
 
-  const fuelData = calculatedFuelData.length > 0
-    ? calculatedFuelData
+  const fuelData = fuelMonthlyData.length > 0
+    ? fuelMonthlyData
     : [{ month: 'Jan', value: 0 }, { month: 'Feb', value: 0 }, { month: 'Mar', value: 0 }];
 
-  // ── Calculate fuel efficiency trend (compare last month to previous month) ──
-  const calculateFuelTrend = (): { trend: number; isImprovement: boolean } => {
-    if (fuelData.length < 2) return { trend: 0, isImprovement: true };
-    const lastValue = fuelData[fuelData.length - 1].value;
-    const prevValue = fuelData[fuelData.length - 2].value;
-    if (prevValue === 0) return { trend: 0, isImprovement: true };
-    // Lower fuel consumption is better, so negative change is improvement
-    const change = ((prevValue - lastValue) / prevValue) * 100;
-    return { trend: Math.abs(Math.round(change)), isImprovement: change > 0 };
-  };
+  const isFuelImproving = fuelSaved >= 0;
+  const fuelTrend = hasPrevMonth ? Math.abs(fuelSaved) : 0;
 
-  const { trend: fuelTrend, isImprovement: isFuelImproving } = calculateFuelTrend();
-
-  // ── Distance data (from total mileage) ──
+  // ── Distance data from trip history (aggregate by day-of-week) ──
   const totalMileage = ambulances.reduce((sum, a) => sum + (a.mileage || 0), 0);
   const avgMileagePerAmbulance = ambulances.length > 0 ? Math.round(totalMileage / ambulances.length) : 0;
 
-  // bar chart: use the same real average for every day (no hard‑coded ratios)
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const distanceData = days.map(d => ({ day: d, value: avgMileagePerAmbulance }));
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const distanceData = (() => {
+    if (tripHistory.length === 0) {
+      // Fallback: show uniform average when no trip history exists
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      return days.map(d => ({ day: d, value: avgMileagePerAmbulance }));
+    }
+    // Aggregate real trip distances by day-of-week
+    const dayTotals: number[] = [0, 0, 0, 0, 0, 0, 0];
+    const dayCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+    tripHistory.forEach(trip => {
+      const dow = trip.dayOfWeek; // 0=Sun..6=Sat
+      dayTotals[dow] += trip.distanceKm;
+      dayCounts[dow]++;
+    });
+    // Show Mon-Sun order
+    const orderedDays = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+    return orderedDays.map(i => ({
+      day: dayNames[i],
+      value: dayCounts[i] > 0 ? Math.round(dayTotals[i] / dayCounts[i]) : 0,
+    }));
+  })();
 
   // ── Track previous total mileage for a realtime trend percentage ──
   const [prevTotalMileage, setPrevTotalMileage] = useState<number>(0);
@@ -434,20 +438,27 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-foreground font-semibold">Fuel Efficiency</h4>
-              <p className="text-muted-foreground text-sm">Avg liters / 100 km (from Firebase)</p>
+              <h4 className="text-foreground font-semibold">Monthly Fuel Consumption</h4>
+              <p className="text-muted-foreground text-sm">Total liters used per month</p>
             </div>
             <span className={`flex items-center gap-1 text-sm font-medium ${isFuelImproving ? 'text-green-600' : 'text-red-600'}`}>
               <TrendingUp size={14} style={{ transform: isFuelImproving ? 'rotate(0deg)' : 'rotate(180deg)' }} />
-              {isFuelImproving ? '+' : '-'}{fuelTrend}%
+              {fuelTrend > 0 ? `${fuelTrend}L ${isFuelImproving ? 'saved' : 'extra'}` : '+0%'}
             </span>
           </div>
-          <div className="text-3xl font-bold text-foreground mb-4">{avgEfficiency.toFixed(1)}L</div>
+          <div className="text-3xl font-bold text-foreground mb-4">{currentMonthFuel.toFixed(1)}L</div>
           <ResponsiveContainer width="100%" height={110}>
-            <LineChart data={fuelData}>
-              <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} dot={false} />
+            <BarChart data={fuelData}>
+              <Bar
+                dataKey="value"
+                fill="#14b8a6"
+                radius={[6, 6, 0, 0]}
+                barSize={30}
+                activeBar={{ fill: '#0d9488', stroke: '#14b8a6', strokeWidth: 1 }}
+              />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
               <Tooltip
+                cursor={{ fill: 'rgba(226, 232, 240, 0.4)', radius: 4 }}
                 contentStyle={{
                   backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(4px)',
@@ -458,8 +469,9 @@ export function AmbulanceFleet({ userRole }: AmbulanceFleetProps) {
                 }}
                 labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
                 itemStyle={{ color: '#14b8a6', fontWeight: 700, padding: 0 }}
+                formatter={(val: number) => [`${val} L`, 'Fuel Used']}
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="bg-card rounded-lg shadow-sm border border-border p-6">

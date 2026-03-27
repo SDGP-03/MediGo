@@ -72,6 +72,16 @@ export interface PendingTransfer {
     priority: 'critical' | 'urgent' | 'standard';
 }
 
+export interface TripRecord {
+    id: string;
+    ambulanceId: string;
+    distanceKm: number;
+    fuelUsedLiters: number;
+    date: string;
+    dayOfWeek: number; // 0=Sun .. 6=Sat
+    month: string;
+}
+
 function normalizeDriver(id: string, raw: any): Driver {
     const safeNumber = (v: any, fallback = 0) => {
         const n = typeof v === 'number' ? v : Number(v);
@@ -117,6 +127,7 @@ export interface UseFleetDataReturn {
     ambulances: AmbulanceUnit[];
     drivers: Driver[];
     pendingTransfers: PendingTransfer[];
+    tripHistory: TripRecord[];
     loading: boolean;
     error: string | null;
     hospitalName: string;
@@ -147,6 +158,7 @@ export function useFleetData(): UseFleetDataReturn {
     const [ambulances, setAmbulances] = useState<AmbulanceUnit[]>([]);
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
+    const [tripHistory, setTripHistory] = useState<TripRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [hospitalName, setHospitalName] = useState<string>('');
@@ -238,7 +250,31 @@ export function useFleetData(): UseFleetDataReturn {
             },
         );
 
-        return () => unsubscribe();
+        // Subscribe to trip history
+        const tripRef = ref(database, `hospitals/${hospitalId}/tripHistory`);
+        const unsubTrips = onValue(
+            tripRef,
+            (snapshot) => {
+                const data = snapshot.val();
+                if (!data) { setTripHistory([]); return; }
+                setTripHistory(
+                    Object.entries(data).map(([id, val]: [string, any]) => ({
+                        id,
+                        ambulanceId: val.ambulanceId || '',
+                        distanceKm: val.distanceKm || 0,
+                        fuelUsedLiters: val.fuelUsedLiters || 0,
+                        date: val.date || '',
+                        dayOfWeek: val.dayOfWeek ?? 0,
+                        month: val.month || '',
+                    })),
+                );
+            },
+        );
+
+        return () => {
+            unsubscribe();
+            unsubTrips();
+        };
     }, [hospitalId, authResolved]);
 
     // ── Helpers ──
@@ -310,6 +346,7 @@ export function useFleetData(): UseFleetDataReturn {
         ambulances,
         drivers,
         pendingTransfers,
+        tripHistory,
         loading,
         error,
         hospitalName,

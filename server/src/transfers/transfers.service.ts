@@ -119,6 +119,13 @@ export class TransfersService implements OnModuleInit {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
                     await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
                     await this.syncAmbulanceState(hospitalId, ambulanceId, 'available');
+
+                    // Log trip distance & fuel on completion
+                    if (status === 'completed' && hospitalId && ambulanceId) {
+                        this.logTripDistanceAndFuel(hospitalId, ambulanceId, data).catch(err =>
+                            this.logger.error(`Failed to log trip data for ${snapshot.key}: ${err.message}`),
+                        );
+                    }
                 }
             } catch (err: any) {
                 this.logger.error(`Failed to update fleet statuses for transfer ${snapshot.key}: ${err.message}`);
@@ -356,5 +363,108 @@ export class TransfersService implements OnModuleInit {
 
     private deg2rad(deg: number): number {
         return deg * (Math.PI/180);
+    }
+
+    // ── Fuel efficiency: compute distance via Routes API & log trip ──────────
+
+    private static readonly FUEL_RATE_L_PER_KM = 0.12; // 12 L/100km for ambulances
+    private static readonly MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    /**
+     * Called when a transfer completes. Uses Google Routes API v2 to compute
+     * actual driving distance, estimates fuel consumption, and writes trip data
+     * to Firebase for the ambulance's mileage, fuelConsumed, monthlyFuelData,
+     * and the hospital's tripHistory log.
+     */
+    private async logTripDistanceAndFuel(hospitalId: string, ambulanceId: string, transferData: any): Promise<void> {
+        const pickup = transferData.pickup;
+        const dest = transferData.destination;
+
+        if (!pickup?.lat || !pickup?.lng || !dest?.lat || !dest?.lng) {
+            this.logger.warn(`Skipping trip log — missing coordinates for ambulance ${ambulanceId}`);
+            return;
+        }
+
+        let distanceKm: number;
+
+        // Try Routes API v2 first, fall back to Haversine
+        const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+            try {
+                const response = await axios.post(
+                    'https://routes.googleapis.com/v2:computeRoutes',
+                    {
+                        origin: { location: { latLng: { latitude: pickup.lat, longitude: pickup.lng } } },
+                        destination: { location: { latLng: { latitude: dest.lat, longitude: dest.lng } } },
+                        travelMode: 'DRIVE',
+                        routingPreference: 'TRAFFIC_AWARE',
+                        extraComputations: ['FUEL_CONSUMPTION'],
+                        vehicleInfo: { emissionType: 'DIESEL' },
+                    },
+                    {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Goog-Api-Key': apiKey,
+                            'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.travelAdvisory.fuelConsumptionMicroliters',
+                        },
+                    },
+                );
+
+                const route = response.data?.routes?.[0];
+                if (route?.distanceMeters) {
+                    distanceKm = route.distanceMeters / 1000;
+                    this.logger.log(`Routes API: ${ambulanceId} trip = ${distanceKm.toFixed(1)} km`);
+                } else {
+                    throw new Error('No route returned');
+                }
+            } catch (err: any) {
+                this.logger.warn(`Routes API failed for ${ambulanceId}, falling back to Haversine: ${err.message}`);
+                distanceKm = this.calculateDistance(pickup.lat, pickup.lng, dest.lat, dest.lng);
+            }
+        } else {
+            this.logger.warn('No Google Maps API key — using Haversine distance');
+            distanceKm = this.calculateDistance(pickup.lat, pickup.lng, dest.lat, dest.lng);
+        }
+
+        // Estimate fuel consumption
+        const fuelUsedLiters = Math.round(distanceKm * TransfersService.FUEL_RATE_L_PER_KM * 100) / 100;
+        const now = new Date();
+        const currentMonth = TransfersService.MONTH_NAMES[now.getMonth()];
+
+        // Read current ambulance data
+        const ambRef = this.firebase.ref(`hospitals/${hospitalId}/ambulances/${ambulanceId}`);
+        const ambSnap = await ambRef.get();
+        const ambData = ambSnap.val() || {};
+
+        const newMileage = Math.round((ambData.mileage || 0) + distanceKm);
+        const newFuelConsumed = Math.round(((ambData.fuelConsumed || 0) + fuelUsedLiters) * 100) / 100;
+
+        // Update monthly fuel — add to current month
+        const monthlyFuel = ambData.monthlyFuelData || {};
+        monthlyFuel[currentMonth] = Math.round(((monthlyFuel[currentMonth] || 0) + fuelUsedLiters) * 100) / 100;
+
+        await ambRef.update({
+            mileage: newMileage,
+            fuelConsumed: newFuelConsumed,
+            monthlyFuelData: monthlyFuel,
+        });
+
+        // Write trip history record
+        const tripRef = this.firebase.ref(`hospitals/${hospitalId}/tripHistory`).push();
+        await tripRef.set({
+            ambulanceId,
+            distanceKm: Math.round(distanceKm * 10) / 10,
+            fuelUsedLiters,
+            date: now.toISOString(),
+            dayOfWeek: now.getDay(), // 0=Sun .. 6=Sat
+            month: currentMonth,
+            pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.hospitalName || '' },
+            destination: { lat: dest.lat, lng: dest.lng, name: dest.hospitalName || dest.address || '' },
+        });
+
+        this.logger.log(
+            `Trip logged for ${ambulanceId}: ${distanceKm.toFixed(1)} km, ${fuelUsedLiters} L fuel. ` +
+            `New totals — mileage: ${newMileage} km, fuelConsumed: ${newFuelConsumed} L`,
+        );
     }
 }
