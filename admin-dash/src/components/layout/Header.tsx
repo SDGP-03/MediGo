@@ -60,8 +60,11 @@ export function Header({ user, onLogout, adminName, userRole }: HeaderProps) {
                 left: tabRect.left - navRect.left,
                 width: tabRect.width,
             });
+        } else {
+            // Reset if no tab matches current view (common during role switch transitions)
+            setIndicatorStyle({ left: 0, width: 0 });
         }
-    }, [currentView]);
+    }, [currentView, userRole]);
 
     useEffect(() => {
         updateIndicator();

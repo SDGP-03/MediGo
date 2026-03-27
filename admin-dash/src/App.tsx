@@ -47,8 +47,6 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
       if (currentUser) {
         try {
           const tokenResult = await currentUser.getIdTokenResult();
@@ -62,10 +60,13 @@ export default function App() {
             }
           }
           setUserRole(currentRole);
+          setUser(currentUser); // Set user ONLY after role is determined
         } catch (error) {
           console.error('Error fetching admin data:', error);
+          setUser(currentUser); // Fallback to avoid getting stuck
         }
       } else {
+        setUser(null);
         setAdminName(null);
         setUserRole(null);
       }
