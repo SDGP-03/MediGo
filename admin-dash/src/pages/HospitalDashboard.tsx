@@ -1,103 +1,75 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Ambulance,
-  Clock,
-  Users,
-  AlertCircle,
-  TrendingUp,
-  MapPin,
-  Layers,
-  List,
-  Plus,
-  Minus,
-  Navigation,
-  Maximize2,
-  AlertTriangle,
-  Wrench,
-  Activity,
-  CheckCircle,
-  User,
-  ArrowRightLeft,
-  Phone,
-  Mail,
-  Shield,
-  Car,
-  Bed,
-  Baby,
-  Stethoscope,
-  Zap,
-  HeartPulse
-} from "lucide-react";
-import { toast } from "sonner";
-import { Switch } from "../components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
-import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
-import { useDriverLocations } from "../useDriverLocations";
-import { apiFetch } from "../api/apiClient";
-import { database, auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { ref, onValue, off, get, set } from "firebase/database";
-import { useFleetData } from "../hooks/useFleetData";
-import { TransferCard } from "../components/dashboard/TransferCard";
-import { decryptData } from "../utils/encryption";
+import { useState, useEffect } from "react"; // React hooks for managing state and side effects
+import { useNavigate } from "react-router-dom"; // Hook for navigating between different pages
+import { Ambulance, Clock, AlertCircle, MapPin, Layers, List, Navigation, AlertTriangle, Activity, CheckCircle, User, ArrowRightLeft, Shield, Car, Bed, Stethoscope, Zap, HeartPulse } from "lucide-react"; // Icons for the UI
+import { toast } from "sonner"; // Library for showing small popup notifications
+import { Switch } from "../components/ui/switch"; // UI component for On/Off toggles
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog"; // UI component for popup windows (modals)
+import { AmbulanceMap } from "../components/dashboard/AmbulanceMap"; // The map component used to show ambulances
+import { useDriverLocations } from "../useDriverLocations"; // Custom hook that listens to live driver locations from Firebase
+import { apiFetch } from "../api/apiClient"; // Our own helper for making requests to the NestJS backend
+import { database, auth } from "../firebase"; // Access to the Firebase database and authentication
+import { onAuthStateChanged } from "firebase/auth"; // Function to detect when a user logs in or out
+import { ref, onValue, off, get, set } from "firebase/database"; // Firebase database functions (references, listeners, getters, setters)
+import { TransferCard } from "../components/dashboard/TransferCard"; // Component to display a single transfer request row
+import { decryptData } from "../utils/encryption"; // Helper to decrypt any sensitive data coming from the database
 
-export function HospitalDashboard() {
-  const navigate = useNavigate();
-  const [mapView, setMapView] = useState<"map" | "list">("map");
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
-  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null);
+export function HospitalDashboard() { // The main functional component for the dashboard
+  const navigate = useNavigate(); // Hook to change pages
+  const [mapView, setMapView] = useState<"map" | "list">("map"); // State to toggle between Map view and List view
+  const [selectedRequest, setSelectedRequest] = useState<any>(null); // Stores the request currently being viewed in detail
+  const [trackedDriverTrigger, setTrackedDriverTrigger] = useState<{ id: string, timestamp: number } | null>(null); // Trigger used to center the map on a specific driver
 
   // --- STATE: DRIVER INFO POPUP ---
-  const [driverPopupOpen, setDriverPopupOpen] = useState(false);
-  const [driverPopupData, setDriverPopupData] = useState<any>(null);
-  const [driverPopupLoading, setDriverPopupLoading] = useState(false);
+  const [driverPopupOpen, setDriverPopupOpen] = useState(false); // Controls whether the driver detail popup is visible
+  const [driverPopupData, setDriverPopupData] = useState<any>(null); // Stores data for the driver being viewed in the popup
+  const [driverPopupLoading, setDriverPopupLoading] = useState(false); // Indicates if driver data is currently being fetched
 
   // --- STATE: ISSUE NOTIFICATION POPUP ---
-  const [issuePopupOpen, setIssuePopupOpen] = useState(false);
-  const [latestIssue, setLatestIssue] = useState<any>(null);
-  const [lastSeenIssueTime, setLastSeenIssueTime] = useState<number>(Date.now());
+  const [issuePopupOpen, setIssuePopupOpen] = useState(false); // Controls the "New Issue" popup
+  const [latestIssue, setLatestIssue] = useState<any>(null); // Stores information about the most recent issue reported
+  const [lastSeenIssueTime, setLastSeenIssueTime] = useState<number>(Date.now()); // Helps track which issues have already been shown
 
   // --- STATE: TRANSFER NOTIFICATION ---
-  const [lastSeenTransferNotifTime, setLastSeenTransferNotifTime] = useState<number>(Date.now());
+  const [lastSeenTransferNotifTime, setLastSeenTransferNotifTime] = useState<number>(Date.now()); // Helps track which transfer alerts have already been shown
 
+  // Function to fetch and show details for a specific driver
   const viewDriverDetails = async (driverId: string) => {
-    if (!driverId || driverId === 'Unknown') {
-      toast.error('No driver assigned to this request.');
+    if (!driverId || driverId === 'Unknown') { // Check if a valid ID was provided
+      toast.error('No driver assigned to this request.'); // Show error if no ID
       return;
     }
-    setDriverPopupOpen(true);
-    setDriverPopupLoading(true);
-    setDriverPopupData(null);
+    setDriverPopupOpen(true); // Open the popup UI
+    setDriverPopupLoading(true); // Show a loading spinner
+    setDriverPopupData(null); // Clear any old data
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error('Not authenticated');
+      const user = auth.currentUser; // Get the currently logged-in administrator
+      if (!user) throw new Error('Not authenticated'); // Stop if not logged in
 
       // 1. Resolve hospitalId (admin may use hospitalPlaceId or fall back to uid)
-      const adminSnap = await get(ref(database, `admin/${user.uid}`));
-      const adminData = adminSnap.exists() ? adminSnap.val() : {};
-      const hospitalId: string = adminData.hospitalPlaceId || user.uid;
+      const adminSnap = await get(ref(database, `admin/${user.uid}`)); // Get admin's profile from Firebase
+      const adminData = adminSnap.exists() ? adminSnap.val() : {}; // Extract the data if it exists
+      const hospitalId: string = adminData.hospitalPlaceId || user.uid; // ID of the hospital this admin belongs to
 
-       // 2. Fetch static/membership data from the hospital's driver list
-      const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`);
-      const driverSnap = await get(driverRef);
-      const driverData = driverSnap.exists() ? driverSnap.val() : {};
+      // 2. Fetch static/membership data from the hospital's driver list
+      const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`); // Reference to the driver's info
+      const driverSnap = await get(driverRef); // Fetch the data
+      const driverData = driverSnap.exists() ? driverSnap.val() : {}; // Extract data
       // 3. Fetch live tracking data from driver_locations
-      const locationRef = ref(database, `driver_locations/${driverId}`);
-      const locationSnap = await get(locationRef);
-      const locationData = locationSnap.exists() ? locationSnap.val() : {};
-      if (driverSnap.exists() || locationSnap.exists()) {
+      const locationRef = ref(database, `driver_locations/${driverId}`); // Reference to driver's live GPS data
+      const locationSnap = await get(locationRef); // Fetch the GPS data
+      const locationData = locationSnap.exists() ? locationSnap.val() : {}; // Extract GPS data
+      if (driverSnap.exists() || locationSnap.exists()) { // If we found any data for this driver
         // Merge data, prioritizing live location fields if they exist
-        const now = Date.now();
-        const ts = locationData.timestamp || 0;
-        let displayStatus = locationData.status || (locationData.isOnline === true ? 'online' : 'offline');
+        const now = Date.now(); // Current time in milliseconds
+        const ts = locationData.timestamp || 0; // The last time the driver updated their GPS
+        let displayStatus = locationData.status || (locationData.isOnline === true ? 'online' : 'offline'); // Determine status
 
         // Heartbeat logic: If last update is > 5 mins old, force offline
         if (displayStatus !== 'offline' && (now - ts >= 5 * 60 * 1000)) {
-          displayStatus = 'offline';
+          displayStatus = 'offline'; // If they haven't talked to us in 5 mins, they are offline
         }
 
-        setDriverPopupData({
+        setDriverPopupData({ // Update the state with the merged driver info
           id: driverId,
           ...driverData,
           ...locationData,
@@ -106,30 +78,32 @@ export function HospitalDashboard() {
           isBusy: displayStatus === 'busy'
         });
       } else {
-        setDriverPopupData({ id: driverId, notFound: true });
+        setDriverPopupData({ id: driverId, notFound: true }); // Mark as missing if no data found
       }
     } catch (err: any) {
-      console.error('Error fetching driver details from Firebase:', err);
-      setDriverPopupData({ id: driverId, error: true });
+      console.error('Error fetching driver details from Firebase:', err); // Log any errors to the console
+      setDriverPopupData({ id: driverId, error: true }); // Show an error state in the UI
     } finally {
-      setDriverPopupLoading(false);
+      setDriverPopupLoading(false); // Hide the loading spinner
     }
   };
 
+  // Function to move the map focus to a specific transfer's driver
   const handleTrackLive = (transfer: any) => {
-    if (!transfer.driverId) {
-      toast.error("No driver assigned to this transfer yet.");
+    if (!transfer.driverId) { // Check if the transfer has a driver assigned
+      toast.error("No driver assigned to this transfer yet."); // Show error if no driver
       return;
     }
-    setMapView("map");
-    setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() });
+    setMapView("map"); // Switch the dashboard view to "Map" mode
+    setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() }); // Send a signal to the Map component to center on this driver
 
     setTimeout(() => {
-      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); // Smoothly scroll the page up to the map
     }, 100);
   };
 
   // --- STATE: RESOURCE AVAILABILITY ---
+  // Initial list of resources the hospital can manage (ICU beds, etc.)
   const [resources, setResources] = useState([
     { id: 'icu', name: 'ICU Bed Availability', available: false },
     { id: 'nicu', name: 'NICU Bed Availability', available: false },
@@ -139,6 +113,7 @@ export function HospitalDashboard() {
     { id: 'er', name: 'Emergency Room Availability', available: false },
   ]);
 
+  // Icons corresponding to each resource type
   const resourceIcons: Record<string, any> = {
     icu: HeartPulse,
     nicu: Activity,
@@ -148,149 +123,154 @@ export function HospitalDashboard() {
     er: Shield
   };
 
+  // Function to toggle a resource (e.g. mark ICU as "Available") and sync with Firebase
   const toggleResource = async (id: string) => {
+    // Create a new list where the clicked resource is flipped (true -> false or false -> true)
     const updatedResources = resources.map(r => r.id === id ? { ...r, available: !r.available } : r);
-    setResources(updatedResources); // Optimistic UI
+    setResources(updatedResources); // Update the UI immediately (Optimistic Update)
 
-    if (auth.currentUser) {
-      const resourcesRef = ref(database, `hospitals/${auth.currentUser.uid}/resources`);
-      await set(resourcesRef, updatedResources);
+    if (auth.currentUser) { // If the admin is logged in
+      const resourcesRef = ref(database, `hospitals/${auth.currentUser.uid}/resources`); // Reference to the hospital's resources in Firebase
+      await set(resourcesRef, updatedResources); // Overwrite the data in Firebase with the new list
     }
   };
 
+  // Function to cancel a transfer request
   const handleCancelRequest = async (requestId: string) => {
-    if (!requestId) return;
+    if (!requestId) return; // Stop if no ID provided
 
-    if (window.confirm("Are you sure you want to cancel this transfer request?")) {
+    if (window.confirm("Are you sure you want to cancel this transfer request?")) { // Ask the user for confirmation
       try {
-        await apiFetch(`/transfers/${requestId}/cancel`, {
-          method: 'PATCH'
+        await apiFetch(`/transfers/${requestId}/cancel`, { // Send a request to our NestJS API to cancel
+          method: 'PATCH' // PATCH is used for partial updates
         });
-        // Optimistic UI update: Remove from local state immediately
+        // Optimistic UI update: Remove the cancelled request from our local lists immediately
         setDbPendingRequests(prev => prev.filter(req => req.id !== requestId));
         setDbActiveTransfers(prev => prev.filter(req => req.id !== requestId));
       } catch (error) {
-        console.error("Error cancelling request:", error);
-        toast.error("Failed to cancel request. Please try again.");
+        console.error("Error cancelling request:", error); // Log failure
+        toast.error("Failed to cancel request. Please try again."); // Notify the user of failure
       }
     }
   };
 
   // --- STATE: HOSPITAL PROFILE ---
-  const [currentHospitalName, setCurrentHospitalName] = useState<string>("");
+  const [currentHospitalName, setCurrentHospitalName] = useState<string>(""); // Stores the name of the hospital currently logged in
 
+  // Effect: Run when the component loads to fetch the hospital's profile and initial resource status
   useEffect(() => {
-    let resourcesUnsub: () => void = () => { };
+    let resourcesUnsub: () => void = () => { }; // Variable to store our cleanup function for the resources listener
 
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => { // Listen for changes in login status
+      if (user) { // If a user is logged in
         try {
-          const adminRef = ref(database, `admin/${user.uid}`);
-          const snapshot = await get(adminRef);
+          const adminRef = ref(database, `admin/${user.uid}`); // Reference to the admin's profile data
+          const snapshot = await get(adminRef); // Fetch the admin data once
           if (snapshot.exists()) {
-            const data = snapshot.val();
-            setCurrentHospitalName(data.hospitalName || "");
+            const data = snapshot.val(); // Extract the profile data
+            setCurrentHospitalName(data.hospitalName || ""); // Save the hospital's name to state
           }
 
-          // Fetch resources
-          const resourcesRef = ref(database, `hospitals/${user.uid}/resources`);
-          const unsubRes = onValue(resourcesRef, (resSnapshot) => {
+          // Fetch resources using a live listener
+          const resourcesRef = ref(database, `hospitals/${user.uid}/resources`); // Reference to the hospital's bed availability
+          const unsubRes = onValue(resourcesRef, (resSnapshot) => { // Start listening for live changes
             if (resSnapshot.exists()) {
-              setResources(resSnapshot.val());
+              setResources(resSnapshot.val()); // Update the UI whenever the data in Firebase changes
             }
           });
-          resourcesUnsub = () => off(resourcesRef, 'value', unsubRes);
+          resourcesUnsub = () => off(resourcesRef, 'value', unsubRes); // Define how to stop listening when we leave the page
 
         } catch (err) {
-          console.error("Error fetching admin profile:", err);
+          console.error("Error fetching admin profile:", err); // Log errors
         }
       }
     });
 
-    return () => {
-      unsubscribe();
-      resourcesUnsub();
+    return () => { // Cleanup function: runs when the component is unmounted
+      unsubscribe(); // Stop listening to Auth changes
+      resourcesUnsub(); // Stop listening to Resource changes
     };
   }, []);
 
-  // --- EFFECT: LISTEN FOR NEW ISSUES ---
+  // --- EFFECT: LISTEN FOR NEW ISSUES (Breakdowns, etc.) ---
   useEffect(() => {
-    let issueUnsub: () => void = () => { };
+    let issueUnsub: () => void = () => { }; // Cleanup function holder
 
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => { // Re-check auth whenever it changes
       if (user) {
         try {
           // 1. Resolve hospitalId (admin may use hospitalPlaceId or fall back to uid)
           const adminSnap = await get(ref(database, `admin/${user.uid}`));
           const adminData = adminSnap.exists() ? adminSnap.val() : {};
-          const hospitalId: string = adminData.hospitalPlaceId || user.uid;
+          const hospitalId: string = adminData.hospitalPlaceId || user.uid; // Get our specific hospital's group ID
 
-          const issuesRef = ref(database, `hospital_issues/${hospitalId}`);
+          const issuesRef = ref(database, `hospital_issues/${hospitalId}`); // Reference to issues reported for THIS hospital
 
-          // 2. Use onValue to get the latest issues
+          // 2. Use onValue to get the latest issues in real-time
           const unsubIssues = onValue(issuesRef, (snapshot) => {
             if (snapshot.exists()) {
-              const data = snapshot.val();
-              const issuesArray = Object.values(data) as any[];
+              const data = snapshot.val(); // Get all issues
+              const issuesArray = Object.values(data) as any[]; // Convert the object into a list
 
-              // Sort by timestamp descending to get the newest
+              // Sort by timestamp descending (newest first)
               issuesArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-              const newest = issuesArray[0];
+              const newest = issuesArray[0]; // Take the very latest issue
 
-              // Only show popup for NEW issues (reported after dashboard loaded)
-              // We use lastSeenIssueTime to avoid duplicates and show only the latest one
+              // Logic to only show popup for NEW issues (reported after the dashboard was opened)
               if (newest && newest.timestamp > lastSeenIssueTime) {
-                setLatestIssue(newest);
-                setIssuePopupOpen(true);
-                setLastSeenIssueTime(newest.timestamp);
+                setLatestIssue(newest); // Store the issue to display in the modal
+                setIssuePopupOpen(true); // Open the popup modal
+                setLastSeenIssueTime(newest.timestamp); // Update our 'last seen' time so we don't show it twice
               }
             }
           });
-          issueUnsub = () => off(issuesRef, 'value', unsubIssues);
+          issueUnsub = () => off(issuesRef, 'value', unsubIssues); // Cleanup definition
         } catch (err) {
           console.error("Error setting up issue listener:", err);
         }
       }
     });
 
-    return () => {
+    return () => { // Final cleanup
       unsubscribe();
       issueUnsub();
     };
-  }, [lastSeenIssueTime]);
+  }, [lastSeenIssueTime]); // Re-run if our 'last seen' tracker changes
 
-  // --- EFFECT: LISTEN FOR INCOMING TRANSFER NOTIFICATIONS ---
+  // --- EFFECT: LISTEN FOR INCOMING TRANSFER NOTIFICATIONS (Toasts) ---
   useEffect(() => {
-    let notifUnsub: () => void = () => { };
+    let notifUnsub: () => void = () => { }; // Cleanup function holder
 
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => { // Check auth
       if (user) {
         try {
+          // Get the hospital's unique ID
           const adminSnap = await get(ref(database, `admin/${user.uid}`));
           const adminData = adminSnap.exists() ? adminSnap.val() : {};
           const hospitalPlaceId: string = adminData.hospitalPlaceId || user.uid;
 
-          const notifRef = ref(database, `hospital_notifications/${hospitalPlaceId}`);
+          const notifRef = ref(database, `hospital_notifications/${hospitalPlaceId}`); // Reference to incoming alerts
 
-          const unsubNotif = onValue(notifRef, (snapshot) => {
+          const unsubNotif = onValue(notifRef, (snapshot) => { // Start listening for live notifications
             if (snapshot.exists()) {
               const data = snapshot.val();
-              const notifsArray = Object.values(data) as any[];
+              const notifsArray = Object.values(data) as any[]; // Convert to list
 
-              // Sort by timestamp descending to get the newest
+              // Sort newest first
               notifsArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
               const newest = notifsArray[0];
 
-              // Only toast for NEW notifications (arrived after dashboard loaded)
+              // Logic to only show a "Toast" for NEW incoming transfer requests
               if (newest && newest.type === 'incoming_transfer' && newest.timestamp > lastSeenTransferNotifTime) {
-                setLastSeenTransferNotifTime(newest.timestamp);
+                setLastSeenTransferNotifTime(newest.timestamp); // Update the 'last seen' mark
 
                 const priorityLabel = (newest.priority || 'standard').charAt(0).toUpperCase() + (newest.priority || 'standard').slice(1);
 
+                // Show the "Toast" notification in the UI
                 toast(`🚨 Incoming Transfer from ${newest.fromHospital}`, {
                   description: `Priority: ${priorityLabel} • Patient ID: ${newest.patientId}`,
-                  duration: 10000,
-                  action: {
+                  duration: 10000, // Show for 10 seconds
+                  action: { // Add a button to automatically scroll to the new request
                     label: 'View',
                     onClick: () => {
                       document.getElementById('incoming-emergency')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -300,119 +280,119 @@ export function HospitalDashboard() {
               }
             }
           });
-          notifUnsub = () => off(notifRef, 'value', unsubNotif);
+          notifUnsub = () => off(notifRef, 'value', unsubNotif); // Stop listening cleanup
         } catch (err) {
           console.error('Error setting up transfer notification listener:', err);
         }
       }
     });
 
-    return () => {
+    return () => { // Final level cleanup
       unsubscribe();
       notifUnsub();
     };
   }, [lastSeenTransferNotifTime]);
 
-  const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]);
-  const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]);
-  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+  const [dbPendingRequests, setDbPendingRequests] = useState<any[]>([]); // List of requests that need attention
+  const [dbActiveTransfers, setDbActiveTransfers] = useState<any[]>([]); // List of ambulances currently on the road
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]); // List of emergencies coming to this hospital
 
-  // Collect external driver IDs from active/incoming transfers (for receiving hospitals)
+  // Collect external driver IDs from active/incoming transfers (to track them on the map)
   const externalDriverIds = Array.from(new Set([
     ...dbActiveTransfers.map(t => t.driverId).filter(Boolean),
     ...incomingRequests.map(t => t.driverId).filter(Boolean)
   ]));
 
-  // Live driver data from backend (filtered to this hospital + external transfers)
+  // Custom hook that gets live data for all our drivers plus any coming from other hospitals
   const { onlineDrivers, busyDrivers, offlineDrivers, isLoading: driversLoading } = useDriverLocations(externalDriverIds);
 
+  // EFFECT: The "Master Listener" for all transfer requests
   useEffect(() => {
-    let unsub = () => {};
-    const authUnsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+    let unsub = () => { }; // Cleanup function holder
+    const authUnsub = onAuthStateChanged(auth, (user) => { // Check if user is logged in
+      if (!user) { // If not logged in, clear all lists
         setDbPendingRequests([]);
         setDbActiveTransfers([]);
         setIncomingRequests([]);
         return;
       }
 
-      const transfersRef = ref(database, 'transfer_requests');
+      const transfersRef = ref(database, 'transfer_requests'); // Reference to the big folder of all transfers in Firebase
 
-      unsub = onValue(transfersRef, (snapshot) => {
-        const data = snapshot.val() || {};
-      const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val }));
+      unsub = onValue(transfersRef, (snapshot) => { // Listen for ANY change in the transfers folder
+        const data = snapshot.val() || {}; // Get the raw data
+        const allTransfers = Object.entries(data).map(([id, val]: [string, any]) => ({ id, ...val })); // Convert to an easy-to-read list
 
-      // Filter pending requests:
-      // 1. 'pending' (waiting for admin to assign driver)
-      // 2. 'dispatched' (waiting for driver to accept)
-      const pending = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        (t.status === 'pending' || t.status === 'dispatched') &&
-        (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
-      );
+        // 1. Filter PENDING requests: 
+        // These are requests that belong to this hospital and are waiting for a driver or admin action.
+        const pending = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          (t.status === 'pending' || t.status === 'dispatched') &&
+          (!currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        );
 
-      // Active transfers: Driver has accepted and is on the move
-      const active = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        (t.status === 'accepted' ||
-          t.status === 'in_progress' ||
-          t.status === 'on_way' ||
-          t.status === 'at_pickup' ||
-          t.status === 'patient_loaded' ||
-          t.status === 'in_transit' ||
-          t.status === 'arrived_at_destination') &&
-        (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
-      );
+        // 2. Filter ACTIVE transfers: 
+        // These are ambulances currently on a mission involving this hospital (either as pickup or destination).
+        const active = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          (t.status === 'accepted' ||
+            t.status === 'in_progress' ||
+            t.status === 'on_way' ||
+            t.status === 'at_pickup' ||
+            t.status === 'patient_loaded' ||
+            t.status === 'in_transit' ||
+            t.status === 'arrived_at_destination') &&
+          (!currentHospitalName || t.destination?.hospitalName === currentHospitalName || t.pickup?.hospitalName === currentHospitalName)
+        );
 
-      // Incoming transfers directed to this hospital
-      const incoming = allTransfers.filter(t =>
-        t.status !== 'cancelled' &&
-        t.status !== 'completed' &&
-        t.destination?.hospitalName === currentHospitalName
-      ).map(t => ({
-        id: t.id,
-        patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
-        age: t.patient?.age || t.age || 'N/A',
-        gender: t.patient?.gender || t.gender || 'N/A',
-        incidentType: t.reason || 'Emergency Transfer',
-        priority: t.priority || 'standard',
-        pickup: t.pickup,
-        destination: t.destination,
-        eta: t.eta || 'Evaluating...',
-        distance: t.distance || 'N/A',
-        ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
-        contactNumber: 'N/A',
-        symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
-        consciousness: 'conscious',
-        breathing: 'normal',
-        driverId: t.driverId,
-        driverName: t.driverName,
-        timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
-      })).reverse();
+        // 3. Filter INCOMING transfers: 
+        // These are patients being sent FROM another hospital TO this hospital.
+        const incoming = allTransfers.filter(t =>
+          t.status !== 'cancelled' &&
+          t.status !== 'completed' &&
+          t.destination?.hospitalName === currentHospitalName
+        ).map(t => ({ // Format the data for our "Incoming Emergency" cards
+          id: t.id,
+          patientName: typeof t.patient === 'object' ? t.patient.name : (t.patient || 'Unknown Patient'),
+          age: t.patient?.age || t.age || 'N/A',
+          gender: t.patient?.gender || t.gender || 'N/A',
+          incidentType: t.reason || 'Emergency Transfer',
+          priority: t.priority || 'standard',
+          pickup: t.pickup,
+          destination: t.destination,
+          eta: t.eta || 'Evaluating...',
+          distance: t.distance || 'N/A',
+          ambulanceNumber: t.ambulance || t.ambulanceId || 'Assigned',
+          contactNumber: 'N/A',
+          symptoms: typeof t.patient === 'object' ? t.patient.currentCondition : 'Not specified',
+          consciousness: 'conscious',
+          breathing: 'normal',
+          driverId: t.driverId,
+          driverName: t.driverName,
+          timestamp: t.createdAt ? new Date(t.createdAt).toLocaleTimeString() : 'Just now'
+        })).reverse(); // Reverse so newest shows at the top
 
-      console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
-      if (allTransfers.length > 0) {
-        const sample = allTransfers[allTransfers.length - 1]; // look at newest
-        console.log(`[Transfers Debug] Sample newest transfer status:`, sample.status, 'Hospital Name matches?', (!currentHospitalName || sample.destination?.hospitalName === currentHospitalName || sample.pickup?.hospitalName === currentHospitalName), currentHospitalName, sample.destination?.hospitalName, sample.pickup?.hospitalName);
-      }
+        // For debugging: print the counts to the developer console
+        console.log(`[Transfers Debug] Total: ${allTransfers.length}, Pending: ${pending.length}, Active: ${active.length}, Incoming: ${incoming.length}`);
 
-      setDbPendingRequests(pending);
-      setDbActiveTransfers(active);
-      setIncomingRequests(incoming);
-    }, (err) => {
-      console.error('[Dashboard] Firebase transfers error:', err);
+        // Update our state with the filtered lists
+        setDbPendingRequests(pending);
+        setDbActiveTransfers(active);
+        setIncomingRequests(incoming);
+      }, (err) => {
+        console.error('[Dashboard] Firebase transfers error:', err); // Log errors
+      });
+
     });
 
-    });
-
-    return () => {
-      authUnsub();
-      unsub();
-      off(ref(database, 'transfer_requests'), 'value');
+    return () => { // Cleanup when closing the page
+      authUnsub(); // Stop listening to auth
+      unsub(); // Stop listening to transfers
+      off(ref(database, 'transfer_requests'), 'value'); // Force turn off the listener
     };
-  }, [currentHospitalName]);
+  }, [currentHospitalName]); // Re-run if our hospital name changes
 
   // --- DATA: INCOMING EMERGENCIES ---
   // Replaced with dynamic stream from setIncomingRequests above.
@@ -422,6 +402,7 @@ export function HospitalDashboard() {
   // Hardcoded ambulances array was removed. 
   // We use live driver data instead.
 
+  // Helper to count how many ambulances are in each state (for the sidebar)
   const liveDriverCount = onlineDrivers.length + busyDrivers.length + offlineDrivers.length;
   const statusCounts = {
     available: onlineDrivers.length,
@@ -430,26 +411,26 @@ export function HospitalDashboard() {
     total: onlineDrivers.length + busyDrivers.length + offlineDrivers.length,
   };
 
-  const activeTransfers = dbActiveTransfers.length > 0 ? dbActiveTransfers : [];
+  const activeTransfers = dbActiveTransfers.length > 0 ? dbActiveTransfers : []; // List of active transfers
+  const pendingRequests = dbPendingRequests.length > 0 ? dbPendingRequests : []; // List of pending requests
 
-  const pendingRequests = dbPendingRequests.length > 0 ? dbPendingRequests : [];
-
+  // Helper function to get the CSS color based on the current status of an ambulance
   const getStatusColor = (status: string) => {
     switch (status) {
       case "available":
-        return "bg-emerald-500";
+        return "bg-emerald-500"; // Green for free
       case "accepted":
-        return "bg-blue-400 text-white";
+        return "bg-blue-400 text-white"; // Light blue for taken
       case "in_progress":
-        return "bg-blue-600 text-white";
+        return "bg-blue-600 text-white"; // Deep blue for working
       case "on_way":
         return "bg-blue-500";
       case "busy":
-        return "bg-orange-500";
+        return "bg-orange-500"; // Orange for busy
       case "standby":
         return "bg-slate-500";
       case "offline":
-        return "bg-red-600";
+        return "bg-red-600"; // Red for offline
       case "in_transit":
         return "bg-blue-100 text-blue-700";
       case "patient_loaded":
@@ -457,73 +438,82 @@ export function HospitalDashboard() {
       case "dispatched":
         return "bg-blue-100 text-blue-700";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-100 text-gray-700"; // Gray for anything else
     }
   };
 
+  // Helper function to get the color for transfer priority (Critical vs Standard)
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "critical":
-        return "bg-red-600";
+        return "bg-red-600"; // Red for critical
       case "urgent":
-        return "bg-orange-500";
+        return "bg-orange-500"; // Orange for urgent
       default:
-        return "bg-green-600";
+        return "bg-green-600"; // Green for standard
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6"> {/* Main container with vertical spacing */}
 
       {/* --- SECTION: MAP & FLEET OVERVIEW --- */}
-      {/* Contains the interactive map and the sidebar with fleet statistics */}
+      {/* This top section contains the interactive map and the sidebar with statistics */}
       <div id="map-section" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
+
+        {/* Header of the Map section */}
         <div className="p-2 border-b border-border flex items-center justify-between">
           <div className="flex items-center pl-3">
+            {/* Animated "Live" pulse dot */}
             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></div>
             <h2 className="bg-card rounded-lg px-3 py-1 text-foreground">
               Live Ambulance Locations
             </h2>
           </div>
+
+          {/* Buttons to switch between Map and List view */}
           <div className="flex items-center gap-2 pointer-events-auto">
             <button
-              onClick={() => setMapView("map")}
+              onClick={() => setMapView("map")} // Click to show the Map
               className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "map" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
-              <Layers size={18} />
+              <Layers size={18} /> {/* Map Layers icon */}
             </button>
             <button
-              onClick={() => setMapView("list")}
+              onClick={() => setMapView("list")} // Click to show the List
               className={`p-2 rounded-lg transition-all active: scale-95 ${mapView === "list" ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" : "hover:bg-accent text-muted-foreground"} `}
             >
-              <List size={18} />
+              <List size={18} /> {/* List icon */}
             </button>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row">
-          {/* Map/List Area */}
+          {/* THE MAIN CONTENT AREA: Map or List */}
           <div className="flex-1 min-w-0">
+            {/* If we are in "map" mode, show the AmbulanceMap component */}
             {mapView === "map" && (
               <AmbulanceMap
                 ambulances={[]}
-                activeTransfers={dbActiveTransfers}
-                onlineDrivers={onlineDrivers}
-                busyDrivers={busyDrivers}
-                offlineDrivers={offlineDrivers}
+                activeTransfers={dbActiveTransfers} // Give the map the active transfers so it can draw routes
+                onlineDrivers={onlineDrivers} // Give the map the available drivers to show markers
+                busyDrivers={busyDrivers} // Give the map busy drivers
+                offlineDrivers={offlineDrivers} // Give the map offline drivers
                 height="650px"
-                trackedDriverTrigger={trackedDriverTrigger}
+                trackedDriverTrigger={trackedDriverTrigger} // Used to center on a driver when "Track" is clicked
               />
             )}
 
+            {/* If we are in "list" mode, show a scrollable list of all drivers */}
             {mapView === "list" && (
               <div className="h-[650px] overflow-y-auto">
                 <div className="divide-y divide-border">
+                  {/* Combine all driver types into one list and loop through them */}
                   {[...onlineDrivers, ...busyDrivers, ...offlineDrivers].map((driver) => (
                     <div
                       key={driver.id}
                       className="p-4 hover:bg-accent transition-colors cursor-pointer"
-                      onClick={() => {
+                      onClick={() => { // Clicking a driver in the list focuses them on the map
                         setMapView("map");
                         setTrackedDriverTrigger({ id: driver.id, timestamp: Date.now() });
                       }}
@@ -531,20 +521,25 @@ export function HospitalDashboard() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="relative">
+                            {/* Avatar or Placeholder icon */}
                             <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center border border-border">
                               <User size={18} className="text-muted-foreground" />
                             </div>
+                            {/* Small status indicator dot over the avatar */}
                             <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${getStatusColor(driver.status)} border-2 border-background rounded-full`}></div>
                           </div>
                           <div>
+                            {/* Driver Name */}
                             <p className="text-foreground text-sm font-semibold truncate max-w-[180px]">
                               {driver.driverName || 'Unknown Driver'}
                             </p>
+                            {/* Driver unique ID */}
                             <p className="text-muted-foreground text-xs font-mono">
                               {driver.id}
                             </p>
                           </div>
                         </div>
+                        {/* Status label and Time check */}
                         <div className="text-right">
                           <p className="text-muted-foreground text-xs">
                             {driver.status.toUpperCase()}
@@ -556,6 +551,7 @@ export function HospitalDashboard() {
                       </div>
                     </div>
                   ))}
+                  {/* Show a message if no drivers were found */}
                   {[...onlineDrivers, ...busyDrivers, ...offlineDrivers].length === 0 && (
                     <div className="p-8 text-center text-muted-foreground italic">
                       No live driver data available.
@@ -566,12 +562,15 @@ export function HospitalDashboard() {
             )}
           </div>
 
-          {/* Fleet Overview Sidebar — Map Key */}
+          {/* SIDEBAR: FLEET STATUS BREAKDOWN */}
+          {/* This is the legend on the right of the map showing summary stats */}
           <div className="w-full lg:w-56 border-t lg:border-t-0 lg:border-l border-border/50 p-4 bg-gradient-to-br from-white/10 to-white/5 dark:from-gray-900/40 dark:to-gray-900/20 shadow-xl overflow-hidden group/sidebar">
-            {/* Simple glow effect */}
+
+            {/* Visual glow effects for the background */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-blue-500/20 transition-all duration-700" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover/sidebar:bg-purple-500/20 transition-all duration-700" />
 
+            {/* Sidebar Title and Pulse icon */}
             <div className="flex items-center justify-between mb-6 relative z-10">
               <h3 className="text-foreground text-sm font-semibold tracking-wide uppercase opacity-70">Fleet Status</h3>
               <div className="relative">
@@ -580,14 +579,15 @@ export function HospitalDashboard() {
               </div>
             </div>
 
-            {/* Total */}
+            {/* Total Fleet Count */}
             <div className="mb-6 pb-4 border-b border-white/10 dark:border-white/5 relative z-10 group/total">
               <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Total Fleet</p>
               <p className="text-foreground text-3xl font-bold tracking-tight group-hover/total:scale-105 transition-transform duration-300 origin-left">{statusCounts.total}</p>
             </div>
 
-            {/* Status breakdown */}
+            {/* Status breakdown with colored labels */}
             <div className="space-y-4 relative z-10">
+              {/* Available count */}
               <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-emerald-500/20">
@@ -598,6 +598,7 @@ export function HospitalDashboard() {
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">{statusCounts.available}</span>
               </div>
 
+              {/* Busy count */}
               <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-orange-500/20">
@@ -608,6 +609,7 @@ export function HospitalDashboard() {
                 <span className="text-orange-600 dark:text-orange-400 font-bold text-sm bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">{statusCounts.busy}</span>
               </div>
 
+              {/* Offline count */}
               <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/5 transition-colors duration-300 cursor-default group/item">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center group-hover/item:scale-110 transition-transform duration-300 shadow-sm border border-red-500/20">
@@ -622,7 +624,7 @@ export function HospitalDashboard() {
         </div>
       </div>
 
-      {/* Pending Requests Alert */}
+      {/* ALERT BOX: SHOWS IF THERE ARE PENDING REQUESTS THAT NEED ACTION */}
       {pendingRequests.length > 0 && (
         <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
           <div className="flex items-center gap-3">
@@ -712,11 +714,8 @@ export function HospitalDashboard() {
         </div> */}
 
 
-
-
-
         {/* --- SECTION: ACTIVE TRANSFERS --- */}
-        {/* List of currently active ambulance transfers */}
+        {/* Render a list of transfers that are currently in progress */}
         <div id="active-transfers" className="overflow-hidden bg-card rounded-lg shadow-sm border border-border">
           <div className="p-4 border-b border-border flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -725,18 +724,20 @@ export function HospitalDashboard() {
             <h2 className="text-lg font-bold text-foreground">Active Transfers</h2>
           </div>
           <div className="divide-y divide-border">
+            {/* If no active transfers, show an empty state message */}
             {activeTransfers.length === 0 ? (
               <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
                 <p className="text-muted-foreground italic">No active transfers at this moment.</p>
               </div>
             ) : (
+              // Map through active transfers and render a TransferCard for each
               activeTransfers.map((transfer) => (
                 <TransferCard
                   key={transfer.id}
                   type="active"
                   data={transfer}
-                  onTrackLive={handleTrackLive}
-                  onViewDriverDetails={viewDriverDetails}
+                  onTrackLive={handleTrackLive} // Callback for "Track" button
+                  onViewDriverDetails={viewDriverDetails} // Callback for "View Driver" button
                 />
               ))
             )}
@@ -744,7 +745,7 @@ export function HospitalDashboard() {
         </div>
 
         {/* --- SECTION: PENDING REQUESTS --- */}
-        {/* Transfer requests waiting for assignment or driver acceptance */}
+        {/* Render a list of requests waiting to be picked up or accepted by a driver */}
         <div id="pending-requests" className="overflow-hidden bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-border">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -753,6 +754,7 @@ export function HospitalDashboard() {
               </div>
               <h2 className="text-lg font-bold text-foreground">Pending Requests</h2>
             </div>
+            {/* If there are pending requests, show a red pulse label */}
             {pendingRequests.length > 0 && (
               <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg animate-pulse">
                 ACTION REQUIRED
@@ -760,6 +762,7 @@ export function HospitalDashboard() {
             )}
           </div>
           <div className="divide-y divide-border">
+            {/* Empty state check */}
             {pendingRequests.length === 0 ? (
               <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
                 <CheckCircle className="mx-auto text-emerald-500/20 mb-2" size={48} />
@@ -781,7 +784,7 @@ export function HospitalDashboard() {
 
 
         {/* --- SECTION: INCOMING EMERGENCY PATIENTS --- */}
-        {/* Real-time feed of incoming emergency patients */}
+        {/* Render a list of ambulance transfers coming FROM other hospitals to this one */}
         <div id="incoming-emergency" className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
@@ -790,6 +793,7 @@ export function HospitalDashboard() {
             <h3 className="text-lg font-bold text-foreground">Incoming Emergency Patients</h3>
           </div>
           <div className="space-y-4">
+            {/* Empty state check */}
             {incomingRequests.length === 0 ? (
               <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed border-border m-4">
                 <p className="text-muted-foreground italic">No incoming emergency patients at this moment.</p>
@@ -800,9 +804,9 @@ export function HospitalDashboard() {
                   key={request.id}
                   type="incoming"
                   data={request}
-                  onAccept={(req) => toast.success(`Accepting emergency from ${req.patientName}`)}
-                  onDecline={(req) => toast.error(`Declining emergency from ${req.patientName}`)}
-                  onViewDetails={(req) => setSelectedRequest(req)}
+                  onAccept={(req) => toast.success(`Accepting emergency from ${req.patientName}`)} // Action for accepting
+                  onDecline={(req) => toast.error(`Declining emergency from ${req.patientName}`)} // Action for declining
+                  onViewDetails={(req) => setSelectedRequest(req)} // Show patient info
                 />
               ))
             )}
@@ -810,7 +814,7 @@ export function HospitalDashboard() {
         </div>
 
         {/* --- SECTION: RESOURCE AVAILABILITY --- */}
-        {/* Checklist for hospital resource availability */}
+        {/* A grid of switches to mark things like ICU or ER availability */}
         <div id="resource-availability" className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
@@ -819,12 +823,13 @@ export function HospitalDashboard() {
             <h3 className="text-lg font-bold text-foreground">Resource Availability</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Loop through our resources array and render a toggle for each one */}
             {resources.map((resource) => {
               const IconComponent = resourceIcons[resource.id] || Stethoscope;
               return (
                 <div
                   key={resource.id}
-                  onClick={() => toggleResource(resource.id)}
+                  onClick={() => toggleResource(resource.id)} // Toggling updates Firebase
                   className={`flex items-center justify-between p-5 rounded-xl border transition-all duration-300 cursor-pointer transform hover:scale-[1.02] hover:shadow-md ${resource.available
                     ? 'bg-emerald-50/50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/30 hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-emerald-100/50'
                     : 'bg-red-50/50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-700 hover:shadow-red-100/50'
@@ -882,6 +887,7 @@ export function HospitalDashboard() {
       </button>
 
       {/* --- DRIVER INFO POPUP --- */}
+      {/* This dialog shows detailed information about a driver when clicked */}
       <Dialog open={driverPopupOpen} onOpenChange={setDriverPopupOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -892,10 +898,12 @@ export function HospitalDashboard() {
               Driver Details
             </DialogTitle>
             <DialogDescription>
+              {/* Show the Driver ID in the description */}
               {driverPopupData?.id ? `Driver ID: ${driverPopupData.id} ` : 'Loading driver information...'}
             </DialogDescription>
           </DialogHeader>
 
+          {/* Show a spinner while the driver data is being fetched from Firebase */}
           {driverPopupLoading && (
             <div className="flex items-center justify-center py-8">
               <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
@@ -933,19 +941,17 @@ export function HospitalDashboard() {
                     {driverPopupData.driverName || 'Unknown Driver'}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className={`w-2.5 h-2.5 rounded-full ${
-                      driverPopupData.status === 'online' ? 'bg-emerald-500 animate-pulse' :
+                    <div className={`w-2.5 h-2.5 rounded-full ${driverPopupData.status === 'online' ? 'bg-emerald-500 animate-pulse' :
                       driverPopupData.status === 'busy' ? 'bg-orange-500' :
-                      'bg-gray-400'
-                    }`} />
-                    <span className={`text-xs font-medium ${
-                      driverPopupData.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
+                        'bg-gray-400'
+                      }`} />
+                    <span className={`text-xs font-medium ${driverPopupData.status === 'online' ? 'text-emerald-600 dark:text-emerald-400' :
                       driverPopupData.status === 'busy' ? 'text-orange-600 dark:text-orange-400' :
-                      'text-muted-foreground'
-                    }`}>
+                        'text-muted-foreground'
+                      }`}>
                       {driverPopupData.status === 'online' ? 'Online' :
-                       driverPopupData.status === 'busy' ? 'Busy' :
-                       'Offline'}
+                        driverPopupData.status === 'busy' ? 'Busy' :
+                          'Offline'}
                     </span>
                   </div>
                 </div>
@@ -1000,6 +1006,7 @@ export function HospitalDashboard() {
       </Dialog>
 
       {/* --- POPUP: ISSUE NOTIFICATION --- */}
+      {/* This popup appears when a driver reports an urgent issue (like a mechanical failure) */}
       <Dialog open={issuePopupOpen} onOpenChange={setIssuePopupOpen}>
         <DialogContent className="sm:max-w-[425px] border-red-500/20 border-2">
           <DialogHeader>
@@ -1011,6 +1018,8 @@ export function HospitalDashboard() {
               A driver has reported a new issue regarding their vehicle.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Display the details of the reported issue */}
           {latestIssue && (
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4 p-3 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/20">
@@ -1042,6 +1051,8 @@ export function HospitalDashboard() {
               </div>
             </div>
           )}
+
+          {/* Acknowledge button to close the alert */}
           <div className="flex justify-end pt-2">
             <button
               onClick={() => setIssuePopupOpen(false)}
@@ -1089,32 +1100,31 @@ export function HospitalDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${
-                  selectedRequest.priority === 'critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' :
+                <div className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-center ${selectedRequest.priority === 'critical' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' :
                   selectedRequest.priority === 'urgent' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' :
-                  'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
-                }`}>
+                    'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                  }`}>
                   {selectedRequest.priority} Priority
                 </div>
               </div>
 
               {/* Grid: Locations & Logistics */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
-                    <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
-                      <MapPin size={14} /> Pickup Point
-                    </div>
-                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.pickup?.hospitalName || 'N/A'}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.pickup?.address || 'Address not provided'}</p>
-                 </div>
-                 
-                 <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
-                    <div className="flex items-center gap-2 mb-3 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest">
-                      <Navigation size={14} /> Destination
-                    </div>
-                    <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.destination?.hospitalName || 'N/A'}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.destination?.address || 'Address not provided'}</p>
-                 </div>
+                <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest">
+                    <MapPin size={14} /> Pickup Point
+                  </div>
+                  <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.pickup?.hospitalName || 'N/A'}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.pickup?.address || 'Address not provided'}</p>
+                </div>
+
+                <div className="p-4 bg-accent/20 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-2 mb-3 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest">
+                    <Navigation size={14} /> Destination
+                  </div>
+                  <p className="text-foreground font-semibold text-sm mb-1">{selectedRequest.destination?.hospitalName || 'N/A'}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{selectedRequest.destination?.address || 'Address not provided'}</p>
+                </div>
               </div>
 
               {/* Grid: Status & Timing */}
@@ -1183,17 +1193,8 @@ export function HospitalDashboard() {
 
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => {
-                    alert(`Accepting emergency from ${decryptData(selectedRequest.patientName)}`);
-                    setSelectedRequest(null);
-                  }}
-                  className="flex-1 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 shadow-lg shadow-green-500/20 active:scale-95 transition-all font-bold text-sm"
-                >
-                  Accept Request
-                </button>
-                <button
                   onClick={() => setSelectedRequest(null)}
-                  className="px-6 py-3 bg-muted text-muted-foreground rounded-xl hover:bg-accent hover:text-foreground active:scale-95 transition-all font-bold text-sm border border-border"
+                  className="w-full py-3 bg-muted text-muted-foreground rounded-xl hover:bg-accent hover:text-foreground active:scale-95 transition-all font-bold text-sm border border-border"
                 >
                   Close
                 </button>
@@ -1207,18 +1208,19 @@ export function HospitalDashboard() {
 }
 
 // --- SUBSIDIARY COMPONENT: QUICK NAVIGATION DOCK ---
-// Renders the floating sidebar navigation for quick access to sections
+// This sidebar allows for quick scrolling to different sections of the dashboard
 function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: number; incomingCount?: number }) {
-  const [activeSection, setActiveSection] = useState<string>('');
+  const [activeSection, setActiveSection] = useState<string>(''); // Tracks which section is currently on screen
 
+  // Smooth scroll handler
   const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
+    const element = document.getElementById(id); // Find the element by its ID
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Move the view to that element
     }
   };
 
-  // Track active section on scroll
+  // Effect to track which section is currently visible to highlight the correct nav icon
   useEffect(() => {
     const handleScroll = () => {
       const sections = ['map-section', 'active-transfers', 'pending-requests', 'incoming-emergency', 'resource-availability'];
@@ -1227,38 +1229,37 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
       for (const id of sections) {
         const element = document.getElementById(id);
         if (element) {
-          const rect = element.getBoundingClientRect();
-          // Element is considered in view if its top is above the middle of viewport
-          // and its bottom is below 100px from the top.
+          const rect = element.getBoundingClientRect(); // Get position of the section
+          // Check if the section is in the middle of the screen
           if (rect.top <= window.innerHeight / 2 && rect.bottom >= 100) {
             current = id;
           }
         }
       }
 
-      // If user scrolled to the absolute bottom of the page
+      // Special check for the bottom of the page
       if (window.innerHeight + Math.round(window.scrollY) >= document.documentElement.scrollHeight - 10) {
-        current = sections[sections.length - 1];
+        current = sections[sections.length - 1]; // Set last section as active
       }
 
       if (current) setActiveSection(current);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    // Initial check after a short delay to ensure rendering is complete
-    const timeoutId = setTimeout(handleScroll, 100);
+    window.addEventListener('scroll', handleScroll, { passive: true }); // Bind scroll event
+    const timeoutId = setTimeout(handleScroll, 100); // Initial check
 
-    return () => {
+    return () => { // Cleanup
       window.removeEventListener('scroll', handleScroll);
       clearTimeout(timeoutId);
     };
   }, []);
 
+  // List of items in the quick navigation menu
   const navItems = [
     { id: 'map-section', label: 'Live Map', icon: MapPin, color: 'from-green-500 to-green-600', shadow: 'shadow-green-500/50', count: 0 },
     { id: 'active-transfers', label: 'Active Transfers', icon: ArrowRightLeft, color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/50', count: 0 },
-    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount },
-    { id: 'incoming-emergency', label: 'Incoming Emergencies', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount },
+    { id: 'pending-requests', label: 'Pending Requests', icon: Clock, color: 'from-orange-500 to-orange-600', shadow: 'shadow-orange-500/50', count: pendingCount }, // Show number of pending requests
+    { id: 'incoming-emergency', label: 'Incoming Emergencies', icon: AlertCircle, color: 'from-red-500 to-red-600', shadow: 'shadow-red-500/50', count: incomingCount }, // Show number of incoming emergencies
     { id: 'resource-availability', label: 'Resource Availability', icon: Activity, color: 'from-emerald-500 to-emerald-600', shadow: 'shadow-emerald-500/50', count: 0 },
   ];
 
@@ -1270,18 +1271,19 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
           return (
             <button
               key={item.id}
-              onClick={() => scrollToSection(item.id)}
+              onClick={() => scrollToSection(item.id)} // Click to scroll
               className="group relative p-2.5 rounded-full transition-all duration-300 ease-out hover:scale-110"
             >
-              {/* Active Background Glow */}
+              {/* Active Highlight Background */}
               <div
                 className={`absolute inset-0 rounded-full transition-all duration-300 ${isActive ? `bg-gradient-to-br ${item.color} ${item.shadow} shadow-lg scale-100 opacity-100` : 'opacity-0 scale-75'
                   }`}
               />
 
-              {/* Hover Background */}
+              {/* Hover Glow */}
               <div className={`absolute inset-0 rounded-full bg-white/50 transition-all duration-300 ${!isActive ? 'group-hover:opacity-100' : ''} opacity-0`} />
 
+              {/* Icon */}
               <item.icon
                 size={18}
                 className={`relative z-10 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white'
@@ -1289,17 +1291,17 @@ function QuickNav({ pendingCount = 0, incomingCount = 0 }: { pendingCount?: numb
                 strokeWidth={isActive ? 2.5 : 2}
               />
 
-              {/* Notification Badge */}
+              {/* Alert Notification Bubble */}
               {item.count > 0 && (
                 <div className="absolute -top-1 -right-1 z-20 w-4 h-4 bg-red-600 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 shadow-sm ">
                   {item.count}
                 </div>
               )}
 
-              {/* Tooltip */}
+              {/* Label that appears on hover (Tooltip) */}
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2.5 py-1 bg-gray-900/90 dark:bg-white/90 backdrop-blur-sm text-white dark:text-gray-900 text-[10px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 translate-x-1 group-hover:translate-x-0 whitespace-nowrap shadow-xl">
                 {item.label}
-                {/* Arrow */}
+                {/* Visual arrow pointing back to the icon */}
                 <div className="absolute top-1/2 -translate-y-1/2 -left-3 border-[4px] border-transparent border-r-gray-900/90 dark:border-r-white/90" />
               </div>
             </button>
