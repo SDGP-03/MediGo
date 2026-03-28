@@ -3,11 +3,11 @@ import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class AuthService {
-    constructor(private readonly firebase: FirebaseService) {}
+    constructor(private readonly firebase: FirebaseService) { }
 
     async createHospitalStaff(data: any) {
         const { name, email, password, hospitalName, placeId, role, address, lat, lng } = data;
-        
+
         if (!['hospitaladmin', 'fleetofficer'].includes(role)) {
             throw new HttpException('Invalid role', HttpStatus.BAD_REQUEST);
         }
@@ -31,13 +31,13 @@ export class AuthService {
 
             // 3. Save to Realtime Database
             const db = this.firebase.getDatabase();
-            
+
             // Shared hospital node basic info (update to prevent overriding if already exists)
             await db.ref(`hospitals/${placeId}/info`).update({
-                 name: hospitalName,
-                 placeId: placeId,
-                 ...(address && { address }),
-                 ...(lat && lng && { location: { lat, lng } })
+                name: hospitalName,
+                placeId: placeId,
+                ...(address && { address }),
+                ...(lat && lng && { location: { lat, lng } })
             });
 
             // Depending on role, save them in the respective arrays/nodes
