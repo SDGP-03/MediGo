@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { User, MapPin, AlertCircle, Users, Truck, CheckCircle2, AlertTriangle, XCircle, Info, Building2, Paperclip, File, Star } from 'lucide-react';
 import { database } from '../firebase';
-import { ref, push, set } from 'firebase/database';
+import { ref, push, set, get } from 'firebase/database';
 import { AmbulanceMap } from '../components/dashboard/AmbulanceMap';
 import { useDriverLocations } from '../useDriverLocations';
 import { useFleetData } from '../hooks/useFleetData';
@@ -85,6 +85,23 @@ export function TransferRequest() {
 
     return () => off(recordsRef, 'value', unsubscribe);
   }, [hospitalId]);
+
+  // Real-time listener for destination hospital's resource availability
+  useEffect(() => {
+    if (!toHospitalDetails?.placeId || !isDestinationRegistered) {
+      if (!isDestinationRegistered) setHospitalResources([]);
+      return;
+    }
+
+    const resourcesRef = ref(database, `hospitals/${toHospitalDetails.placeId}/resources`);
+    const unsubscribe = onValue(resourcesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setHospitalResources(snapshot.val() || []);
+      }
+    });
+
+    return () => off(resourcesRef, 'value', unsubscribe);
+  }, [toHospitalDetails?.placeId, isDestinationRegistered]);
 
   // Ambulances that are available AND not assigned to any driver AND have no active transfer
   const assignedAmbulanceIds = new Set(
@@ -628,22 +645,22 @@ export function TransferRequest() {
                                 });
                                 if (formErrors.toHospital) setFormErrors({ ...formErrors, toHospital: '' });
 
-                                // Check registration and get real-time resources from BACKEND
+                                // Check registration and get real-time resources from FIREBASE directly
                                 setCheckingRegistration(true);
                                 setIsDestinationRegistered(null);
                                 setHospitalResources([]);
                                 
-                                apiFetch(`/hospitals/${place.place_id}/availability`)
-                                  .then((data) => {
-                                    if (data.registered) {
+                                get(ref(database, `hospitals/${place.place_id}`))
+                                  .then((snapshot) => {
+                                    if (snapshot.exists()) {
                                       setIsDestinationRegistered(true);
-                                      setHospitalResources(data.resources || []);
+                                      // The useEffect realtime listener will populate hospitalResources.
                                     } else {
                                       setIsDestinationRegistered(false);
                                     }
                                   })
                                   .catch((err) => {
-                                    console.error("Error fetching hospital info from backend:", err);
+                                    console.error("Error fetching hospital info from Firebase:", err);
                                     setIsDestinationRegistered(false);
                                   })
                                   .finally(() => {
