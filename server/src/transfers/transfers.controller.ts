@@ -42,7 +42,8 @@ export class TransfersController {
         return transfer;
     }
 
-    /** Cancel a transfer request */
+    /** Cancel a transfer request (patch) : updating a specific field*/
+    //** 201 Created or 204 No Content **//
     @Patch(':id/cancel')
     @HttpCode(204)
     async cancelTransfer(@Param('id') id: string) {

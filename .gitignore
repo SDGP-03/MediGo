@@ -22,3 +22,7 @@ Desktop.ini
 **/.env
 **/.env.local
 **/.firebase/
+
+
+.postman
+/postman

@@ -22,15 +22,17 @@ export class TransfersService implements OnModuleInit {
 
     async onModuleInit() {
         this.logger.log('Initializing Transfer Request listener for Fleet state management...');
-        
-        // Listen to active transfers for ETA/Distance tracking
+
+        // Listen to active transfers for ETA/Distance tracking 
+        //checking new one is added or old one is changed
         this.firebase.ref('transfer_requests').on('value', async (snapshot) => {
             const data = snapshot.val();
             if (!data) return;
-            
+
             const newActiveTransfers = new Map<string, ActiveTransfer>();
             Object.entries(data).forEach(([key, value]: [string, any]) => {
                 const dest = value.destination;
+                //ignores all "completed and "cancelled" reciepts ond only listening to the "in progress"
                 if (value.status === 'in_progress' && value.driverId && (dest?.lat || dest?.placeId || dest?.address)) {
                     newActiveTransfers.set(value.driverId, {
                         id: key,
@@ -59,10 +61,12 @@ export class TransfersService implements OnModuleInit {
         this.firebase.ref('driver_locations').on('child_changed', async (snapshot) => {
             const driverId = snapshot.key;
             const locationData = snapshot.val();
-            
+
             if (!driverId || !locationData || !locationData.lat || !locationData.lng) return;
-            
+
             const activeTransfer = this.activeTransfers.get(driverId);
+            // SCENE: Driver update received, but they are NOT currently assigned to an active 'in_progress' transfer.
+            // We stop processing here since ETA is only tracked for active trips.
             if (!activeTransfer) {
                 // If busy but not tracked, log it
                 if (locationData.status === 'busy') {
@@ -70,10 +74,10 @@ export class TransfersService implements OnModuleInit {
                 }
                 return;
             }
-            
+
             const lastCache = this.lastUpdateCache.get(driverId);
             const now = Date.now();
-            
+
             let shouldUpdate = false;
             let reason = '';
             if (!lastCache) {
@@ -82,7 +86,7 @@ export class TransfersService implements OnModuleInit {
             } else {
                 const timeDiff = (now - lastCache.time) / 1000;
                 const distMoved = this.calculateDistance(lastCache.lat, lastCache.lng, locationData.lat, locationData.lng) * 1000;
-                
+
                 // Update if moved > 100 meters OR 60 seconds have passed
                 if (timeDiff >= 60) {
                     shouldUpdate = true;
@@ -92,7 +96,7 @@ export class TransfersService implements OnModuleInit {
                     reason = `Distance moved: ${distMoved.toFixed(1)}m`;
                 }
             }
-            
+
             if (shouldUpdate) {
                 this.triggerEtaUpdate(driverId!, activeTransfer, locationData);
             }
@@ -108,6 +112,7 @@ export class TransfersService implements OnModuleInit {
             const ambulanceId = data.ambulanceId || data.ambulance;
             const hospitalId = data.hospitalId;
 
+            // checking all three of these IDs are present
             if (!driverId || !ambulanceId || !hospitalId) return;
 
             try {
@@ -137,7 +142,7 @@ export class TransfersService implements OnModuleInit {
     private async syncAmbulanceState(hospitalId: string, ambId: string, status: string, transferData?: any, transferId?: string) {
         try {
             const updates: any = { status };
-            
+
             if (transferData && (status === 'assigned' || status === 'on_trip')) {
                 updates.currentTransfer = transferId || 'Active Transfer';
                 updates.patientId = transferData.patient?.id || 'Unknown';
@@ -160,12 +165,12 @@ export class TransfersService implements OnModuleInit {
     private async triggerEtaUpdate(driverId: string, activeTransfer: ActiveTransfer, locationData?: any) {
         try {
             const now = Date.now();
-            
+
             if (!locationData) {
                 const snapshot = await this.firebase.ref(`driver_locations/${driverId}`).get();
                 locationData = snapshot.val();
             }
-
+            //check for location data 
             if (!locationData || !locationData.lat || !locationData.lng) {
                 this.logger.debug(`Cannot update ETA for ${driverId}: location not available`);
                 return;
@@ -180,10 +185,13 @@ export class TransfersService implements OnModuleInit {
             }
 
             let destination = '';
+            //If the system has the exact GPS 
             if (activeTransfer.destLat && activeTransfer.destLng) {
                 destination = `${activeTransfer.destLat},${activeTransfer.destLng}`;
+                //If coordinates are missing, it checks for a destPlaceId
             } else if (activeTransfer.destPlaceId) {
                 destination = `place_id:${activeTransfer.destPlaceId}`;
+                //checks for a destPlaceId address
             } else if (activeTransfer.destAddress) {
                 destination = encodeURIComponent(activeTransfer.destAddress);
             }
@@ -191,7 +199,36 @@ export class TransfersService implements OnModuleInit {
             if (!destination) return;
 
             const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${locationData.lat},${locationData.lng}&destination=${destination}&key=${apiKey}`;
+            //command that sends the request over the internet to the Google Maps API
             const response = await axios.get(url);
+            //sample output
+            //    {
+            //         "status": "OK",
+            //             "routes": [
+            //                 {
+            //                     "legs": [
+            //                         {
+            //                             "distance": {
+            //                                 "text": "5.4 km",
+            //                                 "value": 5412
+            //                             },
+            //                             "duration": {
+            //                                 "text": "12 mins",
+            //                                 "value": 724
+            //                             },
+            //                             "start_address": "General Hospital, Colombo",
+            //                             "end_address": "City Medical Center, Kandy",
+            //                             "steps": [
+            //                                 // Internal turn-by-turn directions go here...
+            //                             ]
+            //                         }
+            //                     ],
+            //                     "overview_polyline": {
+            //                         "points": "a~l~FjkulOnB" // Encoded string used to draw the blue line on the map
+            //                     }
+            //                 }
+            //             ]
+            //     }
 
             if (response.data.status === 'OK' && response.data.routes[0].legs[0]) {
                 const leg = response.data.routes[0].legs[0];
@@ -199,6 +236,7 @@ export class TransfersService implements OnModuleInit {
                 const durationStr = leg.duration.text;
 
                 this.logger.log(`Updated ETA for transfer ${activeTransfer.id}: ${durationStr}, ${distanceStr}`);
+                //update to the firebase
                 await this.firebase.ref(`transfer_requests/${activeTransfer.id}`).update({
                     eta: durationStr,
                     distance: distanceStr
@@ -219,7 +257,9 @@ export class TransfersService implements OnModuleInit {
 
             const callback = transfersRef.on('value', (snapshot) => {
                 const data = snapshot.val();
+                //checks if the transfer_requests node in Firebase is empty
                 if (!data) {
+                    // setting up currently active and pending tranfer list empty
                     subscriber.next({ data: JSON.stringify({ pending: [], active: [] }) } as MessageEvent);
                     return;
                 }
@@ -258,13 +298,18 @@ export class TransfersService implements OnModuleInit {
 
     /** Create a new transfer request */
     async createTransfer(uid: string, data: any): Promise<{ id: string }> {
+        // 1. Identify which hospital the administrator belongs to
         const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
+
         const adminData = adminSnap.val() || {};
         const hospitalId: string = adminData.hospitalPlaceId || uid;
 
+        // 2. Fetch the hospital's profile info (name, address, GPS coordinates)
         const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
         const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
 
+        // 3. ENRICH the raw data: Automatically pre-fill the "Pickup" location
+        // using the hospital information we just fetched.
         const enrichedData = {
             ...data,
             pickup: {
@@ -278,6 +323,7 @@ export class TransfersService implements OnModuleInit {
             hospitalId: hospitalId,
         };
 
+        //push to firebase transfer request
         const newRef = this.firebase.ref('transfer_requests').push();
         await newRef.set(enrichedData);
 
@@ -356,13 +402,13 @@ export class TransfersService implements OnModuleInit {
         const R = 6371;
         const dLat = this.deg2rad(lat2 - lat1);
         const dLon = this.deg2rad(lon2 - lon1);
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
 
     private deg2rad(deg: number): number {
-        return deg * (Math.PI/180);
+        return deg * (Math.PI / 180);
     }
 
     // ── Fuel efficiency: compute distance via Routes API & log trip ──────────
