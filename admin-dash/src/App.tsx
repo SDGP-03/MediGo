@@ -38,12 +38,24 @@ export default function App() {
   // const [currentView, setCurrentView] = useState<View>('dashboard');
 
 
+  // Tracks the current view of the authentication flow
   const [authView, setAuthView] = useState<AuthView>('login');
+
+  // Stores the Firebase Auth user object when logged in
   const [user, setUser] = useState<User | null>(null);
+
+  // Stores the authorized role fetched from the database
   const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Stores the admin's name for display in the header
   const [adminName, setAdminName] = useState<string | null>(null);
+
+  // Flag to manage the global loading state while checking auth
   const [loading, setLoading] = useState(true);
+
+  // Controls the visibility of the logout confirmation dialog
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -70,7 +82,7 @@ export default function App() {
         setAdminName(null);
         setUserRole(null);
       }
-      
+
       setLoading(false);
     });
     //when app closes, tell the system to stop watching
@@ -120,7 +132,7 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
-        onRegister={() => {}} // No-op as the button is removed
+        onRegister={() => { }} // No-op as the button is removed
         onForgotPassword={() => setAuthView('forgot-password')}
         onSupport={() => setAuthView('support')}
       />

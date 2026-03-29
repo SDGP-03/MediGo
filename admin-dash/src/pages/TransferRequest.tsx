@@ -27,8 +27,11 @@ interface PatientRecord {
 
 // Compute the next patient ID based on the highest existing numeric suffix
 function getNextPatientId(records: PatientRecord[]): string {
+  //loop through the existing code and find the max
   const maxNum = records.reduce((max, p) => {
+    //regular expression to parse the patient ID 
     const match = p.id.match(/PT-(\d+)/);
+    //
     if (match) {
       const num = parseInt(match[1], 10);
       return num > max ? num : max;
@@ -39,26 +42,49 @@ function getNextPatientId(records: PatientRecord[]): string {
 }
 
 export function TransferRequest() {
+
+  // Manages the current step in the multi-stage transfer request form
   const [step, setStep] = useState<'patient' | 'transfer' | 'ambulance'>('patient');
+
+  // Tracks the submission state for the final API request to preventing duplicate submissions
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Stores the ID of the selected driver for the transfer mission
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+
+  // Stores the ID of the selected ambulance for the transfer mission
   const [selectedAmbulanceId, setSelectedAmbulanceId] = useState<string>('');
+
+  // Holds validation errors for each step of the form
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Stores indices of selected patient documents from localStorage for attachment
   const [selectedDocumentIndices, setSelectedDocumentIndices] = useState<number[]>([]);
+
+  // Stores coordinates and metadata for the destination hospital from Google Places
   const [toHospitalDetails, setToHospitalDetails] = useState<{
     address: string;
     lat: number;
     lng: number;
     placeId: string;
   } | null>(null);
+
+  // Tracks if the destination hospital is a verified MediGo partner in our database
   const [isDestinationRegistered, setIsDestinationRegistered] = useState<boolean | null>(null);
+
+  // Loading state for the backend API check for hospital registration
   const [checkingRegistration, setCheckingRegistration] = useState(false);
+
+  // Stores the live resource availability (e.g., ICU beds, Ventilators) for the destination hospital
   const [hospitalResources, setHospitalResources] = useState<any[]>([]);
 
-  // Fleet data from Firebase (ambulances + drivers)
+  // Custom hook to fetch the current hospital's registered fleet (drivers and ambulances)
   const { ambulances, drivers, hospitalName, hospitalId } = useFleetData();
+
+  // Custom hook to track real-time driver locations and statuses ('busy', 'online') via backend stream
   const { onlineDrivers, busyDrivers } = useDriverLocations();
 
+  // Stores the list of decrypted patient records fetched from the hospital's database
   const [patientRecords, setPatientRecords] = useState<PatientRecord[]>([]);
 
   // Fetch real patient records
@@ -113,6 +139,8 @@ export function TransferRequest() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<PatientRecord[]>([]);
   const [isNewPatient, setIsNewPatient] = useState(false);
+
+  // Reference to the patient name autocomplete container for detecting clicks outside to close suggestions
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
   const { isLoaded } = useJsApiLoader({
@@ -632,7 +660,7 @@ export function TransferRequest() {
                                 setCheckingRegistration(true);
                                 setIsDestinationRegistered(null);
                                 setHospitalResources([]);
-                                
+
                                 apiFetch(`/hospitals/${place.place_id}/availability`)
                                   .then((data) => {
                                     if (data.registered) {

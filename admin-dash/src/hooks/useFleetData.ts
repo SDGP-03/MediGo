@@ -152,15 +152,34 @@ export interface UseFleetDataReturn {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useFleetData(): UseFleetDataReturn {
+    // Stores the current Firebase Auth user ID 
     const [uid, setUid] = useState<string | null>(null);
+
+    // Stores the unique ID for the hospital (used as the database path key)
     const [hospitalId, setHospitalId] = useState<string | null>(null);
+
+    // Tracks if the initial authentication check with Firebase is finished
     const [authResolved, setAuthResolved] = useState(false);
+
+    // List of all ambulance units registered to this hospital
     const [ambulances, setAmbulances] = useState<AmbulanceUnit[]>([]);
+
+    // List of all drivers registered to this hospital
     const [drivers, setDrivers] = useState<Driver[]>([]);
+
+    // List of currently active/pending transfer requests
     const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
+
+    // List of historical trip records for analytics
     const [tripHistory, setTripHistory] = useState<TripRecord[]>([]);
+
+    // Controls the global loading state for the fleet data subscription
     const [loading, setLoading] = useState(true);
+
+    // Stores any error messages encountered during Firebase operations
     const [error, setError] = useState<string | null>(null);
+
+    // The human-readable name of the hospital 
     const [hospitalName, setHospitalName] = useState<string>('');
 
     // ── Track auth state ──

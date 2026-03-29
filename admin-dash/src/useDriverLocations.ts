@@ -33,14 +33,28 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
 export function useDriverLocations(externalDriverIds: string[] = []) {
+    // Stores drivers currently marked as 'online' and active within the last 5 minutes
     const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
+    
+    // Stores drivers currently on a task ('busy') and active within the last 5 minutes
     const [busyDrivers, setBusyDrivers] = useState<DriverLocation[]>([]);
+    
+    // Stores drivers marked as 'offline' or stale (last seen > 5 minutes ago) but within the last 24 hours
     const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
+    
+    // Manages the initial loading state while fetching and processing driver data
     const [isLoading, setIsLoading] = useState(true);
+    
+    // A counter used to trigger periodic re-calculations of driver status (e.g., checking for staleness)
     const [heartbeat, setHeartbeat] = useState(0);
 
+    // Keeps a stable reference to the latest external driver IDs passed as props
     const externalDriverIdsRef = useRef(externalDriverIds);
+    
+    // Stores the most recent snapshot of driver location data from Firebase for reuse
     const lastDataRef = useRef<Record<string, any> | null>(null);
+    
+    // Stores the set of driver IDs belonging to the hospital to filter out irrelevant drivers
     const allowedDriverIdsRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {

@@ -18,10 +18,7 @@ async function getIdToken(): Promise<string> {
 }
 
 /** Make an authenticated fetch request to the backend */
-export async function apiFetch<T = any>(
-    path: string,
-    options: RequestInit = {},
-): Promise<T> {
+export async function apiFetch<T = any>(path: string, options: RequestInit = {},): Promise<T> {
     const token = await getIdToken();
     const url = `${API_BASE}${path}`;
 

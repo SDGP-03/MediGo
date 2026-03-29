@@ -69,20 +69,37 @@ export function AmbulanceMap({
   height = '384px',
   trackedDriverTrigger = null
 }: AmbulanceMapProps) {
+  // Stores the currently selected ambulance on the map for detailed view
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceLocation | null>(null);
+
+  // Reference to the Google Maps instance
   const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  // Stores the browser's current geolocation (lat, lng, accuracy)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+
+  // Boolean to toggle real-time tracking of the user's location
   const [isTracking, setIsTracking] = useState(false);
+
+  // Stores any error messages from the Geolocation API
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  // ID of the active geolocation watch process to clear it later
   const [watchId, setWatchId] = useState<number | null>(null);
+
+  // Controls the visibility of the user's location info window
   const [showUserLocationInfo, setShowUserLocationInfo] = useState(false);
 
-  // State for external tracked device
+  // Stores data for an externally tracked device from the tracker app
   const [trackedDevice, setTrackedDevice] = useState<TrackedDevice | null>(null);
 
-  // Driver locations come from props now
+  // Stores the online/busy driver currently selected on the map
   const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null);
+
+  // Stores the offline driver currently selected on the map
   const [selectedOfflineDriver, setSelectedOfflineDriver] = useState<DriverLocation | null>(null);
+
+  // Controls the visibility of the tracked device info overlay
   const [showTrackedDeviceInfo, setShowTrackedDeviceInfo] = useState(false);
 
 
@@ -149,7 +166,7 @@ export function AmbulanceMap({
 
         if (activeTransfer) {
           const toPickup = ['accepted', 'on_way', 'at_pickup', 'dispatched'].includes(activeTransfer.status);
-          
+
           // For inter-hospital transfers (has a destination hospital), the receiving hospital
           // always wants to see the route to the final destination, not the sending hospital.
           const isInterHospitalTransfer = Boolean(activeTransfer.destination?.hospitalName);
