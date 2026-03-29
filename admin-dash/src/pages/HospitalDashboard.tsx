@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react"; // React hooks for managing state and side effects
-import { useNavigate } from "react-router-dom"; // Hook for navigating between different pages
-import { Ambulance, Clock, AlertCircle, MapPin, Layers, List, Navigation, AlertTriangle, Activity, CheckCircle, User, ArrowRightLeft, Shield, Car, Bed, Stethoscope, Zap, HeartPulse } from "lucide-react"; // Icons for the UI
-import { toast } from "sonner"; // Library for showing small popup notifications
-import { Switch } from "../components/ui/switch"; // UI component for On/Off toggles
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog"; // UI component for popup windows (modals)
-import { AmbulanceMap } from "../components/dashboard/AmbulanceMap"; // The map component used to show ambulances
-import { useDriverLocations } from "../useDriverLocations"; // Custom hook that listens to live driver locations from Firebase
-import { apiFetch } from "../api/apiClient"; // Our own helper for making requests to the NestJS backend
-import { database, auth } from "../firebase"; // Access to the Firebase database and authentication
-import { onAuthStateChanged } from "firebase/auth"; // Function to detect when a user logs in or out
-import { ref, onValue, off, get, set } from "firebase/database"; // Firebase database functions (references, listeners, getters, setters)
-import { TransferCard } from "../components/dashboard/TransferCard"; // Component to display a single transfer request row
-import { decryptData } from "../utils/encryption"; // Helper to decrypt any sensitive data coming from the database
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Ambulance, Clock, AlertCircle, MapPin, Layers, List, Navigation, AlertTriangle, Activity, CheckCircle, User, ArrowRightLeft, Shield, Car, Bed, Stethoscope, Zap, HeartPulse } from "lucide-react";
+import { toast } from "sonner";
+import { Switch } from "../components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import { AmbulanceMap } from "../components/dashboard/AmbulanceMap";
+import { useDriverLocations } from "../useDriverLocations";
+import { apiFetch } from "../api/apiClient";
+import { database, auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { ref, onValue, off, get, set } from "firebase/database";
+import { TransferCard } from "../components/dashboard/TransferCard";
+import { decryptData } from "../utils/encryption";
 
 export function HospitalDashboard() { // The main functional component for the dashboard
   const navigate = useNavigate(); // Hook to change pages
@@ -38,35 +38,35 @@ export function HospitalDashboard() { // The main functional component for the d
       toast.error('No driver assigned to this request.'); // Show error if no ID
       return;
     }
-    setDriverPopupOpen(true); // Open the popup UI
-    setDriverPopupLoading(true); // Show a loading spinner
-    setDriverPopupData(null); // Clear any old data
+    setDriverPopupOpen(true);
+    setDriverPopupLoading(true);
+    setDriverPopupData(null);
     try {
       const user = auth.currentUser; // Get the currently logged-in administrator
-      if (!user) throw new Error('Not authenticated'); // Stop if not logged in
+      if (!user) throw new Error('Not authenticated');
 
       // 1. Resolve hospitalId (admin may use hospitalPlaceId or fall back to uid)
-      const adminSnap = await get(ref(database, `admin/${user.uid}`)); // Get admin's profile from Firebase
-      const adminData = adminSnap.exists() ? adminSnap.val() : {}; // Extract the data if it exists
-      const hospitalId: string = adminData.hospitalPlaceId || user.uid; // ID of the hospital this admin belongs to
+      const adminSnap = await get(ref(database, `admin/${user.uid}`));
+      const adminData = adminSnap.exists() ? adminSnap.val() : {};
+      const hospitalId: string = adminData.hospitalPlaceId || user.uid;
 
       // 2. Fetch static/membership data from the hospital's driver list
-      const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`); // Reference to the driver's info
-      const driverSnap = await get(driverRef); // Fetch the data
-      const driverData = driverSnap.exists() ? driverSnap.val() : {}; // Extract data
+      const driverRef = ref(database, `hospitals/${hospitalId}/drivers/${driverId}`);
+      const driverSnap = await get(driverRef);
+      const driverData = driverSnap.exists() ? driverSnap.val() : {};
       // 3. Fetch live tracking data from driver_locations
-      const locationRef = ref(database, `driver_locations/${driverId}`); // Reference to driver's live GPS data
+      const locationRef = ref(database, `driver_locations/${driverId}`);
       const locationSnap = await get(locationRef); // Fetch the GPS data
-      const locationData = locationSnap.exists() ? locationSnap.val() : {}; // Extract GPS data
+      const locationData = locationSnap.exists() ? locationSnap.val() : {};
       if (driverSnap.exists() || locationSnap.exists()) { // If we found any data for this driver
         // Merge data, prioritizing live location fields if they exist
-        const now = Date.now(); // Current time in milliseconds
-        const ts = locationData.timestamp || 0; // The last time the driver updated their GPS
+        const now = Date.now();
+        const ts = locationData.timestamp || 0;
         let displayStatus = locationData.status || (locationData.isOnline === true ? 'online' : 'offline'); // Determine status
 
         // Heartbeat logic: If last update is > 5 mins old, force offline
         if (displayStatus !== 'offline' && (now - ts >= 5 * 60 * 1000)) {
-          displayStatus = 'offline'; // If they haven't talked to us in 5 mins, they are offline
+          displayStatus = 'offline';
         }
 
         setDriverPopupData({ // Update the state with the merged driver info
@@ -78,23 +78,23 @@ export function HospitalDashboard() { // The main functional component for the d
           isBusy: displayStatus === 'busy'
         });
       } else {
-        setDriverPopupData({ id: driverId, notFound: true }); // Mark as missing if no data found
+        setDriverPopupData({ id: driverId, notFound: true });
       }
     } catch (err: any) {
-      console.error('Error fetching driver details from Firebase:', err); // Log any errors to the console
+      console.error('Error fetching driver details from Firebase:', err);
       setDriverPopupData({ id: driverId, error: true }); // Show an error state in the UI
     } finally {
-      setDriverPopupLoading(false); // Hide the loading spinner
+      setDriverPopupLoading(false);
     }
   };
 
   // Function to move the map focus to a specific transfer's driver
   const handleTrackLive = (transfer: any) => {
-    if (!transfer.driverId) { // Check if the transfer has a driver assigned
+    if (!transfer.driverId) {
       toast.error("No driver assigned to this transfer yet."); // Show error if no driver
       return;
     }
-    setMapView("map"); // Switch the dashboard view to "Map" mode
+    setMapView("map");
     setTrackedDriverTrigger({ id: transfer.driverId, timestamp: Date.now() }); // Send a signal to the Map component to center on this driver
 
     setTimeout(() => {
@@ -168,11 +168,11 @@ export function HospitalDashboard() { // The main functional component for the d
     const unsubscribe = auth.onAuthStateChanged(async (user) => { // Listen for changes in login status
       if (user) { // If a user is logged in
         try {
-          const adminRef = ref(database, `admin/${user.uid}`); // Reference to the admin's profile data
-          const snapshot = await get(adminRef); // Fetch the admin data once
+          const adminRef = ref(database, `admin/${user.uid}`);
+          const snapshot = await get(adminRef);
           if (snapshot.exists()) {
-            const data = snapshot.val(); // Extract the profile data
-            setCurrentHospitalName(data.hospitalName || ""); // Save the hospital's name to state
+            const data = snapshot.val();
+            setCurrentHospitalName(data.hospitalName || "");
 
             // Resolve the correct hospital key: placeId takes priority, uid is the fallback
             const hospitalKey: string = data.hospitalPlaceId || user.uid;
@@ -188,7 +188,7 @@ export function HospitalDashboard() { // The main functional component for the d
             resourcesUnsub = () => off(resourcesRef, 'value', unsubRes);
           }
         } catch (err) {
-          console.error("Error fetching admin profile:", err); // Log errors
+          console.error("Error fetching admin profile:", err);
         }
       }
     });

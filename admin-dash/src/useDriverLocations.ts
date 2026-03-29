@@ -35,25 +35,25 @@ const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 export function useDriverLocations(externalDriverIds: string[] = []) {
     // Stores drivers currently marked as 'online' and active within the last 5 minutes
     const [onlineDrivers, setOnlineDrivers] = useState<DriverLocation[]>([]);
-    
+
     // Stores drivers currently on a task ('busy') and active within the last 5 minutes
     const [busyDrivers, setBusyDrivers] = useState<DriverLocation[]>([]);
-    
+
     // Stores drivers marked as 'offline' or stale (last seen > 5 minutes ago) but within the last 24 hours
     const [offlineDrivers, setOfflineDrivers] = useState<DriverLocation[]>([]);
-    
+
     // Manages the initial loading state while fetching and processing driver data
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // A counter used to trigger periodic re-calculations of driver status (e.g., checking for staleness)
     const [heartbeat, setHeartbeat] = useState(0);
 
     // Keeps a stable reference to the latest external driver IDs passed as props
     const externalDriverIdsRef = useRef(externalDriverIds);
-    
+
     // Stores the most recent snapshot of driver location data from Firebase for reuse
     const lastDataRef = useRef<Record<string, any> | null>(null);
-    
+
     // Stores the set of driver IDs belonging to the hospital to filter out irrelevant drivers
     const allowedDriverIdsRef = useRef<Set<string>>(new Set());
 
@@ -84,10 +84,12 @@ export function useDriverLocations(externalDriverIds: string[] = []) {
 
             try {
                 // 1. Resolve Admin -> HospitalId
+                // This identifies which hospital the logged-in admin manages.
                 const adminSnap = await get(ref(database, `admin/${user.uid}`));
                 const hospitalId: string = adminSnap.val()?.hospitalPlaceId || user.uid;
 
-                // 2. Listen to Hospital's Drivers (Reactive)
+                // 2. Listen to Hospital's Drivers (Internal Admin Drivers)
+                // This fetches the list of drivers that belong to the admin's hospital.
                 const hospitalDriversRef = ref(database, `hospitals/${hospitalId}/drivers`);
                 hospitalUnsub = onValue(hospitalDriversRef, (snap) => {
                     const data = snap.val() || {};
@@ -96,7 +98,7 @@ export function useDriverLocations(externalDriverIds: string[] = []) {
                     const activeIds = Object.entries(data)
                         .filter(([, val]: [string, any]) => val.status === 'active')
                         .map(([id]) => id);
-                    
+
                     allowedDriverIdsRef.current = new Set(activeIds);
                     // Manually trigger a re-process if we already have location data
                     setHeartbeat((h) => h + 1);
@@ -134,6 +136,9 @@ export function useDriverLocations(externalDriverIds: string[] = []) {
         const allowedIds = allowedDriverIdsRef.current;
 
         const allDrivers: DriverLocation[] = Object.entries(data)
+            // FILTER LOGIC:
+            // - allowedIds.has(id): Includes "My Hospital" drivers (Admin Drivers)
+            // - extDrivers.has(id): Includes "Receiving Hospital" drivers (External Drivers)
             .filter(([id]) => allowedIds.has(id) || extDrivers.has(id))
             .map(([id, value]: [string, any]) => {
                 let rawStatus: string = value.status || (value.isOnline ? 'online' : 'offline');

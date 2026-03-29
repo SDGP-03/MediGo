@@ -87,7 +87,7 @@ export interface TripRecord {
  * normalizeDriver - A mapping function that transforms raw data from Firebase 
  * into a structured 'Driver' object. It handles data sanitization, schema 
  * compatibility, and provides default values.
- * helps when driver is blocked
+ * driverProfiles updating
  */
 function normalizeDriver(id: string, raw: any): Driver {
     // Helper to ensure numerical fields are valid numbers; defaults to 0 if invalid.
@@ -159,6 +159,7 @@ export interface UseFleetDataReturn {
 
     addPendingTransfer: (transfer: Omit<PendingTransfer, 'id'>) => Promise<void>;
     removePendingTransfer: (id: string) => Promise<void>;
+    // to suggest own patient ID
     hospitalId: string | null;
 }
 
@@ -256,18 +257,23 @@ export function useFleetData(): UseFleetDataReturn {
                     })),
                 );
 
+                // ─── Process Drivers ───
+                // Convert the raw Firebase drivers object into an array and normalize each record
                 const drvObj = data.drivers || {};
                 setDrivers(
                     Object.entries(drvObj).map(([id, val]: [string, any]) => ({
-                        ...normalizeDriver(id, val),
+                        ...normalizeDriver(id, val), // Applies safety checks and fallbacks
                     })),
                 );
 
+                // ─── Process Pending Transfers ───
+                // Convert pending transfers to an array and decrypt sensitive patient identifiers
                 const pndObj = data.pendingTransfers || {};
                 setPendingTransfers(
                     Object.entries(pndObj).map(([id, val]: [string, any]) => ({
                         id,
                         ...val,
+                        // SECURITY: Patient names are encrypted at rest; they must be decrypted for the UI
                         patient: decryptData(val.patient),
                     })),
                 );
@@ -311,6 +317,7 @@ export function useFleetData(): UseFleetDataReturn {
 
     // ── Helpers ──
 
+    // keep this function in memory without re running. unless the hospitalId changes
     const addAmbulance = useCallback(async (unit: AmbulanceUnit) => {
         if (!hospitalId) return;
         await set(ref(database, `hospitals/${hospitalId}/ambulances/${unit.id}`), unit);

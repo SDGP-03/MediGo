@@ -324,24 +324,46 @@ export class TransfersService implements OnModuleInit {
             hospitalId: hospitalId,
         };
 
-        //push to firebase transfer request
-        const newRef = this.firebase.ref('transfer_requests').push();
-        await newRef.set(enrichedData);
-
         // Identify target driver and ambulance from the input data
         const targetDriverId = data.driverId;
         const targetAmbulanceId = data.ambulanceId || data.ambulance;
-        // If both driver and ambulance are specified, update their statuses
+
+        // --- CONCURRENCY FIX: Use a transaction to safely check and lock the driver ---
+        if (targetDriverId && hospitalId) {
+            const driverRef = this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}/status`);
+            
+            const { committed, snapshot } = await driverRef.transaction((currentStatus) => {
+                // Abort the transaction if the driver is already assigned, busy, or on a trip
+                if (currentStatus === 'assigned' || currentStatus === 'busy' || currentStatus === 'on_trip') {
+                    return; // Returning undefined aborts the transaction
+                }
+                // Otherwise, lock the driver by claiming their status
+                return 'assigned';
+            });
+
+            if (!committed) {
+                this.logger.warn(`Failed to assign driver ${targetDriverId}: Already assigned or busy.`);
+                throw new Error('Driver is already assigned to another transfer. Please select a different driver.');
+            }
+        }
+
+        // Now that the driver is securely locked, push the transfer request
+        const newRef = this.firebase.ref('transfer_requests').push();
+        await newRef.set(enrichedData);
+
+        // Update the remaining related entities
         if (targetDriverId && targetAmbulanceId && hospitalId) {
             try {
-                // to update all three nodes simultaneously for data consistency
+                // The hospital driver node is already updated via the transaction above.
+                // Now we just need to sync the global driver_locations and the ambulance.
                 await Promise.all([
                     this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' }),
-                    this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}`).update({ status: 'assigned' }),
                     this.syncAmbulanceState(hospitalId, targetAmbulanceId, 'assigned', enrichedData, newRef.key!)
                 ]);
             } catch (err: any) {
                 this.logger.error(`Failed to assign for transfer ${newRef.key}: ${err.message}`);
+                // In a fully resilient system, if these fail we would roll back the transaction
+                // and delete the transfer request, but this is sufficient for the primary race condition.
             }
         }
 
