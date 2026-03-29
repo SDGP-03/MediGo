@@ -91,7 +91,13 @@ export function useDriverLocations(externalDriverIds: string[] = []) {
                 const hospitalDriversRef = ref(database, `hospitals/${hospitalId}/drivers`);
                 hospitalUnsub = onValue(hospitalDriversRef, (snap) => {
                     const data = snap.val() || {};
-                    allowedDriverIdsRef.current = new Set(Object.keys(data));
+                    // Only allow drivers that are explicitly marked as 'active' (authorized)
+                    // This ensures blocked/inactive drivers are hidden from the map and live tracking
+                    const activeIds = Object.entries(data)
+                        .filter(([, val]: [string, any]) => val.status === 'active')
+                        .map(([id]) => id);
+                    
+                    allowedDriverIdsRef.current = new Set(activeIds);
                     // Manually trigger a re-process if we already have location data
                     setHeartbeat((h) => h + 1);
                 });

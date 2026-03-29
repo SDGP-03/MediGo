@@ -5,14 +5,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, database } from '../firebase';
-import { ref, onValue, off, push, update, remove, set } from 'firebase/database';
+import { ref, onValue, push, update, remove, set } from 'firebase/database';
 import { apiPost, apiPatch, apiDelete } from '../api/apiClient';
 import { decryptData } from '../utils/encryption';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type AmbulanceStatus = 'available' | 'in_service' | 'maintenance';
-
+//ambulance
 export interface AmbulanceUnit {
     id: string;
     status: AmbulanceStatus;
@@ -38,7 +38,7 @@ export interface AmbulanceUnit {
 }
 
 export type DriverStatus = 'active' | 'inactive';
-
+// driverProfiles
 export interface Driver {
     id: string;
     name: string;
@@ -64,9 +64,10 @@ export interface Driver {
     fuelEfficiencyScore: number;
 }
 
+// for pending transfer
 export interface PendingTransfer {
     id: string;
-    patient: string;
+    patient: string; // This stores the decrypted patient name/ID
     from: string;
     to: string;
     priority: 'critical' | 'urgent' | 'standard';
@@ -82,12 +83,20 @@ export interface TripRecord {
     month: string;
 }
 
+/**
+ * normalizeDriver - A mapping function that transforms raw data from Firebase 
+ * into a structured 'Driver' object. It handles data sanitization, schema 
+ * compatibility, and provides default values.
+ * helps when driver is blocked
+ */
 function normalizeDriver(id: string, raw: any): Driver {
+    // Helper to ensure numerical fields are valid numbers; defaults to 0 if invalid.
     const safeNumber = (v: any, fallback = 0) => {
         const n = typeof v === 'number' ? v : Number(v);
         return Number.isFinite(n) ? n : fallback;
     };
 
+    // Maps various raw status values to the strict 'active' | 'inactive' type.
     const statusFromRaw = (v: any): DriverStatus => {
         if (v === 'active') return 'active';
         return 'inactive';
@@ -95,7 +104,9 @@ function normalizeDriver(id: string, raw: any): Driver {
 
     return {
         id,
+        // Support both modern 'name' and legacy 'driverName' fields.
         name: (raw?.name ?? raw?.driverName ?? 'Unknown Driver').toString(),
+        // Validates gender against allowed values; defaults to 'Other'.
         gender: (raw?.gender === 'Male' || raw?.gender === 'Female' || raw?.gender === 'Other')
             ? raw.gender
             : 'Other',
@@ -104,8 +115,10 @@ function normalizeDriver(id: string, raw: any): Driver {
         licenseNumber: (raw?.licenseNumber ?? '').toString(),
         licenseExpiry: (raw?.licenseExpiry ?? '').toString(),
         joinDate: (raw?.joinDate ?? '').toString(),
+        // Check both 'status' and 'blockStatus' for backward compatibility.
         status: statusFromRaw(raw?.status ?? raw?.blockStatus),
         assignedAmbulance: raw?.assignedAmbulance ?? null,
+        // Apply numeric sanitization to metrics and performance data.
         rating: safeNumber(raw?.rating, 0),
         totalTrips: safeNumber(raw?.totalTrips, 0),
         totalKm: safeNumber(raw?.totalKm, 0),

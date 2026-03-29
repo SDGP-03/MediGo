@@ -138,7 +138,7 @@ export function TransferRequest() {
 
   // ─── ACTIVE DRIVERS ───
   // Only show drivers that are:
-  //   1. Registered in THIS hospital's Firebase registry (from useFleetData)
+  //   1. Registered in THIS hospital's Firebase registry AND marked as 'active' (authorized)
   //   2. Currently ONLINE in the SSE live stream (matching by driver ID or name)
   //   3. NOT currently marked as busy
   const activeDrivers = drivers.filter(d => {
@@ -148,7 +148,9 @@ export function TransferRequest() {
     const isLiveBusy = busyDrivers.some(bd =>
       bd.id === d.id || bd.driverName.toLowerCase().trim() === d.name.toLowerCase().trim()
     );
-    return isLiveOnline && !isLiveBusy;
+    // Safety: Only include drivers with 'active' account status (not blocked)
+    // AND must be online AND must not be already on a mission
+    return d.status === 'active' && isLiveOnline && !isLiveBusy;
   });
 
   // Autocomplete state for patient name

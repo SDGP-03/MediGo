@@ -26,22 +26,24 @@ function StarRating({ rating }: { rating: number }) {
     );
 }
 
-function StatusBadge({ realTimeStatus }: { realTimeStatus: 'online' | 'busy' | 'offline' | null }) {
+function StatusBadge({ realTimeStatus }: { realTimeStatus: 'online' | 'busy' | 'offline' | 'blocked' | null }) {
     const status = realTimeStatus || 'offline';
     
     const styles = {
         online: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
         busy: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
         offline: 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600',
+        blocked: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
     };
     const labels = {
         online: 'ONLINE',
         busy: 'BUSY',
         offline: 'OFFLINE',
+        blocked: 'BLOCKED',
     };
 
     return (
-        <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[status]}`}>
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${styles[status]}`}>
             {labels[status]}
         </span>
     );
@@ -448,6 +450,19 @@ function EditDriverModal({ driver, onClose, onSave }: EditModalProps) {
                             <Field label="License Expiry *" type="date" icon={<Calendar size={14} />} value={form.licenseExpiry} onChange={v => set('licenseExpiry', v)} error={errors.licenseExpiry} />
                             <Field label="Joining Date" type="date" icon={<Calendar size={14} />} value={form.joinDate} onChange={v => set('joinDate', v)} />
                             <Field label="Assigned Ambulance" icon={<Car size={14} />} value={form.assignedAmbulance} onChange={v => set('assignedAmbulance', v)} />
+                            
+                            {/* Driver Status Toggle */}
+                            <div>
+                                <label className="block text-xs text-muted-foreground mb-1">Account Status</label>
+                                <select 
+                                    value={form.status} 
+                                    onChange={e => set('status', e.target.value)}
+                                    className="w-full px-3 py-2.5 text-sm border border-input rounded-lg bg-input-field-bg text-foreground focus:outline-none focus:ring-2 focus:ring-red-500"
+                                >
+                                    <option value="active">Active (Authorized)</option>
+                                    <option value="inactive">Inactive (Blocked)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     {/* Salary */}
@@ -598,6 +613,12 @@ export function DriverProfiles() {
     const { onlineDrivers, busyDrivers, offlineDrivers } = useDriverLocations();
 
     const getRealTimeStatus = (driverId: string) => {
+        const driver = drivers.find(d => d.id === driverId);
+        
+        // Priority check: If the account is blocked/inactive in the DB, 
+        // return 'blocked' regardless of their real-time GPS connection.
+        if (driver?.status === 'inactive') return 'blocked';
+        
         if (onlineDrivers.some(d => d.id === driverId)) return 'online';
         if (busyDrivers.some(d => d.id === driverId)) return 'busy';
         if (offlineDrivers.some(d => d.id === driverId)) return 'offline';
@@ -605,7 +626,7 @@ export function DriverProfiles() {
     };
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'offline'>('all');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'offline' | 'inactive'>('all');
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Driver | null>(null);
     const [editTarget, setEditTarget] = useState<Driver | null>(null);
@@ -635,6 +656,9 @@ export function DriverProfiles() {
         } else if (filterStatus === 'offline') {
             // "Offline" means disconnected
             matchStatus = rtStatus === 'offline';
+        } else if (filterStatus === 'inactive') {
+            // "Inactive" means the driver account is blocked/inactive in DB
+            matchStatus = d.status === 'inactive';
         }
 
         const matchSearch =
@@ -721,7 +745,7 @@ export function DriverProfiles() {
                     />
                 </div>
                 <div className="flex gap-2 flex-wrap">
-                    {(['all', 'active', 'offline'] as const).map(s => (
+                    {(['all', 'active', 'offline', 'inactive'] as const).map(s => (
                         <button
                             key={s}
                             onClick={() => setFilterStatus(s)}

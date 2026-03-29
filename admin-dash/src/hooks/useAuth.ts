@@ -24,7 +24,7 @@ export function useAuth(): UseAuthReturn {
         loading: true,
         error: null,
     });
-
+    //keep the login session in every refresh
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setAuthState({
