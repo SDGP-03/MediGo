@@ -31,7 +31,6 @@ function getNextPatientId(records: PatientRecord[]): string {
   const maxNum = records.reduce((max, p) => {
     //regular expression to parse the patient ID 
     const match = p.id.match(/PT-(\d+)/);
-    //
     if (match) {
       const num = parseInt(match[1], 10);
       return num > max ? num : max;
@@ -78,7 +77,7 @@ export function TransferRequest() {
   // Stores the live resource availability (e.g., ICU beds, Ventilators) for the destination hospital
   const [hospitalResources, setHospitalResources] = useState<any[]>([]);
 
-  // Custom hook to fetch the current hospital's registered fleet (drivers and ambulances)
+  // Fleet data from Firebase (ambulances + drivers)
   const { ambulances, drivers, hospitalName, hospitalId } = useFleetData();
 
   // Custom hook to track real-time driver locations and statuses ('busy', 'online') via backend stream
@@ -678,9 +677,9 @@ export function TransferRequest() {
                                 setIsDestinationRegistered(null);
                                 setHospitalResources([]);
 
-                                apiFetch(`/hospitals/${place.place_id}/availability`)
-                                  .then((data) => {
-                                    if (data.registered) {
+                                get(ref(database, `hospitals/${place.place_id}`))
+                                  .then((snapshot) => {
+                                    if (snapshot.exists()) {
                                       setIsDestinationRegistered(true);
                                       // The useEffect realtime listener will populate hospitalResources.
                                     } else {
