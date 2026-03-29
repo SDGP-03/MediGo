@@ -118,11 +118,9 @@ export class TransfersService implements OnModuleInit {
             try {
                 if (status === 'in_progress') {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'busy' });
-                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'busy' });
                     await this.syncAmbulanceState(hospitalId, ambulanceId, 'on_trip', data, snapshot.key!);
                 } else if (status === 'completed' || status === 'cancelled') {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
-                    await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
                     await this.syncAmbulanceState(hospitalId, ambulanceId, 'available');
                     await this.firebase.ref(`transfer_requests/${snapshot.key}`).update({ driverId: null });
 
@@ -330,14 +328,15 @@ export class TransfersService implements OnModuleInit {
 
         // --- CONCURRENCY FIX: Use a transaction to safely check and lock the driver ---
         if (targetDriverId && hospitalId) {
-            const driverRef = this.firebase.ref(`hospitals/${hospitalId}/drivers/${targetDriverId}/status`);
+            // Lock using their live tracking status, NOT their account block status
+            const driverRef = this.firebase.ref(`driver_locations/${targetDriverId}/status`);
             
             const { committed, snapshot } = await driverRef.transaction((currentStatus) => {
                 // Abort the transaction if the driver is already assigned, busy, or on a trip
                 if (currentStatus === 'assigned' || currentStatus === 'busy' || currentStatus === 'on_trip') {
                     return; // Returning undefined aborts the transaction
                 }
-                // Otherwise, lock the driver by claiming their status
+                // Otherwise, lock the driver by claiming their live status
                 return 'assigned';
             });
 
@@ -354,10 +353,9 @@ export class TransfersService implements OnModuleInit {
         // Update the remaining related entities
         if (targetDriverId && targetAmbulanceId && hospitalId) {
             try {
-                // The hospital driver node is already updated via the transaction above.
-                // Now we just need to sync the global driver_locations and the ambulance.
+                // The driver is already marked as 'assigned' in driver_locations via the transaction.
+                // We only need to sync the ambulance state now.
                 await Promise.all([
-                    this.firebase.ref(`driver_locations/${targetDriverId}`).update({ status: 'assigned' }),
                     this.syncAmbulanceState(hospitalId, targetAmbulanceId, 'assigned', enrichedData, newRef.key!)
                 ]);
             } catch (err: any) {
