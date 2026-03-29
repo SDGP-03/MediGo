@@ -985,6 +985,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
       await reqRef.update({
         'status': 'in_progress',
+        "driverId": uid,
         'resumedAt': ServerValue.timestamp,
       });
 

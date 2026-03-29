@@ -178,38 +178,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         .child('drivers')
         .child(user.uid);
 
-    _driverProfileSubscription = driverRef.onValue.listen(
-      (event) async {
-        final value = event.snapshot.value;
-        if (value is! Map) return;
+    _driverProfileSubscription = driverRef.onValue.listen((event) async {
+      final value = event.snapshot.value;
+      if (value is! Map) return;
 
-        final String? latestName = value['name']?.toString().trim();
-        final String? latestHospitalId =
-            value['hospitalPlaceId']?.toString().trim();
+      final String? latestName = value['name']?.toString().trim();
+      final String? latestHospitalId = value['hospitalPlaceId']
+          ?.toString()
+          .trim();
 
-        if (latestName != null && latestName.isNotEmpty) {
-          _cachedDriverName = latestName;
+      if (latestName != null && latestName.isNotEmpty) {
+        _cachedDriverName = latestName;
 
-          // Keep driver_locations in sync so admin-dash reflects profile edits,
-          // and to prevent the heartbeat `set()` from re-writing an old name.
-          try {
-            final locationRef = _driverLocationRef ??
-                FirebaseDatabase.instance
-                    .ref()
-                    .child('driver_locations')
-                    .child(user.uid);
-            await locationRef.update({'driverName': latestName});
-          } catch (e) {
-            debugPrint('Failed to sync driverName to driver_locations: $e');
-          }
+        // Keep driver_locations in sync so admin-dash reflects profile edits,
+        // and to prevent the heartbeat `set()` from re-writing an old name.
+        try {
+          final locationRef =
+              _driverLocationRef ??
+              FirebaseDatabase.instance
+                  .ref()
+                  .child('driver_locations')
+                  .child(user.uid);
+          await locationRef.update({'driverName': latestName});
+        } catch (e) {
+          debugPrint('Failed to sync driverName to driver_locations: $e');
         }
+      }
 
-        if (latestHospitalId != null && latestHospitalId.isNotEmpty) {
-          _cachedHospitalId = latestHospitalId;
-        }
-      },
-      onError: (e) => debugPrint('Driver profile listener error: $e'),
-    );
+      if (latestHospitalId != null && latestHospitalId.isNotEmpty) {
+        _cachedHospitalId = latestHospitalId;
+      }
+    }, onError: (e) => debugPrint('Driver profile listener error: $e'));
   }
 
   void _initDriverLocationRef() {
@@ -1004,10 +1003,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         .child('transfer_requests')
         .child(requestId);
 
-    await requestRef.update({
-      'status': 'cancelled',
-      'driverId': null, // Unassign so admin can reassign
-    });
+    await requestRef.update({'status': 'cancelled'});
 
     if (!mounted) return;
     setState(() {
@@ -1025,10 +1021,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-	  Future<void> _clearCurrentAssignmentUi() async {
-	    if (!mounted) return;
-	    setState(() {
-	      currentAssignment = null;
+  Future<void> _clearCurrentAssignmentUi() async {
+    if (!mounted) return;
+    setState(() {
+      currentAssignment = null;
       destinationMarker = null;
     });
 
