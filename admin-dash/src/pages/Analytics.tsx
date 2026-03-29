@@ -19,9 +19,10 @@ export function Analytics() {
 
   // Helper to format duration: "M min S sec" or just "S sec"
   const formatDuration = (totalSeconds: number | null) => {
+    //Handles missing backend data
     if (totalSeconds === null) return 'No data yet';
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = Math.round(totalSeconds % 60);
+    const mins = Math.floor(totalSeconds / 60);//rounds DOWN to nearest whole number(2.9->2)
+    const secs = Math.round(totalSeconds % 60);//rounds to nearest whole number(2.9->3)
     if (mins === 0) return `${secs} sec`;
     if (secs === 0) return `${mins} min`;
     return `${mins} min ${secs} sec`;
@@ -31,7 +32,7 @@ export function Analytics() {
   const operationalStats = [
     {
       label: 'Total Requests',
-      value: data.totalRequests.toLocaleString(),
+      value: data.totalRequests.toLocaleString(),//Formats numbers:1000 → 1,000
       icon: Activity,
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
@@ -164,7 +165,7 @@ export function Analytics() {
                   name="Avg Response Time"
                   dot={{ r: 5, fill: '#ef4444' }}
                   activeDot={{ r: 7 }}
-                  connectNulls={false}
+                  connectNulls={false} //If data is missing, don’t draw a line there, if this is true then Jan ───── Mar
                 />
               </LineChart>
             </ResponsiveContainer>

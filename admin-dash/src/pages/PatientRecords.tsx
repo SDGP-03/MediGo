@@ -7,6 +7,9 @@ import { database, auth } from '../firebase';
 import { ref, onValue, off, set, update, push, get } from 'firebase/database';
 import { encryptData, decryptObject, decryptData } from '../utils/encryption';
 
+
+//Defines TypeScript interfaces for the data structures used in the application
+//PatientTransfer interface defines the structure of a patient transfer record
 interface PatientTransfer {
   date: string;
   from: string;
@@ -15,13 +18,14 @@ interface PatientTransfer {
   status: string;
 }
 
+//VitalSigns interface defines the structure of a patient's vital signs
 interface VitalSigns {
   bp: string;
   heartRate: string;
   temperature: string;
   oxygen: string;
 }
-
+//PatientDocument interface defines the structure of a patient's document
 interface PatientDocument {
   name: string;
   size: number;
@@ -29,7 +33,7 @@ interface PatientDocument {
   data: string;
   uploadedAt: number;
 }
-
+//PatientRecord interface defines the structure of a patient record
 interface PatientRecord {
   id: string;
   name: string;
@@ -43,7 +47,7 @@ interface PatientRecord {
   recentTransfers: PatientTransfer[];
   documents: PatientDocument[];
 }
-
+//TransferRequestRecord interface defines the structure of a transfer request record
 interface TransferRequestRecord {
   createdAt?: number;
   status?: string;
@@ -68,40 +72,42 @@ interface TransferRequestRecord {
 }
 
 type PatientOverrides = Record<string, Partial<PatientRecord>>;
-
+//EMPTY_VITALS: Provides a safe fallback,system shows "Not recorded" instead of crashing with a null error.
 const EMPTY_VITALS: VitalSigns = {
   bp: 'Not recorded',
   heartRate: 'Not recorded',
   temperature: 'Not recorded',
   oxygen: 'Not recorded',
 };
-
+//sanitizeKey: Cleans up Firebase keys,Firebase doesn't allow certain characters (like . # $ / [ ]) in keys. This function replaces them with underscores (_).
 const sanitizeKey = (value: string) => value.replace(/[.#$/[\]]/g, '_');
 
+//normalizeNumber: Converts values to numbers safely,Ensures that if a value is "25", it becomes the number 25, not "25" as a string.
 const normalizeNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
-
+//formatDate: Converts timestamps to readable dates,Turns a raw number like 1700000000 into "2023-11-15".
 const formatDate = (timestamp?: number): string => {
   if (!timestamp) return 'Unknown';
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return 'Unknown';
   return date.toISOString().slice(0, 10);
 };
-
+//statusLabel: Formats status strings,Changes "pending" to "Pending" and "in_transit" to "In Transit".
 const statusLabel = (status?: string): string => {
   if (!status) return 'Pending';
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
 };
-
+//toDocumentsArray: Converts documents to an array,Ensures the documents are always in a list format, even if Firebase stores them as an object.
 const toDocumentsArray = (value: unknown): PatientDocument[] => {
   if (!value) return [];
   if (Array.isArray(value)) return value as PatientDocument[];
   return Object.values(value as Record<string, PatientDocument>);
 };
-
+//toAscii: Converts text to ASCII,Removes emojis and special symbols that might break the PDF layout.
 const toAscii = (value: string) => value.replace(/[^\x20-\x7E]/g, '?');
+//escapePdfText: Escapes special characters for PDF,Ensures characters like parentheses () don't break the PDF code.
 const escapePdfText = (value: string) => toAscii(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 const HOSPITAL_OPTIONS = [
   'Central Medical Center',
@@ -110,7 +116,7 @@ const HOSPITAL_OPTIONS = [
   'Teaching Hospital East',
   'Metro Hospital',
 ];
-
+//wrapText: Wraps long text into lines,Breaks long sentences into multiple lines so they fit nicely in the PDF.
 const wrapText = (text: string, maxChars = 80): string[] => {
   const cleaned = toAscii(text || '');
   if (!cleaned) return ['-'];
@@ -129,7 +135,7 @@ const wrapText = (text: string, maxChars = 80): string[] => {
   if (line) lines.push(line);
   return lines;
 };
-
+//loadJpegHexFromPath: Loads and resizes the logo,Reads the logo image and shrinks it to fit in the PDF header.
 const loadJpegHexFromPath = async (path: string, maxSize = 42): Promise<{ hex: string; width: number; height: number } | null> => {
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -164,12 +170,12 @@ const loadJpegHexFromPath = async (path: string, maxSize = 42): Promise<{ hex: s
     return null;
   }
 };
-
+//createStyledPdfBlob: Creates a PDF document,Generates a professional-looking PDF with the patient's details and transfer history.
 const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
   const logo = await loadJpegHexFromPath('/MediGo-icon.PNG');
   const now = new Date();
   const generatedAt = now.toLocaleString();
-
+  //content: Builds the PDF content,Constructs the actual text and drawing commands for the PDF.
   let content = '';
   content += '0.95 0.96 0.98 rg 0 730 612 62 re f\n';
   content += '0.80 0.11 0.11 rg 0 726 612 6 re f\n';
@@ -198,7 +204,7 @@ const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
   content += `BT /F1 10 Tf 315 677 Td (${escapePdfText(`${patient.age} / ${patient.gender}`)}) Tj ET\n`;
   content += `BT /F2 10 Tf 315 662 Td (Blood Group / Allergies) Tj ET\n`;
   content += `BT /F1 10 Tf 315 647 Td (${escapePdfText(`${patient.bloodGroup} / ${patient.allergies || 'None'}`)}) Tj ET\n`;
-
+  //sectionTitle: Creates a styled header for a section,Draws a colored background and title text for sections like "Vital Signs".
   let y = 596;
   const sectionTitle = (title: string) => {
     content += `0.90 0.93 0.98 rg 40 ${y - 4} 532 20 re f\n`;
@@ -206,7 +212,7 @@ const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
     content += `BT /F2 11 Tf 46 ${y + 2} Td (${escapePdfText(title)}) Tj ET\n`;
     y -= 24;
   };
-
+  //writeLines: Writes text lines to the PDF,Adds lines of text to the PDF content at the current position.
   const writeLines = (lines: string[], font = '/F1', size = 10) => {
     content += '0.08 0.08 0.08 rg\n';
     lines.forEach((line) => {
@@ -255,7 +261,7 @@ const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
   const objects: string[] = [];
   const imageObjectIndex = logo ? 7 : null;
   const xObjectPart = logo ? `/XObject << /Im1 ${imageObjectIndex} 0 R >>` : '';
-
+  //objects: Creates the PDF structure,Builds the internal structure of the PDF (pages, fonts, content) in a format that PDF viewers can understand.
   objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
   objects.push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
   objects.push(`3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> ${xObjectPart} >> /Contents 6 0 R >>\nendobj\n`);
@@ -285,6 +291,7 @@ const createStyledPdfBlob = async (patient: PatientRecord): Promise<Blob> => {
 
   return new Blob([pdf], { type: 'application/pdf' });
 };
+//blobToDataUrl: Converts a Blob to a Data URL,Converts the generated PDF Blob into a data URL string, which can be used for displaying or downloading the PDF.
 
 const blobToDataUrl = (blob: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -293,7 +300,7 @@ const blobToDataUrl = (blob: Blob): Promise<string> =>
     reader.onerror = () => reject(new Error('Failed to convert report to data URL'));
     reader.readAsDataURL(blob);
   });
-
+//mergePatients: Combines patient data from multiple sources,Merges patient records from transfer requests and manual overrides into a single, unified list.
 const mergePatients = (
   transferRequests: Record<string, TransferRequestRecord>,
   overrides: PatientOverrides,
@@ -366,13 +373,14 @@ const mergePatients = (
   });
 
   // 3. Final sorting
+  //Sorts the recent transfers for each patient by date in descending order (most recent first).
   Object.values(byPatientId).forEach((patient) => {
     patient.recentTransfers.sort((a, b) => b.date.localeCompare(a.date));
   });
 
   return Object.values(byPatientId).sort((a, b) => a.name.localeCompare(b.name));
 };
-
+//getNextPatientId: Generates the next patient ID,Calculates the next patient ID in the sequence (e.g., PT-20251) based on existing patient IDs.
 const getNextPatientId = (patients: PatientRecord[]): string => {
   const maxNum = patients.reduce((max, p) => {
     const match = p.id.match(/PT-(\d+)/);
@@ -384,7 +392,7 @@ const getNextPatientId = (patients: PatientRecord[]): string => {
   }, 20250);
   return `PT-${maxNum + 1}`;
 };
-
+//PatientRecords: Main component for displaying patient records, handles data fetching, state management, and UI rendering.
 export function PatientRecords() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -393,7 +401,7 @@ export function PatientRecords() {
   const [hospitalName, setHospitalName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
+  //transferRequests: Stores all transfer requests for the hospital,Holds all ambulance transfer requests, whether active or completed.
   const [transferRequests, setTransferRequests] = useState<Record<string, TransferRequestRecord>>({});
   const [patientOverrides, setPatientOverrides] = useState<PatientOverrides>({});
 
@@ -406,13 +414,13 @@ export function PatientRecords() {
         setIsLoading(false);
         return;
       }
-
+      //patientOverrides: Stores manually entered patient data or overridden by the admin.
       try {
         const adminSnap = await get(ref(database, `admin/${user.uid}`));
         const adminData = adminSnap.exists() ? adminSnap.val() : {};
         const id = adminData.hospitalPlaceId || user.uid;
         const hName = adminData.hospitalName || null;
-        
+        //Sets the hospital ID and name
         setHospitalId(id);
         setHospitalName(hName);
 
@@ -422,7 +430,7 @@ export function PatientRecords() {
 
         const savedOverrides = localStorage.getItem(`medigo_records_${id}`);
         if (savedOverrides) setPatientOverrides(JSON.parse(savedOverrides));
-
+        //Error handling
       } catch (err) {
         console.error('Error resolving hospital ID:', err);
         setLoadError('Failed to initialize hospital system');
@@ -430,27 +438,27 @@ export function PatientRecords() {
       }
     };
 
-    fetchHospitalId();
+    fetchHospitalId();//Calls the fetchHospitalId function when the component mounts
   }, []);
-
+  //isEditing: Tracks whether the user is currently editing a patient record,Used to control the visibility and state of the edit mode.
   const [isEditing, setIsEditing] = useState(false);
   const [editedPatient, setEditedPatient] = useState<PatientRecord | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [selectedHospital, setSelectedHospital] = useState('');
-  const [newMedication, setNewMedication] = useState('');
+  const [isSaving, setIsSaving] = useState(false);//Tracks if the user is currently saving a patient record,Used to show a loading state during save operations.
+  const [isUploading, setIsUploading] = useState(false);//Tracks if a file upload is in progress,Used to show a loading state during file uploads.
+  const [isSending, setIsSending] = useState(false);//Tracks if a message is being sent,Used to show a loading state during message sending.
+  const [selectedHospital, setSelectedHospital] = useState('');//Stores the ID of the selected hospital,Used for filtering or routing.
+  const [newMedication, setNewMedication] = useState('');//Stores the name of a new medication being added,Used in the medication form.
   const [newTransfer, setNewTransfer] = useState({
     date: '',
     from: '',
     to: '',
     reason: '',
-    status: 'In Progress',
+    status: 'In Progress',//Stores the status of a new transfer request,Used in the transfer request form.
   });
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);//Tracks if the add patient modal is open,Used to control the visibility of the add patient modal.
   const [newPatientData, setNewPatientData] = useState<Partial<PatientRecord>>({
-    name: '',
+    name: '',//Stores the name of a new patient being added,Used in the patient form.
     age: 0,
     id: '',
     gender: 'Male',
@@ -462,9 +470,9 @@ export function PatientRecords() {
     recentTransfers: [],
     documents: [],
   });
-
+  //openAddModal: Opens the add patient modal,Sets the state to show the add patient form.
   const openAddModal = () => {
-    const nextId = getNextPatientId(patients);
+    const nextId = getNextPatientId(patients);//Generates the next patient ID
     setNewPatientData({
       name: '',
       age: 0,
@@ -478,19 +486,19 @@ export function PatientRecords() {
       recentTransfers: [],
       documents: [],
     });
-    setIsAddModalOpen(true);
+    setIsAddModalOpen(true);//Sets the state to show the add patient form
   };
-
+  //handleAddPatient: Handles the addition of a new patient,Validates the patient data and saves it to the database.
   const handleAddPatient = async () => {
     if (!newPatientData.name || !newPatientData.id || !newPatientData.age) {
-      toast.error('Please fill in Name, Age, and Patient ID.');
+      toast.error('Please fill in Name, Age, and Patient ID.');//Shows an error message if the patient data is incomplete
       return;
     }
 
-    setIsSaving(true);
+    setIsSaving(true);//Sets the state to show a loading state during save operations
     try {
-      await savePatient(newPatientData as PatientRecord);
-      setIsAddModalOpen(false);
+      await savePatient(newPatientData as PatientRecord);//Saves the patient data to the database
+      setIsAddModalOpen(false);//Closes the add patient modal
       setNewPatientData({
         name: '',
         age: 0,
@@ -504,12 +512,12 @@ export function PatientRecords() {
         recentTransfers: [],
         documents: [],
       });
-      setSelectedPatientId(newPatientData.id!);
+      setSelectedPatientId(newPatientData.id!);//Sets the selected patient ID
     } catch (error) {
-      console.error('Failed to add patient:', error);
-      toast.error('Failed to add patient. Please check your connection.');
+      console.error('Failed to add patient:', error);//Logs the error to the console
+      toast.error('Failed to add patient. Please check your connection.');//Shows an error message if the patient data is incomplete
     } finally {
-      setIsSaving(false);
+      setIsSaving(false);//Sets the state to show a loading state during save operations
     }
   };
 
@@ -518,10 +526,10 @@ export function PatientRecords() {
 
     const transfersRef = ref(database, 'transfer_requests');
     const recordsRef = ref(database, `hospitals/${hospitalId}/patient_records`);
-
+    //unsubTransfers: A function that will be called to stop listening to the transfer requests,Used to clean up the event listener when the component unmounts.
     const unsubTransfers = onValue(transfersRef, (snapshot) => {
       const data = snapshot.val() || {};
-      
+
       // Filter transfers to only show those involving this hospital
       const filteredTransfers: Record<string, TransferRequestRecord> = {};
       if (hospitalName) {
@@ -546,12 +554,12 @@ export function PatientRecords() {
     });
 
     const unsubRecords = onValue(recordsRef, (snapshot) => {
-      const data = snapshot.val() || {};
+      const data = snapshot.val() || {};//Retrieves the patient records from the database
       const decryptedData: PatientOverrides = {};
       Object.entries(data).forEach(([key, value]) => {
         decryptedData[key] = decryptObject(value as Partial<PatientRecord>);
-      });
-      setPatientOverrides(decryptedData);
+      });//Decrypts the patient records
+      setPatientOverrides(decryptedData);//Sets the patient overrides
       try {
         localStorage.setItem(`medigo_records_${hospitalId}`, JSON.stringify(decryptedData));
       } catch (err) {
@@ -574,7 +582,7 @@ export function PatientRecords() {
     () => mergePatients(transferRequests, patientOverrides),
     [transferRequests, patientOverrides],
   );
-
+  //filteredPatients: Filters the patients based on the search term,Used to display the filtered list of patients.
   const filteredPatients = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return patients;
@@ -584,12 +592,12 @@ export function PatientRecords() {
         patient.id.toLowerCase().includes(term),
     );
   }, [patients, searchTerm]);
-
+  //selectedPatient: Selects the patient based on the selected patient ID,Used to display the selected patient's information.
   const selectedPatient = useMemo(
     () => patients.find((patient) => patient.id === selectedPatientId) || null,
     [patients, selectedPatientId],
   );
-
+  //useEffect: Handles the side effects of the component,Used to display the selected patient's information.
   useEffect(() => {
     if (!selectedPatientId) return;
     const stillExists = patients.some((patient) => patient.id === selectedPatientId);
@@ -599,7 +607,7 @@ export function PatientRecords() {
       setEditedPatient(null);
     }
   }, [patients, selectedPatientId]);
-
+  //savePatient: Saves the patient data to the database,Used to display the selected patient's information.
   const savePatient = async (record: PatientRecord) => {
     if (!hospitalId) return;
     const key = sanitizeKey(record.id);
@@ -607,18 +615,18 @@ export function PatientRecords() {
     try {
       await set(ref(database, `hospitals/${hospitalId}/patient_records/${key}`), {
         id: record.id,
-        name: encryptData(record.name),
-        age: encryptData(record.age),
-        gender: encryptData(record.gender),
-        bloodGroup: encryptData(record.bloodGroup),
-        allergies: encryptData(record.allergies),
-        medicalHistory: encryptData(record.medicalHistory),
-        medications: record.medications.map(m => encryptData(m)),
+        name: encryptData(record.name),//Encrypts the patient's name
+        age: encryptData(record.age),//Encrypts the patient's age
+        gender: encryptData(record.gender),//Encrypts the patient's gender
+        bloodGroup: encryptData(record.bloodGroup),//Encrypts the patient's blood group
+        allergies: encryptData(record.allergies),//Encrypts the patient's allergies
+        medicalHistory: encryptData(record.medicalHistory),//Encrypts the patient's medical history
+        medications: record.medications.map(m => encryptData(m)),//Encrypts the patient's medications
         vitalSigns: {
-          bp: encryptData(record.vitalSigns.bp),
-          heartRate: encryptData(record.vitalSigns.heartRate),
-          temperature: encryptData(record.vitalSigns.temperature),
-          oxygen: encryptData(record.vitalSigns.oxygen),
+          bp: encryptData(record.vitalSigns.bp),//Encrypts the patient's blood pressure
+          heartRate: encryptData(record.vitalSigns.heartRate),//Encrypts the patient's heart rate
+          temperature: encryptData(record.vitalSigns.temperature),//Encrypts the patient's temperature
+          oxygen: encryptData(record.vitalSigns.oxygen),//Encrypts the patient's oxygen saturation
         },
         recentTransfers: record.recentTransfers.map(t => ({
           ...t,
@@ -628,38 +636,38 @@ export function PatientRecords() {
         })),
         documents: record.documents || [],
       });
-      setIsEditing(false);
-      setEditedPatient(null);
+      setIsEditing(false);//Sets the state to show the edit patient form
+      setEditedPatient(null);//Sets the edited patient to null
     } finally {
-      setIsSaving(false);
+      setIsSaving(false);//Sets the state to show a loading state during save operations
     }
   };
-
+  //handleSaveChanges: Handles the save changes operation,Used to display the selected patient's information.
   const handleSaveChanges = async () => {
     if (!editedPatient) return;
     try {
-      await savePatient(editedPatient);
+      await savePatient(editedPatient);//Saves the patient data to the database
     } catch (error) {
       console.error('Failed to save patient record:', error);
       toast.error('Failed to save patient changes. Please try again.');
     }
   };
-
+  //handleFileUpload: Handles the file upload operation,Used to display the selected patient's information.
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, patient: PatientRecord) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const maxSize = 5 * 1024 * 1024;
-    const selectedFiles = Array.from(files);
-    const oversized = selectedFiles.filter((file) => file.size > maxSize);
+    const maxSize = 5 * 1024 * 1024;//Sets the maximum file size to 5MB
+    const selectedFiles = Array.from(files);//Converts the files to an array
+    const oversized = selectedFiles.filter((file) => file.size > maxSize);//Filters the files that are larger than the maximum file size
 
     if (oversized.length > 0) {
-      toast.error(`Some files are too large (max 5MB): ${oversized.map((file) => file.name).join(', ')}`);
+      toast.error(`Some files are too large (max 5MB): ${oversized.map((file) => file.name).join(', ')}`);//Displays an error message if the files are too large
       event.target.value = '';
       return;
     }
 
-    setIsUploading(true);
+    setIsUploading(true);//Sets the state to show a loading state during file upload operations
     try {
       const encodedFiles = await Promise.all(
         selectedFiles.map(
@@ -675,6 +683,7 @@ export function PatientRecords() {
                   uploadedAt: Date.now(),
                 });
               };
+              //Handles the file upload operation,Used to display the selected patient's information.
               reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
               reader.readAsDataURL(file);
             }),
@@ -685,16 +694,16 @@ export function PatientRecords() {
         ...patient,
         documents: [...(patient.documents || []), ...encodedFiles],
       };
-      await savePatient(updatedRecord);
+      await savePatient(updatedRecord);//Saves the patient data to the database
     } catch (error) {
       console.error('Failed to upload files:', error);
       toast.error('File upload failed. Please try again.');
     } finally {
-      setIsUploading(false);
+      setIsUploading(false);//Sets the state to show a loading state during file upload operations
       event.target.value = '';
     }
   };
-
+  //handleFileRemove: Handles the file remove operation,Used to display the selected patient's information.
   const handleFileRemove = async (patient: PatientRecord, fileIndex: number) => {
     const updatedRecord: PatientRecord = {
       ...patient,
@@ -702,30 +711,30 @@ export function PatientRecords() {
     };
 
     try {
-      await savePatient(updatedRecord);
+      await savePatient(updatedRecord);//Saves the patient data to the database
     } catch (error) {
       console.error('Failed to remove file:', error);
       toast.error('Failed to remove file. Please try again.');
     }
   };
-
+  //downloadPatientReportPdf: Downloads the patient report as a PDF file,Used to display the selected patient's information.
   const downloadPatientReportPdf = async (patient: PatientRecord) => {
-    const pdfBlob = await createStyledPdfBlob(patient);
-    const url = URL.createObjectURL(pdfBlob);
+    const pdfBlob = await createStyledPdfBlob(patient);//Creates a styled PDF blob from the patient data
+    const url = URL.createObjectURL(pdfBlob);//Creates a URL for the PDF blob
     const link = window.document.createElement('a');
     link.href = url;
     link.download = `${sanitizeKey(patient.id)}-report.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   };
-
+  //sendPatientReportToHospital: Sends the patient report to the selected hospital,Used to display the selected patient's information.
   const sendPatientReportToHospital = async (patient: PatientRecord) => {
     if (!selectedHospital) {
-      toast.error('Please select a destination hospital first.');
+      toast.error('Please select a destination hospital first.');//Displays an error message if the destination hospital is not selected
       return;
     }
 
-    setIsSending(true);
+    setIsSending(true);//Sets the state to show a loading state during send operations
     try {
       const pdfBlob = await createStyledPdfBlob(patient);
       const reportData = await blobToDataUrl(pdfBlob);
@@ -754,19 +763,20 @@ export function PatientRecords() {
         },
       });
 
-      toast.success(`Report sent to ${selectedHospital} successfully.`);
+      toast.success(`Report sent to ${selectedHospital} successfully.`);//Displays a success message if the report is sent successfully
     } catch (error) {
       console.error('Failed to send report:', error);
-      toast.error('Failed to send report to hospital. Please try again.');
+      toast.error('Failed to send report to hospital. Please try again.');//Displays an error message if the report is not sent successfully
     } finally {
-      setIsSending(false);
+      setIsSending(false);//Sets the state to show a loading state during send operations
     }
   };
+  //handleExportJSON: Exports the patient data to a JSON file,Used to display the selected patient's information.
   const handleExportJSON = () => {
     const dataStr = JSON.stringify(Object.values(patients), null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
     const fileName = `medigo_patients_${hospitalId}_${new Date().toISOString().slice(0, 10)}.json`;
-
+    //Creates a link element to download the JSON file
     const linkElement = window.document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', fileName);
@@ -780,8 +790,8 @@ export function PatientRecords() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const content = e.target?.result as string;
-        const importedPatients = JSON.parse(content);
+        const content = e.target?.result as string;//Reads the JSON file
+        const importedPatients = JSON.parse(content);//Parses the JSON file
 
         if (!Array.isArray(importedPatients)) {
           throw new Error('Invalid JSON format. Expected an array of patients.');
@@ -795,11 +805,11 @@ export function PatientRecords() {
               await savePatient(patient);
             }
           }
-          alert('Extraction complete. All valid records have been added to your system.');
+          alert('Extraction complete. All valid records have been added to your system.');//Displays a success message if the data is imported successfully
         }
       } catch (err) {
         console.error('Import failed:', err);
-        toast.error('Failed to extract data: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        toast.error('Failed to extract data: ' + (err instanceof Error ? err.message : 'Unknown error'));//Displays an error message if the data is not imported successfully
       } finally {
         setIsSaving(false);
         event.target.value = '';
@@ -807,7 +817,7 @@ export function PatientRecords() {
     };
     reader.readAsText(file);
   };
-
+  //Returns the patient records to the UI
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
@@ -874,13 +884,13 @@ export function PatientRecords() {
                     >
                       <Download size={18} />
                     </button>
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Plus size={20} />
-            <span>Add Patient</span>
-          </button>
+                    <button
+                      onClick={openAddModal}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      <Plus size={20} />
+                      <span>Add Patient</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -919,7 +929,7 @@ export function PatientRecords() {
                 ) : (
                   <div className="p-8 text-center">
                     <AlertCircle className="mx-auto text-muted-foreground mb-3" size={40} />
-                    <p className="text-foreground font-medium mb-1">No matches found</p>
+                    <p className="text-foreground font-medium mb-1">No matches found</p>//Displays a message if no patients are found
                     <p className="text-muted-foreground text-sm">
                       {searchTerm ? `No patients match "${searchTerm}"` : 'No patients available'}
                     </p>
@@ -1437,7 +1447,7 @@ export function PatientRecords() {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-sm font-medium text-muted-foreground">Patient ID *</label>
-                    <button 
+                    <button
                       onClick={() => setNewPatientData({ ...newPatientData, id: getNextPatientId(patients) })}
                       className="text-[10px] text-red-600 hover:underline"
                     >

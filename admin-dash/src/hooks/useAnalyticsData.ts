@@ -54,7 +54,7 @@ export function useAnalyticsData(): AnalyticsData {
         const fetchData = async () => {
             if (!auth.currentUser) return; // safeguard
             try {
-                const result = await apiFetch('/analytics');
+                const result = await apiFetch('/analytics');//Calls backend API,This is where:Auth token is used,Backend filtering happens
                 if (!cancelled) {
                     setData({ ...result, isLoading: false });
                 }
@@ -68,7 +68,7 @@ export function useAnalyticsData(): AnalyticsData {
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user && !cancelled) {
-                fetchData();
+                fetchData();//Only logged-in users fetch data
 
                 // Clear any existing interval before setting a new one
                 if (interval) clearInterval(interval);

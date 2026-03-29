@@ -1,3 +1,6 @@
+/*Injectable → allows this service to be used in other files
+Logger → used to print logs (for debugging)
+FirebaseService → used to access Firebase data*/
 import { Injectable, Logger } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 
@@ -7,37 +10,39 @@ const INCIDENT_COLORS = [
 ];
 
 @Injectable()
+//This service handles all analytics calculations on the backend
 export class AnalyticsService {
     private readonly logger = new Logger(AnalyticsService.name);
-
+    //Inject Firebase service into this class
     constructor(private readonly firebase: FirebaseService) { }
 
     /** Get aggregated analytics data */
     async getAnalytics(uid: string): Promise<any> {
+        //Just logs info (for debugging)
         this.logger.log(`Starting getAnalytics() calculation for uid: ${uid}...`);
 
         // Resolve admin uid → shared hospitalPlaceId
         const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
         const adminData = adminSnap.val() || {};
         const hospitalId: string = adminData.hospitalPlaceId || uid;
-
+        //Just logs info (for debugging)
         this.logger.log(`Admin Data: ${JSON.stringify(adminData)}`);
         this.logger.log(`Resolved hospitalId: ${hospitalId}`);
 
-        // Read hospital info from the shared hospital node
+        // Read hospital info from the shared hospital node from the firebase database
         const infoSnap = await this.firebase.ref(`hospitals/${hospitalId}/info`).get();
         const hospitalInfo = infoSnap.exists() ? infoSnap.val() : {};
         const hospitalName = hospitalInfo.name || adminData.hospitalName || 'Your Hospital';
 
         this.logger.log(`Resolved hospitalName: ${hospitalName}`);
-
+        // Fetch multiple data sources in parallel for better performance(promise.all)
         const [transferSnap, driverSnap, hospitalDriversSnap] = await Promise.all([
             this.firebase.ref('transfer_requests').get(),
             this.firebase.ref('driver_locations').get(),
             this.firebase.ref(`hospitals/${hospitalId}/drivers`).get(),
         ]);
         this.logger.log('Firebase fetch complete.');
-
+        //Firebase stores objects to convert to array
         let allTransfers: any[] = transferSnap.exists()
             ? Object.values(transferSnap.val())
             : [];
@@ -85,8 +90,8 @@ export class AnalyticsService {
         // Status distribution
         const statusMap: Record<string, number> = {};
         transfers.forEach((t: any) => {
-            const s = t.status || 'unknown';
-            statusMap[s] = (statusMap[s] || 0) + 1;
+            const s = t.status || 'unknown';//gets the status of the transfer
+            statusMap[s] = (statusMap[s] || 0) + 1;//counts how many times each status appears
         });
 
         const statusDistribution = Object.entries(statusMap).map(
