@@ -8,6 +8,7 @@ import { useFleetData } from '../hooks/useFleetData';
 import { encryptData, decryptData, decryptObject } from '../utils/encryption';
 import { onValue, off } from 'firebase/database';
 import { apiPost, apiFetch } from '../api/apiClient';
+// External component for Google Places search suggestions in the Transfer Request form
 import Autocomplete from 'react-google-autocomplete';
 import { useJsApiLoader } from '@react-google-maps/api';
 import { toast } from 'sonner';
@@ -161,6 +162,8 @@ export function TransferRequest() {
   // Reference to the patient name autocomplete container for detecting clicks outside to close suggestions
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
+
+  //asynchronously load the Google Maps JavaScript API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',

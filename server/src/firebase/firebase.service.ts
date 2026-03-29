@@ -4,7 +4,9 @@ import * as admin from 'firebase-admin';
 @Injectable()
 export class FirebaseService implements OnModuleInit {
     private readonly logger = new Logger(FirebaseService.name);
+    // Handle to the Firebase Realtime Database for CRUD operations.
     private db!: admin.database.Database;
+    // Handle to the Firebase Auth service for verifying identities and roles.
     private authAdmin!: admin.auth.Auth;
 
     onModuleInit() {
