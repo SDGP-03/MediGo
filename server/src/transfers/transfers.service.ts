@@ -124,6 +124,7 @@ export class TransfersService implements OnModuleInit {
                     await this.firebase.ref(`driver_locations/${driverId}`).update({ status: 'online' });
                     await this.firebase.ref(`hospitals/${hospitalId}/drivers/${driverId}`).update({ status: 'active' });
                     await this.syncAmbulanceState(hospitalId, ambulanceId, 'available');
+                    await this.firebase.ref(`transfer_requests/${snapshot.key}`).update({ driverId: null });
 
                     // Log trip distance & fuel on completion
                     if (status === 'completed' && hospitalId && ambulanceId) {
