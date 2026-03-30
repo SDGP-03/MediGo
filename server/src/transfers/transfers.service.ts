@@ -326,11 +326,11 @@ export class TransfersService implements OnModuleInit {
         const targetDriverId = data.driverId;
         const targetAmbulanceId = data.ambulanceId || data.ambulance;
 
-        // --- CONCURRENCY FIX: Use a transaction to safely check and lock the driver ---
+        // --- CONCURRENCY: Use a transaction to safely check and lock the driver ---
         if (targetDriverId && hospitalId) {
             // Lock using their live tracking status, NOT their account block status
             const driverRef = this.firebase.ref(`driver_locations/${targetDriverId}/status`);
-            
+
             const { committed, snapshot } = await driverRef.transaction((currentStatus) => {
                 // Abort the transaction if the driver is already assigned, busy, or on a trip
                 if (currentStatus === 'assigned' || currentStatus === 'busy' || currentStatus === 'on_trip') {
@@ -431,6 +431,7 @@ export class TransfersService implements OnModuleInit {
         return R * c;
     }
 
+    // Helper function to convert degrees to radians, require for distance math
     private deg2rad(deg: number): number {
         return deg * (Math.PI / 180);
     }

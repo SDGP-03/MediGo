@@ -587,7 +587,7 @@ export function AmbulanceMap({
               suppressInfoWindows: true,
               preserveViewport: true,
               polylineOptions: {
-                strokeColor: "#3b82f6",
+                strokeColor: "#2276feff",
                 strokeWeight: 5,
                 strokeOpacity: 0.8,
               },
