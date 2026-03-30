@@ -1,4 +1,4 @@
-import CIryptoJS from 'crypto-js';//brings in a library of "math recipes" used for encryption.
+import CryptoJS from 'crypto-js';//brings in a library of "math recipes" used for encryption.
 
 // SECRET_KEY — This is the "Password" for your encryption. Without this exact string, nobody can unlock the data.
 // 256-bit key (32 bytes)
