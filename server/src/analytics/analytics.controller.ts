@@ -9,9 +9,9 @@ import { AuthGuard } from '../auth/auth.guard';//security that will check the to
 @Controller('analytics')//This tells NestJS that any request starting with /analytics should be handled by this class.
 @UseGuards(AuthGuard)//ensures that no one can see the analytics unless they have a valid Firebase token
 export class AnalyticsController {
-    constructor(private readonly analyticsService: AnalyticsService) { }
+    constructor(private readonly analyticsService: AnalyticsService) { }//connects the controller with the service
 
-    @Get()//This tells NestJS to run the function below if someone makes a GET request (the most common type of request for reading data).c
+    @Get()//This tells NestJS to run the function below if someone makes a GET request
     //This captures the incoming request object.
     async getAnalytics(@Req() req: any) {
         return this.analyticsService.getAnalytics(req.user.uid);//Calls the service to do the heavy lifting

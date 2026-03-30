@@ -14,7 +14,7 @@ const INCIDENT_COLORS = [
 export class AnalyticsService {
     private readonly logger = new Logger(AnalyticsService.name);
     //Inject Firebase service into this class
-    constructor(private readonly firebase: FirebaseService) { }
+    constructor(private readonly firebase: FirebaseService) { }//Connects to Firebase database
 
     /** Get aggregated analytics data */
     async getAnalytics(uid: string): Promise<any> {
@@ -24,7 +24,7 @@ export class AnalyticsService {
         // Resolve admin uid → shared hospitalPlaceId
         const adminSnap = await this.firebase.ref(`admin/${uid}`).get();
         const adminData = adminSnap.val() || {};
-        const hospitalId: string = adminData.hospitalPlaceId || uid;
+        const hospitalId: string = adminData.hospitalPlaceId || uid;//Ensures correct data filtering
         //Just logs info (for debugging)
         this.logger.log(`Admin Data: ${JSON.stringify(adminData)}`);
         this.logger.log(`Resolved hospitalId: ${hospitalId}`);
@@ -60,7 +60,7 @@ export class AnalyticsService {
                 t.destination?.placeId === hospitalId ||
                 (hospitalName !== 'Your Hospital' && (t.pickup?.hospitalName === hospitalName || t.destination?.hospitalName === hospitalName))
         );
-
+        //Gets driver locations and hospital drivers
         const driverLocations = driverSnap.exists() ? driverSnap.val() : {};
         const hospitalDrivers = hospitalDriversSnap.exists() ? hospitalDriversSnap.val() : {};
         const hospitalDriverIds = Object.keys(hospitalDrivers);
@@ -239,7 +239,7 @@ export class AnalyticsService {
 
         this.logger.log('Finished getAnalytics() calculation.');
 
-        return {
+        return {//Sends everything to frontend
             isLoading: false,
             totalRequests,
             totalTransfersThisMonth: transfersThisMonth,
