@@ -29,9 +29,9 @@ export class AuthGuard implements CanActivate {
         let token: string | undefined;
 
         // Extraction: Extract the raw JWT (JSON Web Token) from the preferred source
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            token = authHeader.split('Bearer ')[1];
-        } else if (queryToken) {
+        if (authHeader && authHeader.startsWith('Bearer ')) {//heck if header has:Authorization: Bearer TOKEN
+            token = authHeader.split('Bearer ')[1];//Extract only the token part
+        } else if (queryToken) {//Or if token is in URL
             token = queryToken as string;
         }
 

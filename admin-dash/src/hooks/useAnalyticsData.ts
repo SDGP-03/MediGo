@@ -30,7 +30,7 @@ export interface AnalyticsData {
     hospitalLoadData: { name: string; count: number; percent: number; color: string; borderColor: string; }[];
     peakHoursData: { label: string; description: string; percent: number; color: string; textColor: string; }[];
 }
-
+//The hook initializes state to store all analytics data and loading status
 export function useAnalyticsData(): AnalyticsData {
     const [data, setData] = useState<AnalyticsData>({
         isLoading: true,
@@ -46,7 +46,8 @@ export function useAnalyticsData(): AnalyticsData {
         hospitalLoadData: [],
         peakHoursData: [],
     });
-
+    /*Runs when component loadsSets up:data fetching,authentication listener
+    auto-refresh*/
     useEffect(() => {
         let cancelled = false;
         let interval: NodeJS.Timeout;
@@ -58,7 +59,7 @@ export function useAnalyticsData(): AnalyticsData {
                 if (!cancelled) {
                     setData({ ...result, isLoading: false });
                 }
-            } catch (error) {
+            } catch (error) {//Prevents app crash
                 console.error('[Analytics] Failed to fetch:', error);
                 if (!cancelled) {
                     setData((prev) => ({ ...prev, isLoading: false }));
@@ -80,8 +81,8 @@ export function useAnalyticsData(): AnalyticsData {
 
         return () => {
             cancelled = true;
-            unsubscribe();
-            if (interval) clearInterval(interval);
+            unsubscribe();//Stops listening to auth changes
+            if (interval) clearInterval(interval);//Stops auto-refresh
         };
     }, []);
 

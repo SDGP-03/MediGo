@@ -11,13 +11,13 @@ export class PatientsService {
     /** Stream patient data (from transfer_requests + patient_records) via SSE */
     streamPatients(): Observable<MessageEvent> {
         return new Observable((subscriber) => {
-            const transfersRef = this.firebase.ref('transfer_requests');
+            const transfersRef = this.firebase.ref('transfer_requests');//Connect to Firebase references-TR and PR
             const recordsRef = this.firebase.ref('patient_records');
 
             let transferData: Record<string, any> = {};
             let recordData: Record<string, any> = {};
 
-            const emit = () => {
+            const emit = () => {//The emit function pushes combined patient and transfer data to the frontend in real-time.
                 subscriber.next({
                     data: JSON.stringify({
                         transferRequests: transferData,
